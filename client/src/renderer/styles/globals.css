@@ -1,0 +1,671 @@
+/* SynClaw — AutoClaw Ember Light Theme (data-skin="ember", data-theme="light") */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================
+   CSS Variables — Complete Theme System
+   ============================================ */
+
+/* Dark Theme (Default) */
+:root,
+[data-theme="dark"] {
+  /* Brand Gradient */
+  --accent-gradient: linear-gradient(135deg, #fc5d1e, #e55318);
+
+  /* Accent Colors */
+  --accent1: #fc5d1e;
+  --accent2: #e55318;
+  --accent-cyan: #06b6d4;
+  --accent-violet: #8b5cf6;
+  --accent-orange: #f97316;
+
+  /* Semantic Colors */
+  --success: #22c55e;
+  --info: #3b82f6;
+  --warning: #eab308;
+  --danger: #ef4444;
+
+  /* Background Colors */
+  --bg-base: #0f0f1a;
+  --bg-layout: #0f0f1a;
+  --bg-container: #1a1a2e;
+  --bg-elevated: #252540;
+  --bg-subtle: #1e1e32;
+  --bg-surface: #1a1a2e;
+  --bg-nav: #0f0f1a;
+  --bg-sidebar: #12121e;
+
+  /* Input Colors */
+  --input-bg: #1a1a2e;
+  --input-border: #2d2d4a;
+
+  /* Border Colors */
+  --border: rgba(255, 255, 255, 0.08);
+  --border-secondary: rgba(255, 255, 255, 0.04);
+
+  /* Text Colors */
+  --text: #e2e8f0;
+  --text-sec: #94a3b8;
+  --text-ter: #64748b;
+  --text-quaternary: #475569;
+  --text-inverse: #ffffff;
+  --text-placeholder: #64748b;
+
+  /* Shadow */
+  --shadow: 0 10px 28px rgba(0, 0, 0, 0.4);
+  --shadow-secondary: 0 1px 2px rgba(0, 0, 0, 0.2), 0 6px 14px rgba(0, 0, 0, 0.2);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+
+  /* Scrollbar */
+  --scrollbar-track: rgba(255, 255, 255, 0.05);
+  --scrollbar-thumb: rgba(255, 255, 255, 0.15);
+
+  /* Radius */
+  --radius: 14px;
+  --r-card: 12px;
+  --r-pill: 20px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+
+  /* Spacing */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 16px;
+  --space-xl: 24px;
+
+  /* Layout */
+  --header-height: 44px;
+  --sidebar-width: 260px;
+
+  /* Transitions */
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.3s ease;
+}
+
+/* Light Theme */
+[data-theme="light"] {
+  /* Brand Gradient */
+  --accent-gradient: linear-gradient(135deg, #fc5d1e, #e55318);
+
+  /* Accent Colors */
+  --accent1: #fc5d1e;
+  --accent2: #e55318;
+  --accent-cyan: #0891b2;
+  --accent-violet: #7c3aed;
+  --accent-orange: #ea580c;
+
+  /* Semantic Colors */
+  --success: #2f9e5b;
+  --info: #4e7db7;
+  --warning: #c8872b;
+  --danger: #df5353;
+
+  /* Background Colors */
+  --bg-base: #f5f5f5;
+  --bg-layout: #f5f5f5;
+  --bg-container: #ffffff;
+  --bg-elevated: #ffffff;
+  --bg-subtle: #f7f7f7;
+  --bg-surface: #ffffff;
+  --bg-nav: #f5f5f5;
+  --bg-sidebar: #f5f5f5;
+
+  /* Input Colors */
+  --input-bg: #ffffff;
+  --input-border: #e5e5e5;
+
+  /* Border Colors */
+  --border: #e5e5e5;
+  --border-secondary: #f0f0f0;
+
+  /* Text Colors */
+  --text: #292929;
+  --text-sec: #7a7a7a;
+  --text-ter: #9e9e9e;
+  --text-quaternary: #b0b0b0;
+  --text-inverse: #ffffff;
+  --text-placeholder: #b0b0b0;
+
+  /* Shadow */
+  --shadow: 0 10px 28px rgba(0, 0, 0, 0.06);
+  --shadow-secondary: 0 1px 2px rgba(0, 0, 0, 0.03), 0 6px 14px rgba(0, 0, 0, 0.03);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+
+  /* Scrollbar */
+  --scrollbar-track: rgba(0, 0, 0, 0.05);
+  --scrollbar-thumb: rgba(0, 0, 0, 0.15);
+
+  /* Radius */
+  --radius: 14px;
+  --r-card: 12px;
+  --r-pill: 20px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+
+  /* Spacing */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 16px;
+  --space-xl: 24px;
+
+  /* Layout */
+  --header-height: 44px;
+  --sidebar-width: 260px;
+
+  /* Transitions */
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.3s ease;
+}
+
+/* ============================================
+   Base Styles
+   ============================================ */
+
+:root {
+  font-family: 'Inter', 'PingFang SC', system-ui, -apple-system, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  color-scheme: light dark;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background: var(--bg-layout);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background-color var(--transition-normal), color var(--transition-normal);
+}
+
+#app {
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background: var(--bg-layout);
+}
+
+/* ============================================
+   Scrollbar Styling
+   ============================================ */
+
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+[data-theme="light"] ::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.25);
+}
+
+/* ============================================
+   Selection & Focus
+   ============================================ */
+
+::selection {
+  background: rgba(252, 93, 30, 0.15);
+  color: var(--text);
+}
+
+*:focus {
+  outline: none;
+}
+
+*:focus-visible {
+  outline: 2px solid rgba(252, 93, 30, 0.4);
+  outline-offset: 2px;
+}
+
+/* ============================================
+   Form Elements
+   ============================================ */
+
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--text);
+  -webkit-box-shadow: 0 0 0 1000px var(--input-bg) inset;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+textarea,
+input {
+  font-family: inherit;
+}
+
+/* ============================================
+   Component Styles
+   ============================================ */
+
+/* AutoClaw Send Button gradient */
+.btn-send {
+  background: var(--accent-gradient) !important;
+  color: var(--text-inverse) !important;
+  border: none !important;
+}
+
+.btn-send:hover {
+  opacity: 0.88;
+}
+
+/* Orb glow (empty state) */
+.orb-glow {
+  background: radial-gradient(circle at 30% 30%, rgba(252, 93, 30, 0.14), rgba(252, 93, 30, 0.02) 65%);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+/* Electron 标题栏拖拽区域（与 hiddenInset 配合） */
+.title-bar-drag {
+  -webkit-app-region: drag;
+}
+
+.title-bar-no-drag {
+  -webkit-app-region: no-drag;
+}
+
+/* Accent bar left (Claude-style) */
+.sidebar-item--active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 6px;
+  bottom: 6px;
+  width: 3px;
+  border-radius: 0 2px 2px 0;
+  background: var(--accent1);
+}
+
+/* ============================================
+   Markdown Prose Styles
+   ============================================ */
+
+.prose {
+  color: var(--text);
+  max-width: 65ch;
+}
+
+.prose h1,
+.prose h2,
+.prose h3,
+.prose h4 {
+  color: var(--text);
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.prose h1 {
+  font-size: 1.875rem;
+  margin-top: 0;
+  margin-bottom: 1rem;
+}
+
+.prose h2 {
+  font-size: 1.5rem;
+  margin-top: 1.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.prose h3 {
+  font-size: 1.25rem;
+  margin-top: 1.25rem;
+  margin-bottom: 0.5rem;
+}
+
+.prose p {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  line-height: 1.7;
+}
+
+.prose a {
+  color: var(--accent1);
+  text-decoration: none;
+}
+
+.prose a:hover {
+  text-decoration: underline;
+}
+
+.prose strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.prose em {
+  font-style: italic;
+}
+
+.prose ul,
+.prose ol {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  padding-left: 1.5rem;
+}
+
+.prose li {
+  margin-top: 0.25rem;
+  margin-bottom: 0.25rem;
+}
+
+.prose blockquote {
+  border-left: 3px solid var(--accent1);
+  padding-left: 1rem;
+  margin: 1rem 0;
+  color: var(--text-sec);
+  font-style: italic;
+}
+
+.prose code {
+  background: var(--bg-subtle);
+  padding: 0.125rem 0.375rem;
+  border-radius: 4px;
+  font-size: 0.875em;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.prose pre {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1rem;
+  overflow-x: auto;
+  margin: 1rem 0;
+}
+
+.prose pre code {
+  background: none;
+  padding: 0;
+  font-size: 0.875rem;
+}
+
+.prose table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1rem 0;
+}
+
+.prose th,
+.prose td {
+  border: 1px solid var(--border);
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+}
+
+.prose th {
+  background: var(--bg-subtle);
+  font-weight: 600;
+}
+
+.prose hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 2rem 0;
+}
+
+.prose img {
+  max-width: 100%;
+  border-radius: 8px;
+}
+
+/* Task list styles */
+.prose input[type="checkbox"] {
+  margin-right: 0.5rem;
+  accent-color: var(--accent1);
+}
+
+/* Prose Invert (for dark backgrounds) */
+.prose-invert {
+  color: var(--text);
+}
+
+.prose-invert h1,
+.prose-invert h2,
+.prose-invert h3,
+.prose-invert h4 {
+  color: var(--text);
+}
+
+.prose-invert a {
+  color: var(--accent-cyan);
+}
+
+.prose-invert strong {
+  color: var(--text);
+}
+
+/* ============================================
+   Code Block with Copy Button
+   ============================================ */
+
+.code-block-wrapper {
+  position: relative;
+}
+
+.code-block-copy-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  padding: 4px 8px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-sec);
+  font-size: 12px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.2s, background 0.2s;
+}
+
+.code-block-wrapper:hover .code-block-copy-btn {
+  opacity: 1;
+}
+
+.code-block-copy-btn:hover {
+  background: var(--bg-subtle);
+  color: var(--text);
+}
+
+.code-block-copy-btn.copied {
+  color: var(--success);
+}
+
+/* ============================================
+   Animations
+   ============================================ */
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+@keyframes blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.2s ease-out;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.2s ease-out;
+}
+
+/* Stagger animation delays */
+.stagger-1 { animation-delay: 0.03s; }
+.stagger-2 { animation-delay: 0.06s; }
+.stagger-3 { animation-delay: 0.09s; }
+.stagger-4 { animation-delay: 0.12s; }
+.stagger-5 { animation-delay: 0.15s; }
+
+/* ============================================
+   Toast Styles
+   ============================================ */
+
+.toast-container {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--bg-container);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: var(--shadow-md);
+  pointer-events: auto;
+  min-width: 280px;
+  max-width: 400px;
+}
+
+.toast-icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.toast-content {
+  flex: 1;
+  font-size: 14px;
+  color: var(--text);
+}
+
+.toast-close {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text-ter);
+  transition: color 0.15s;
+}
+
+.toast-close:hover {
+  color: var(--text);
+}
+
+.toast-success {
+  border-left: 3px solid var(--success);
+}
+
+.toast-success .toast-icon {
+  color: var(--success);
+}
+
+.toast-error {
+  border-left: 3px solid var(--danger);
+}
+
+.toast-error .toast-icon {
+  color: var(--danger);
+}
+
+.toast-info {
+  border-left: 3px solid var(--info);
+}
+
+.toast-info .toast-icon {
+  color: var(--info);
+}
+
+.toast-warning {
+  border-left: 3px solid var(--warning);
+}
+
+.toast-warning .toast-icon {
+  color: var(--warning);
+}
+
+/* ============================================
+   Skeleton Loading
+   ============================================ */
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--bg-subtle) 25%,
+    var(--bg-elevated) 50%,
+    var(--bg-subtle) 75%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-loading 1.5s infinite;
+  border-radius: 4px;
+}
+
+@keyframes skeleton-loading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}

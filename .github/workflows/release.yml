@@ -1,0 +1,52 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest, ubuntu-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build main process
+        run: node scripts/build-main.mjs
+
+      - name: Build renderer
+        run: pnpm run build
+
+      - name: Build macOS
+        if: matrix.os == 'macos-latest'
+        run: pnpm exec electron-builder --mac --publish always
+
+      - name: Build Windows
+        if: matrix.os == 'windows-latest'
+        run: pnpm exec electron-builder --win --publish always
+
+      - name: Build Linux
+        if: matrix.os == 'ubuntu-latest'
+        run: pnpm exec electron-builder --linux --publish always
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.os }}-artifacts
+          path: release/**
+          retention-days: 30
