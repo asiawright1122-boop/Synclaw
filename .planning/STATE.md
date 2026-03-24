@@ -21,7 +21,7 @@ See: `.planning/PROJECT.md` (updated 2026-03-24)
 
 | Phase | Name | Plans | Summaries | Status |
 |-------|------|-------|-----------|--------|
-| 1 | 构建修复 | 0 | 0 | Planned |
+| 1 | 构建修复 | 0 | 0 | Context Ready |
 | 2 | 首次启动引导 | 0 | 0 | Planned |
 | 3 | 文件安全与权限 | 0 | 0 | Planned |
 | 4 | 技能市场 UI | 0 | 0 | Planned |
@@ -44,3 +44,4 @@ See: `.planning/PROJECT.md` (updated 2026-03-24)
 - 子仓库 `web/` 独立管理，`.planning/` 文档不进入 web 提交
 - Git 已初始化，首次提交已创建
 - 项目为 brownfield，已有大量功能代码
+- Phase 1 发现：`openclaw-source/dist/` 和 `file:unwatch` 已存在，仅需修复 Node.js 版本检查
