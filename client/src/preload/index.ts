@@ -17,6 +17,8 @@ export interface AppSettings {
   notificationsEnabled: boolean
   compactMode: boolean
   favorites: string[]
+  hasCompletedOnboarding: boolean
+  authorizedDirs: string[]
 }
 
 export interface FileInfo {

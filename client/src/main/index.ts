@@ -28,6 +28,8 @@ export interface AppSettings {
   notificationsEnabled: boolean
   compactMode: boolean
   favorites: string[]
+  hasCompletedOnboarding: boolean
+  authorizedDirs: string[]
   privacy: {
     optimizationPlan: boolean
   }
@@ -40,6 +42,8 @@ const defaultSettings: AppSettings = {
   notificationsEnabled: true,
   compactMode: false,
   favorites: [],
+  hasCompletedOnboarding: false,
+  authorizedDirs: [],
   privacy: {
     optimizationPlan: false,
   },

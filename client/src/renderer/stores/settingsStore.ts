@@ -28,6 +28,13 @@ export interface SettingsState {
   addFavorite: (path: string) => void
   removeFavorite: (path: string) => void
 
+  // Onboarding
+  hasCompletedOnboarding: boolean
+  setHasCompletedOnboarding: (value: boolean) => void
+  authorizedDirs: string[]
+  addAuthorizedDir: (path: string) => void
+  removeAuthorizedDir: (path: string) => void
+
   // Reset to defaults
   resetSettings: () => void
 
@@ -42,6 +49,8 @@ const defaultSettings = {
   notificationsEnabled: true,
   compactMode: false,
   favorites: [],
+  hasCompletedOnboarding: false,
+  authorizedDirs: [],
 }
 
 export const useSettingsStore = create<SettingsState>((set) => ({
@@ -59,6 +68,8 @@ export const useSettingsStore = create<SettingsState>((set) => ({
           notificationsEnabled: res.data.notificationsEnabled,
           compactMode: res.data.compactMode,
           favorites: Array.isArray(res.data.favorites) ? res.data.favorites : [],
+          hasCompletedOnboarding: res.data.hasCompletedOnboarding ?? false,
+          authorizedDirs: Array.isArray(res.data.authorizedDirs) ? res.data.authorizedDirs : [],
         })
       }
     } catch {
@@ -110,6 +121,28 @@ export const useSettingsStore = create<SettingsState>((set) => ({
     })
   },
 
+  setHasCompletedOnboarding: async (value) => {
+    set({ hasCompletedOnboarding: value })
+    await window.openclaw?.settings.set('hasCompletedOnboarding', value)
+  },
+
+  addAuthorizedDir: async (path) => {
+    set(s => {
+      if (s.authorizedDirs.includes(path)) return s
+      const next = [...s.authorizedDirs, path]
+      window.openclaw?.settings.set('authorizedDirs', next)
+      return { authorizedDirs: next }
+    })
+  },
+
+  removeAuthorizedDir: async (path) => {
+    set(s => {
+      const next = s.authorizedDirs.filter(p => p !== path)
+      window.openclaw?.settings.set('authorizedDirs', next)
+      return { authorizedDirs: next }
+    })
+  },
+
   resetSettings: async () => {
     try {
       const res = await window.openclaw?.settings.reset()
@@ -121,6 +154,8 @@ export const useSettingsStore = create<SettingsState>((set) => ({
           notificationsEnabled: res.data.notificationsEnabled,
           compactMode: res.data.compactMode,
           favorites: [],
+          hasCompletedOnboarding: false,
+          authorizedDirs: [],
         })
       }
     } catch {

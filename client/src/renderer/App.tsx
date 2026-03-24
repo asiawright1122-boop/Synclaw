@@ -13,18 +13,24 @@ import { CommandPalette } from './components/CommandPalette'
 import { GlobalSearch } from './components/GlobalSearch'
 import { ContextMenu, useContextMenu } from './components/ContextMenu'
 import { ToastContainer } from './components/Toast'
+import { OnboardingView } from './components/OnboardingView'
 import { X } from 'lucide-react'
 
 function App() {
   const { settingsModalOpen, setSettingsModalOpen, setSettingsSection } = useAppStore()
-  const { theme, loadSettings } = useSettingsStore()
+  const { theme, hasCompletedOnboarding, loadSettings } = useSettingsStore()
   const { menu, showMenuAt, closeMenu } = useContextMenu()
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false)
   const [globalSearchOpen, setGlobalSearchOpen] = useState(false)
+  const [settingsLoaded, setSettingsLoaded] = useState(false)
 
   // Load persisted settings from electron-store on mount
   useEffect(() => {
-    loadSettings()
+    const load = async () => {
+      await loadSettings()
+      setSettingsLoaded(true)
+    }
+    load()
   }, [loadSettings])
 
   // Listen for navigation events from main process
@@ -65,6 +71,11 @@ function App() {
     setSettingsModalOpen(true)
     setCommandPaletteOpen(false)
   }, [setSettingsSection, setSettingsModalOpen])
+
+  // 引导完成后重新加载并显示主界面
+  const handleOnboardingComplete = useCallback(() => {
+    window.location.reload()
+  }, [])
 
   // Apply theme on mount and when theme changes
   useEffect(() => {
@@ -112,8 +123,26 @@ function App() {
     closeMenu()
   }
 
+  // Wait for settings to load before rendering — prevents flicker
+  if (!settingsLoaded) {
+    return (
+      <div
+        className="h-screen w-screen flex items-center justify-center"
+        style={{ background: 'var(--bg-layout)' }}
+      >
+        <div className="w-8 h-8 rounded-full animate-spin" style={{ border: '2px solid var(--border)', borderTopColor: 'var(--accent1)' }} />
+      </div>
+    )
+  }
+
   return (
-    <div
+    <>
+      {/* 首次启动引导 */}
+      {!hasCompletedOnboarding && (
+        <OnboardingView onComplete={handleOnboardingComplete} />
+      )}
+
+      <div
       className="h-screen w-screen flex flex-col overflow-hidden"
       style={{ background: 'var(--bg-layout)', color: 'var(--text)' }}
     >
@@ -178,6 +207,7 @@ function App() {
       {/* Toast Notifications */}
       <ToastContainer />
     </div>
+    </>
   )
 }
 

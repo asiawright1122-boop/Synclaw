@@ -15,9 +15,9 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Onboarding
 
-- [ ] **ONBD-01**: 首次启动引导流程（API Key 设置）
-- [ ] **ONBD-02**: 授权目录选择 UI（用户指定可操作的文件路径）
-- [ ] **ONBD-03**: 引导状态持久化（已完成引导不再重复显示）
+- [x] **ONBD-01**: 首次启动引导流程（API Key 设置）
+- [x] **ONBD-02**: 授权目录选择 UI（用户指定可操作的文件路径）
+- [x] **ONBD-03**: 引导状态持久化（已完成引导不再重复显示）
 
 ### File Security
 
