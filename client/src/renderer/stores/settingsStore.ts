@@ -35,6 +35,19 @@ export interface SettingsState {
   addAuthorizedDir: (path: string) => void
   removeAuthorizedDir: (path: string) => void
 
+  // Workspace (synced to both Gateway and electron-store)
+  workspace: {
+    limitAccess: boolean
+    autoSave: boolean
+    watch: boolean
+    heartbeat: '30m' | '1h' | '2h' | '4h'
+  }
+  setWorkspaceLimitAccess: (value: boolean) => void
+  setWorkspaceAutoSave: (value: boolean) => void
+  setWorkspaceWatch: (value: boolean) => void
+  setWorkspaceHeartbeat: (value: '30m' | '1h' | '2h' | '4h') => void
+  syncWorkspaceFromGateway: () => Promise<void>
+
   // Reset to defaults
   resetSettings: () => void
 
@@ -51,6 +64,12 @@ const defaultSettings = {
   favorites: [],
   hasCompletedOnboarding: false,
   authorizedDirs: [],
+  workspace: {
+    limitAccess: true,
+    autoSave: true,
+    watch: true,
+    heartbeat: '2h' as const,
+  },
 }
 
 export const useSettingsStore = create<SettingsState>((set) => ({
@@ -70,6 +89,12 @@ export const useSettingsStore = create<SettingsState>((set) => ({
           favorites: Array.isArray(res.data.favorites) ? res.data.favorites : [],
           hasCompletedOnboarding: res.data.hasCompletedOnboarding ?? false,
           authorizedDirs: Array.isArray(res.data.authorizedDirs) ? res.data.authorizedDirs : [],
+          workspace: {
+            limitAccess: res.data.workspace?.limitAccess ?? true,
+            autoSave: res.data.workspace?.autoSave ?? true,
+            watch: res.data.workspace?.watch ?? true,
+            heartbeat: (['30m', '1h', '2h', '4h'].includes(res.data.workspace?.heartbeat) ? res.data.workspace?.heartbeat : '2h') as '30m' | '1h' | '2h' | '4h',
+          },
         })
       }
     } catch {
@@ -143,6 +168,51 @@ export const useSettingsStore = create<SettingsState>((set) => ({
     })
   },
 
+  setWorkspaceLimitAccess: async (value) => {
+    set(s => ({ workspace: { ...s.workspace, limitAccess: value } }))
+    await window.openclaw?.settings.set('workspace.limitAccess', value)
+    if (window.openclaw) window.openclaw.config.patch({ limitAccess: value }).catch(() => {})
+  },
+
+  setWorkspaceAutoSave: async (value) => {
+    set(s => ({ workspace: { ...s.workspace, autoSave: value } }))
+    await window.openclaw?.settings.set('workspace.autoSave', value)
+    if (window.openclaw) window.openclaw.config.patch({ autoSave: value }).catch(() => {})
+  },
+
+  setWorkspaceWatch: async (value) => {
+    set(s => ({ workspace: { ...s.workspace, watch: value } }))
+    await window.openclaw?.settings.set('workspace.watch', value)
+    if (window.openclaw) window.openclaw.config.patch({ watch: value }).catch(() => {})
+  },
+
+  setWorkspaceHeartbeat: async (value) => {
+    set(s => ({ workspace: { ...s.workspace, heartbeat: value } }))
+    await window.openclaw?.settings.set('workspace.heartbeat', value)
+    if (window.openclaw) window.openclaw.config.patch({ heartbeat: value }).catch(() => {})
+  },
+
+  // Sync workspace config from Gateway to local electron-store (one-time on mount)
+  syncWorkspaceFromGateway: async () => {
+    if (!window.openclaw) return
+    try {
+      const res = await window.openclaw.config.get()
+      if (res?.success && res.data) {
+        const cfg = res.data as Record<string, unknown>
+        const patches: Array<{ key: string; value: unknown }> = []
+        if (typeof cfg.limitAccess === 'boolean') patches.push({ key: 'workspace.limitAccess', value: cfg.limitAccess })
+        if (typeof cfg.autoSave === 'boolean') patches.push({ key: 'workspace.autoSave', value: cfg.autoSave })
+        if (typeof cfg.watch === 'boolean') patches.push({ key: 'workspace.watch', value: cfg.watch })
+        if (['30m', '1h', '2h', '4h'].includes(cfg.heartbeat as string)) {
+          patches.push({ key: 'workspace.heartbeat', value: cfg.heartbeat })
+        }
+        for (const { key, value } of patches) {
+          await window.openclaw.settings.set(key, value)
+        }
+      }
+    } catch {}
+  },
+
   resetSettings: async () => {
     try {
       const res = await window.openclaw?.settings.reset()
@@ -156,10 +226,15 @@ export const useSettingsStore = create<SettingsState>((set) => ({
           favorites: [],
           hasCompletedOnboarding: false,
           authorizedDirs: [],
+          workspace: {
+            limitAccess: res.data.workspace?.limitAccess ?? true,
+            autoSave: res.data.workspace?.autoSave ?? true,
+            watch: res.data.workspace?.watch ?? true,
+            heartbeat: (['30m', '1h', '2h', '4h'].includes(res.data.workspace?.heartbeat) ? res.data.workspace?.heartbeat : '2h') as '30m' | '1h' | '2h' | '4h',
+          },
         })
       }
     } catch {
-      // electron-store unavailable — reset to renderer defaults
       set({ ...defaultSettings })
     }
   },

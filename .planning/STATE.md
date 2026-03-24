@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: unknown
-last_updated: "2026-03-24T06:36:00.000Z"
+status: Ready to plan
+last_updated: "2026-03-24T06:46:27.470Z"
 progress:
   total_phases: 5
-  completed_phases: 2
-  total_plans: 4
-  completed_plans: 4
+  completed_phases: 3
+  total_plans: 2
+  completed_plans: 2
 ---
 
 # STATE.md — SynClaw v1.0 MVP
@@ -22,7 +22,7 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-03-24)
 
 **Core value:** 用户可以通过自然语言对话，安全地操作用户本地文件系统，且数据永不离开用户设备。
-**Current focus:** Phase 2 — 首次启动引导
+**Current focus:** Phase 4 — 技能市场 UI
 
 ## Milestones
 
@@ -36,7 +36,7 @@ See: `.planning/PROJECT.md` (updated 2026-03-24)
 |-------|------|-------|-----------|--------|
 | 1 | 构建修复 | 1 | 1 | Complete |
 | 2 | 首次启动引导 | 3 | 1 | Complete |
-| 3 | 文件安全与权限 | 0 | 0 | Planned |
+| 3 | 文件安全与权限 | 1 | 1 | Complete |
 | 4 | 技能市场 UI | 0 | 0 | Planned |
 | 5 | 正式打包发布 | 0 | 0 | Planned |
 

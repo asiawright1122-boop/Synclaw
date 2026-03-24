@@ -7,6 +7,7 @@ import { useSettingsStore } from '../stores/settingsStore'
 import { useToastStore } from './Toast'
 import { FeedbackPanel } from './FeedbackPanel'
 import { ImPanel } from './IMPanel'
+import { AuthorizedDirsPanel } from './AuthorizedDirsPanel'
 import {
   ArrowLeft,
   Pencil,
@@ -18,6 +19,7 @@ import {
   MessageCircle,
   FolderOpen,
   Shield,
+  Lock,
   MessageSquarePlus,
   Info,
   RefreshCw,
@@ -38,6 +40,7 @@ type SettingsSection =
   | 'mcp'
   | 'skills'
   | 'im'
+  | 'security'
   | 'workspace'
   | 'privacy'
   | 'feedback'
@@ -54,6 +57,7 @@ const NAV: { id: SettingsSection; label: string; icon: typeof Pencil }[] = [
   { id: 'mcp', label: 'MCP 服务', icon: Plug },
   { id: 'skills', label: '技能', icon: BookOpen },
   { id: 'im', label: 'IM 频道', icon: MessageCircle },
+  { id: 'security', label: '文件安全', icon: Lock },
   { id: 'workspace', label: '工作区', icon: FolderOpen },
   { id: 'gateway', label: 'Gateway', icon: Server },
   { id: 'privacy', label: '数据与隐私', icon: Shield },
@@ -2554,61 +2558,42 @@ function SkillsPanel() {
 
 
 function WorkspacePanel() {
-  const [limitAccess, setLimitAccess] = useState(true)
-  const [autoSave, setAutoSave] = useState(true)
-  const [watch, setWatch] = useState(true)
-  const [hb, setHb] = useState<'30m' | '1h' | '2h' | '4h'>('2h')
+  const limitAccess = useSettingsStore(s => s.workspace.limitAccess)
+  const autoSave = useSettingsStore(s => s.workspace.autoSave)
+  const watch = useSettingsStore(s => s.workspace.watch)
+  const heartbeat = useSettingsStore(s => s.workspace.heartbeat)
+  const setLimitAccess = useSettingsStore(s => s.setWorkspaceLimitAccess)
+  const setAutoSave = useSettingsStore(s => s.setWorkspaceAutoSave)
+  const setWatch = useSettingsStore(s => s.setWorkspaceWatch)
+  const setHeartbeat = useSettingsStore(s => s.setWorkspaceHeartbeat)
+  const syncFromGateway = useSettingsStore(s => s.syncWorkspaceFromGateway)
   const [saving, setSaving] = useState(false)
   const addToast = useToastStore(s => s.addToast)
 
-  // Load workspace config on mount
+  // Sync workspace config from Gateway → local electron-store on first mount
   useEffect(() => {
-    if (!window.openclaw) return
-    window.openclaw.config.get().then((res) => {
-      if (res?.success && res.data) {
-        const cfg = res.data as Record<string, unknown>
-        if (typeof cfg.limitAccess === 'boolean') setLimitAccess(cfg.limitAccess)
-        if (typeof cfg.autoSave === 'boolean') setAutoSave(cfg.autoSave)
-        if (typeof cfg.watch === 'boolean') setWatch(cfg.watch)
-        if (cfg.heartbeat === '30m' || cfg.heartbeat === '1h' || cfg.heartbeat === '2h' || cfg.heartbeat === '4h') {
-          setHb(cfg.heartbeat)
-        }
-      }
-    }).catch(() => {})
-  }, [])
-
-  // Save workspace config to Gateway
-  const saveConfig = useCallback(async (patch: Record<string, unknown>) => {
-    if (!window.openclaw) return
-    setSaving(true)
-    try {
-      await window.openclaw.config.patch(patch)
-    } catch (err) {
-      console.error('[WorkspacePanel] Failed to save config:', err)
-    } finally {
-      setSaving(false)
-    }
-  }, [])
+    syncFromGateway().catch(() => {})
+  }, [syncFromGateway])
 
   const handleLimitAccess = useCallback((val: boolean) => {
-    setLimitAccess(val)
-    saveConfig({ limitAccess: val })
-  }, [saveConfig])
+    setSaving(true)
+    setLimitAccess(val).finally(() => setSaving(false))
+  }, [setLimitAccess])
 
   const handleAutoSave = useCallback((val: boolean) => {
-    setAutoSave(val)
-    saveConfig({ autoSave: val })
-  }, [saveConfig])
+    setSaving(true)
+    setAutoSave(val).finally(() => setSaving(false))
+  }, [setAutoSave])
 
   const handleWatch = useCallback((val: boolean) => {
-    setWatch(val)
-    saveConfig({ watch: val })
-  }, [saveConfig])
+    setSaving(true)
+    setWatch(val).finally(() => setSaving(false))
+  }, [setWatch])
 
   const handleHeartbeat = useCallback((val: '30m' | '1h' | '2h' | '4h') => {
-    setHb(val)
-    saveConfig({ heartbeat: val })
-  }, [saveConfig])
+    setSaving(true)
+    setHeartbeat(val).finally(() => setSaving(false))
+  }, [setHeartbeat])
 
   return (
     <div className="pb-10">
@@ -2687,7 +2672,7 @@ function WorkspacePanel() {
                 onClick={() => handleHeartbeat(k)}
                 className="px-3 py-1.5 rounded-full text-xs font-medium border transition-all"
                 style={
-                  hb === k
+                  heartbeat === k
                     ? {
                         background: 'var(--accent1)',
                         color: '#fff',
@@ -3189,6 +3174,8 @@ export function SettingsView() {
         return <SkillsPanel />
       case 'im':
         return <ImPanel />
+      case 'security':
+        return <AuthorizedDirsPanel />
       case 'workspace':
         return <WorkspacePanel />
       case 'gateway':

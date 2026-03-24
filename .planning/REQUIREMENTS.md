@@ -21,9 +21,9 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### File Security
 
-- [ ] **FILE-01**: 文件操作路径白名单验证（防止路径穿越攻击）
-- [ ] **FILE-02**: 敏感目录保护（禁止访问系统目录）
-- [ ] **FILE-03**: 授权目录动态管理（在设置中添加/移除授权路径）
+- [x] **FILE-01**: 文件操作路径白名单验证（防止路径穿越攻击）
+- [x] **FILE-02**: 敏感目录保护（禁止访问系统目录）
+- [x] **FILE-03**: 授权目录动态管理（在设置中添加/移除授权路径）
 
 ### Skill Market
 
@@ -83,12 +83,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | BUILD-01 | Phase 1 | Complete |
 | BUILD-02 | Phase 1 | Complete |
 | BUILD-03 | Phase 1 | Complete |
-| ONBD-01 | Phase 2 | Pending |
-| ONBD-02 | Phase 2 | Pending |
-| ONBD-03 | Phase 2 | Pending |
-| FILE-01 | Phase 3 | Pending |
-| FILE-02 | Phase 3 | Pending |
-| FILE-03 | Phase 3 | Pending |
+| ONBD-01 | Phase 2 | Complete |
+| ONBD-02 | Phase 2 | Complete |
+| ONBD-03 | Phase 2 | Complete |
+| FILE-01 | Phase 3 | Complete |
+| FILE-02 | Phase 3 | Complete |
+| FILE-03 | Phase 3 | Complete |
 | SKIL-01 | Phase 4 | Pending |
 | SKIL-02 | Phase 4 | Pending |
 | SKIL-03 | Phase 4 | Pending |

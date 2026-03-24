@@ -26,6 +26,12 @@ export interface AppSettings {
   privacy: {
     optimizationPlan: boolean
   }
+  workspace: {
+    limitAccess: boolean
+    autoSave: boolean
+    watch: boolean
+    heartbeat: '30m' | '1h' | '2h' | '4h'
+  }
 }
 
 export interface FileInfo {

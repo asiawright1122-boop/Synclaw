@@ -41,6 +41,9 @@ export function OnboardingView({ onComplete }: OnboardingViewProps) {
   const [authorizedDirs, setAuthorizedDirs] = useState<string[]>([])
   const [dirError, setDirError] = useState('')
   const [gatewayStatus, setGatewayStatus] = useState<'checking' | 'ready' | 'error'>('checking')
+  const [apiKeySaving, setApiKeySaving] = useState(false)
+  const [apiKeyError, setApiKeyError] = useState('')
+  const [apiKeySuccess, setApiKeySuccess] = useState(false)
 
   const {
     setHasCompletedOnboarding,
@@ -71,13 +74,21 @@ export function OnboardingView({ onComplete }: OnboardingViewProps) {
   }, [])
 
   const handleStep1Next = async () => {
-    if (apiKeyInput.trim() && validateApiKey(apiKeyInput)) {
-      try {
-        await window.openclaw?.skills?.update?.({ apiKey: apiKeyInput.trim() })
-      } catch {
-        // Non-fatal: key may still be saved to env
+    if (!apiKeyInput.trim() || !validateApiKey(apiKeyInput)) return
+    setApiKeyError('')
+    setApiKeySaving(true)
+    try {
+      const res = await window.openclaw?.skills?.update?.({ apiKey: apiKeyInput.trim() })
+      if (res?.success) {
+        setApiKeySuccess(true)
+        setStep(2)
+      } else {
+        setApiKeyError(res?.error ? `保存失败：${res.error}` : '保存 API Key 时出错，请重试')
       }
-      setStep(2)
+    } catch (err) {
+      setApiKeyError(`保存失败：${err instanceof Error ? err.message : String(err)}`)
+    } finally {
+      setApiKeySaving(false)
     }
   }
 
@@ -309,6 +320,19 @@ export function OnboardingView({ onComplete }: OnboardingViewProps) {
                   </p>
                 )}
 
+                {apiKeyError && (
+                  <p className="text-xs mb-3 px-3 py-2 rounded-lg" style={{ background: 'rgba(239,68,68,0.1)', color: 'var(--danger)' }}>
+                    {apiKeyError}
+                  </p>
+                )}
+
+                {apiKeySuccess && (
+                  <p className="text-xs mb-3 px-3 py-2 rounded-lg flex items-center gap-1.5" style={{ background: 'rgba(34,197,94,0.1)', color: 'var(--success)' }}>
+                    <CheckCircle className="w-3.5 h-3.5" />
+                    API Key 已保存
+                  </p>
+                )}
+
                 <div className="flex items-center justify-between mt-4">
                   <button
                     type="button"
@@ -323,18 +347,27 @@ export function OnboardingView({ onComplete }: OnboardingViewProps) {
                   <button
                     type="button"
                     onClick={handleStep1Next}
-                    disabled={!validateApiKey(apiKeyInput)}
+                    disabled={!validateApiKey(apiKeyInput) || apiKeySaving}
                     className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium transition-all duration-200"
                     style={{
-                      background: validateApiKey(apiKeyInput)
+                      background: validateApiKey(apiKeyInput) && !apiKeySaving
                         ? 'var(--accent-gradient)'
                         : 'var(--bg-elevated)',
-                      color: validateApiKey(apiKeyInput) ? 'white' : 'var(--text-ter)',
-                      cursor: validateApiKey(apiKeyInput) ? 'pointer' : 'not-allowed',
+                      color: validateApiKey(apiKeyInput) && !apiKeySaving ? 'white' : 'var(--text-ter)',
+                      cursor: validateApiKey(apiKeyInput) && !apiKeySaving ? 'pointer' : 'not-allowed',
                     }}
                   >
-                    继续
-                    <ChevronRight className="w-4 h-4" />
+                    {apiKeySaving ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        保存中…
+                      </>
+                    ) : (
+                      <>
+                        继续
+                        <ChevronRight className="w-4 h-4" />
+                      </>
+                    )}
                   </button>
                 </div>
               </motion.div>

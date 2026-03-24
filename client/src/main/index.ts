@@ -33,6 +33,12 @@ export interface AppSettings {
   privacy: {
     optimizationPlan: boolean
   }
+  workspace: {
+    limitAccess: boolean
+    autoSave: boolean
+    watch: boolean
+    heartbeat: '30m' | '1h' | '2h' | '4h'
+  }
 }
 
 const defaultSettings: AppSettings = {
@@ -46,6 +52,12 @@ const defaultSettings: AppSettings = {
   authorizedDirs: [],
   privacy: {
     optimizationPlan: false,
+  },
+  workspace: {
+    limitAccess: true,
+    autoSave: true,
+    watch: true,
+    heartbeat: '2h',
   },
 }
 
@@ -63,7 +75,12 @@ try {
 
 export function getAppSettings(): AppSettings {
   if (settingsStore) {
-    return settingsStore.store as AppSettings
+    const stored = settingsStore.store as AppSettings
+    return {
+      ...defaultSettings,
+      ...stored,
+      workspace: { ...defaultSettings.workspace, ...(stored.workspace ?? {}) },
+    }
   }
   return defaultSettings
 }
@@ -79,12 +96,20 @@ export function setAppSetting(key: string, value: unknown): void {
   }
 }
 
+function deepSet(store: import('electron-store').default<AppSettings>, obj: unknown, prefix = ''): void {
+  if (typeof obj === 'object' && obj !== null && !Array.isArray(obj)) {
+    for (const [k, v] of Object.entries(obj as Record<string, unknown>)) {
+      deepSet(store, v, prefix ? `${prefix}.${k}` : k)
+    }
+  } else {
+    store.set(prefix as keyof AppSettings, obj as never)
+  }
+}
+
 export function resetAppSettings(): AppSettings {
   if (settingsStore) {
     settingsStore.clear()
-    for (const [k, v] of Object.entries(defaultSettings)) {
-      settingsStore.set(k as keyof AppSettings, v)
-    }
+    deepSet(settingsStore, defaultSettings)
     return settingsStore.store as AppSettings
   }
   return defaultSettings

@@ -11,6 +11,51 @@ const log = {
   error: (...args: unknown[]) => console.error('[IPC]', new Date().toISOString(), ...args),
 }
 
+// ── Path validation (file security) ───────────────────────────────────
+
+const BLOCKED_PATHS = new Set([
+  '/etc',
+  '/private/etc',
+  '/proc',
+  '/sys',
+  '/dev',
+  '/root',
+  '/boot',
+  '/run',
+  '/var/run',
+  '/private/var/run',
+  '/usr/bin',
+  '/usr/lib',
+  '/usr/sbin',
+  'C:\\Windows',
+  'C:\\Program Files',
+  'C:\\Program Files (x86)',
+  'C:\\ProgramData',
+])
+
+function isPathBlocked(filePath: string): boolean {
+  const normalized = path.normalize(filePath)
+  for (const blocked of BLOCKED_PATHS) {
+    if (normalized.startsWith(blocked + path.sep) || normalized === blocked) return true
+  }
+  return false
+}
+
+function isPathAuthorized(filePath: string, authorizedDirs: string[]): boolean {
+  if (authorizedDirs.length === 0) return false
+  const normalized = path.normalize(filePath)
+  return authorizedDirs.some(dir => {
+    const authNorm = path.normalize(dir)
+    return normalized.startsWith(authNorm + path.sep) || normalized === authNorm
+  })
+}
+
+function validatePath(filePath: string, authorizedDirs: string[]): { valid: boolean; error?: string } {
+  if (isPathBlocked(filePath)) return { valid: false, error: `访问被拒绝：系统敏感目录 ${filePath}` }
+  if (!isPathAuthorized(filePath, authorizedDirs)) return { valid: false, error: `访问被拒绝：路径 ${filePath} 未在授权目录范围内` }
+  return { valid: true }
+}
+
 // 获取 gateway bridge 单例
 function gateway() {
   return getGatewayBridge()
@@ -893,6 +938,9 @@ export function registerIpcHandlers() {
   // ── File handlers ───────────────────────────────────────────────────
 
   ipcMain.handle('file:read', async (_event, filePath: string) => {
+    const { getAppSettings } = require('./index.js')
+    const validation = validatePath(filePath, getAppSettings().authorizedDirs)
+    if (!validation.valid) return { success: false, error: validation.error }
     try {
       const content = await fs.readFile(filePath, 'utf-8')
       return { success: true, data: content }
@@ -903,6 +951,9 @@ export function registerIpcHandlers() {
   })
 
   ipcMain.handle('file:readBinary', async (_event, filePath: string) => {
+    const { getAppSettings } = require('./index.js')
+    const validation = validatePath(filePath, getAppSettings().authorizedDirs)
+    if (!validation.valid) return { success: false, error: validation.error }
     try {
       const buffer = await fs.readFile(filePath)
       return { success: true, data: buffer.toString('base64') }
@@ -913,6 +964,9 @@ export function registerIpcHandlers() {
   })
 
   ipcMain.handle('file:write', async (_event, filePath: string, content: string) => {
+    const { getAppSettings } = require('./index.js')
+    const validation = validatePath(filePath, getAppSettings().authorizedDirs)
+    if (!validation.valid) return { success: false, error: validation.error }
     try {
       await fs.writeFile(filePath, content, 'utf-8')
       return { success: true }
@@ -923,6 +977,9 @@ export function registerIpcHandlers() {
   })
 
   ipcMain.handle('file:list', async (_event, dirPath: string) => {
+    const { getAppSettings } = require('./index.js')
+    const validation = validatePath(dirPath, getAppSettings().authorizedDirs)
+    if (!validation.valid) return { success: false, error: validation.error }
     try {
       const entries = await fs.readdir(dirPath, { withFileTypes: true })
       const files = entries.map(entry => ({
@@ -938,6 +995,9 @@ export function registerIpcHandlers() {
   })
 
   ipcMain.handle('file:delete', async (_event, filePath: string) => {
+    const { getAppSettings } = require('./index.js')
+    const validation = validatePath(filePath, getAppSettings().authorizedDirs)
+    if (!validation.valid) return { success: false, error: validation.error }
     try {
       const stat = await fs.stat(filePath)
       if (stat.isDirectory()) {
@@ -953,6 +1013,9 @@ export function registerIpcHandlers() {
   })
 
   ipcMain.handle('file:stat', async (_event, filePath: string) => {
+    const { getAppSettings } = require('./index.js')
+    const validation = validatePath(filePath, getAppSettings().authorizedDirs)
+    if (!validation.valid) return { success: false, error: validation.error }
     try {
       const stat = await fs.stat(filePath)
       return {
@@ -972,6 +1035,9 @@ export function registerIpcHandlers() {
   })
 
   ipcMain.handle('file:mkdir', async (_event, dirPath: string) => {
+    const { getAppSettings } = require('./index.js')
+    const validation = validatePath(dirPath, getAppSettings().authorizedDirs)
+    if (!validation.valid) return { success: false, error: validation.error }
     try {
       await fs.mkdir(dirPath, { recursive: true })
       return { success: true }
@@ -982,10 +1048,19 @@ export function registerIpcHandlers() {
   })
 
   ipcMain.handle('file:exists', async (_event, filePath: string) => {
+    const { getAppSettings } = require('./index.js')
+    const validation = validatePath(filePath, getAppSettings().authorizedDirs)
+    if (!validation.valid) return { success: false, error: validation.error }
     return { success: true, data: existsSync(filePath) }
   })
 
   ipcMain.handle('file:rename', async (_event, oldPath: string, newPath: string) => {
+    const { getAppSettings } = require('./index.js')
+    const authDirs = getAppSettings().authorizedDirs
+    const v1 = validatePath(oldPath, authDirs)
+    if (!v1.valid) return { success: false, error: v1.error }
+    const v2 = validatePath(newPath, authDirs)
+    if (!v2.valid) return { success: false, error: v2.error }
     try {
       await fs.rename(oldPath, newPath)
       return { success: true }
@@ -996,6 +1071,12 @@ export function registerIpcHandlers() {
   })
 
   ipcMain.handle('file:copy', async (_event, srcPath: string, destPath: string) => {
+    const { getAppSettings } = require('./index.js')
+    const authDirs = getAppSettings().authorizedDirs
+    const v1 = validatePath(srcPath, authDirs)
+    if (!v1.valid) return { success: false, error: v1.error }
+    const v2 = validatePath(destPath, authDirs)
+    if (!v2.valid) return { success: false, error: v2.error }
     try {
       const srcStat = await fs.stat(srcPath)
       if (srcStat.isDirectory()) {
@@ -1023,6 +1104,9 @@ export function registerIpcHandlers() {
   const fileWatchers = new Map<string, fs.StatWatcher>()
 
   ipcMain.handle('file:watch', async (event, dirPath: string) => {
+    const { getAppSettings } = require('./index.js')
+    const validation = validatePath(dirPath, getAppSettings().authorizedDirs)
+    if (!validation.valid) return { success: false, error: validation.error }
     try {
       if (fileWatchers.has(dirPath)) {
         return { success: true, data: 'already watching' }
@@ -1042,6 +1126,9 @@ export function registerIpcHandlers() {
   })
 
   ipcMain.handle('file:unwatch', async (_event, dirPath: string) => {
+    const { getAppSettings } = require('./index.js')
+    const validation = validatePath(dirPath, getAppSettings().authorizedDirs)
+    if (!validation.valid) return { success: false, error: validation.error }
     try {
       const watcher = fileWatchers.get(dirPath)
       if (watcher) {
@@ -1141,7 +1228,11 @@ export function registerIpcHandlers() {
 
   ipcMain.handle('settings:set', (_event, key: string, value: unknown) => {
     const { setAppSetting } = require('./index.js')
-    const validKeys = ['theme', 'fontSize', 'animationsEnabled', 'notificationsEnabled', 'compactMode', 'favorites', 'privacy.optimizationPlan']
+    const validKeys = [
+      'theme', 'fontSize', 'animationsEnabled', 'notificationsEnabled', 'compactMode',
+      'favorites', 'authorizedDirs', 'hasCompletedOnboarding',
+      'workspace.limitAccess', 'workspace.autoSave', 'workspace.watch', 'workspace.heartbeat',
+    ]
     if (!validKeys.includes(key)) {
       return { success: false, error: `Invalid settings key: ${key}` }
     }
