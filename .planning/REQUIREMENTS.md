@@ -9,9 +9,9 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Build System
 
-- [ ] **BUILD-01**: OpenClaw 源码构建时自动编译（`dist/` 目录生成）
-- [ ] **BUILD-02**: Node.js 版本检查升级为 >= 22.12.0
-- [ ] **BUILD-03**: `file:unwatch` API 在 preload 中补充实现
+- [x] **BUILD-01**: OpenClaw 源码构建时自动编译（`dist/` 目录生成）
+- [x] **BUILD-02**: Node.js 版本检查升级为 >= 22.12.0
+- [x] **BUILD-03**: `file:unwatch` API 在 preload 中补充实现
 
 ### Onboarding
 
@@ -80,9 +80,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| BUILD-01 | Phase 1 | Pending |
-| BUILD-02 | Phase 1 | Pending |
-| BUILD-03 | Phase 1 | Pending |
+| BUILD-01 | Phase 1 | Complete |
+| BUILD-02 | Phase 1 | Complete |
+| BUILD-03 | Phase 1 | Complete |
 | ONBD-01 | Phase 2 | Pending |
 | ONBD-02 | Phase 2 | Pending |
 | ONBD-03 | Phase 2 | Pending |

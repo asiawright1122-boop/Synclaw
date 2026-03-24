@@ -1,3 +1,16 @@
+---
+gsd_state_version: 1.0
+milestone: v1.0
+milestone_name: milestone
+status: unknown
+last_updated: "2026-03-24T06:26:03.844Z"
+progress:
+  total_phases: 5
+  completed_phases: 1
+  total_plans: 1
+  completed_plans: 1
+---
+
 # STATE.md — SynClaw v1.0 MVP
 
 **Version:** v1.0
@@ -21,7 +34,7 @@ See: `.planning/PROJECT.md` (updated 2026-03-24)
 
 | Phase | Name | Plans | Summaries | Status |
 |-------|------|-------|-----------|--------|
-| 1 | 构建修复 | 0 | 0 | Context Ready |
+| 1 | 构建修复 | 1 | 0 | Planned |
 | 2 | 首次启动引导 | 0 | 0 | Planned |
 | 3 | 文件安全与权限 | 0 | 0 | Planned |
 | 4 | 技能市场 UI | 0 | 0 | Planned |
@@ -42,6 +55,6 @@ See: `.planning/PROJECT.md` (updated 2026-03-24)
 ## Notes
 
 - 子仓库 `web/` 独立管理，`.planning/` 文档不进入 web 提交
-- Git 已初始化，首次提交已创建
+- Git 已初始化
 - 项目为 brownfield，已有大量功能代码
 - Phase 1 发现：`openclaw-source/dist/` 和 `file:unwatch` 已存在，仅需修复 Node.js 版本检查
