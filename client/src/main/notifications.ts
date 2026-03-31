@@ -7,12 +7,9 @@
 
 import { Notification, BrowserWindow } from 'electron'
 import { getGatewayBridge } from './gateway-bridge.js'
+import logger from './logger.js'
 
-const log = {
-  info: (...args: unknown[]) => console.log(`[Notifications] ${new Date().toISOString()}`, ...args),
-  warn: (...args: unknown[]) => console.warn(`[Notifications] ${new Date().toISOString()}`, ...args),
-  error: (...args: unknown[]) => console.error(`[Notifications] ${new Date().toISOString()}`, ...args),
-}
+const log = logger.scope('notifications')
 
 export class NotificationManager {
   private enabled: boolean = true
@@ -58,6 +55,28 @@ export class NotificationManager {
             this.notify(
               '分身状态变更',
               `${data.name ?? '分身'}: ${data.status ?? '状态变化'}`,
+              'info'
+            )
+            break
+          }
+          case 'exec.approval.requested': {
+            const data = payload as { id?: string; command?: string; nodeId?: string }
+            // If a new exec approval arrives and window is not focused, notify the user
+            if (!this.mainWindow.isFocused()) {
+              const cmdPreview = (data.command ?? 'Shell command').slice(0, 60)
+              this.notify(
+                '命令执行审批',
+                `待执行: ${cmdPreview}${cmdPreview.length >= 60 ? '…' : ''}`,
+                'info'
+              )
+            }
+            break
+          }
+          case 'exec.approval.resolved': {
+            const data = payload as { id?: string; approved?: boolean }
+            this.notify(
+              '命令审批已处理',
+              data.approved ? '已批准执行' : '已拒绝',
               'info'
             )
             break

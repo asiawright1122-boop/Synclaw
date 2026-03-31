@@ -35,7 +35,7 @@ export interface SettingsState {
   addAuthorizedDir: (path: string) => void
   removeAuthorizedDir: (path: string) => void
 
-  // Workspace (synced to both Gateway and electron-store)
+  // Workspace — stored in electron-store only; Gateway reads from runtime config
   workspace: {
     limitAccess: boolean
     autoSave: boolean
@@ -46,13 +46,34 @@ export interface SettingsState {
   setWorkspaceAutoSave: (value: boolean) => void
   setWorkspaceWatch: (value: boolean) => void
   setWorkspaceHeartbeat: (value: '30m' | '1h' | '2h' | '4h') => void
-  syncWorkspaceFromGateway: () => Promise<void>
+
+  // TTS (Text-to-Speech) settings
+  tts: {
+    enabled: boolean
+    speed: number
+    volume: number
+    autoPlay: boolean
+    provider: string | null
+  }
+  setTtsEnabled: (enabled: boolean) => void
+  setTtsSpeed: (speed: number) => void
+  setTtsVolume: (volume: number) => void
+  setTtsAutoPlay: (autoPlay: boolean) => void
+  setTtsProvider: (provider: string | null) => void
+
+  // STT (Speech-to-Text) settings
+  stt: {
+    enabled: boolean
+    autoStart: boolean
+  }
+  setSttEnabled: (enabled: boolean) => void
+  setSttAutoStart: (autoStart: boolean) => void
 
   // Reset to defaults
   resetSettings: () => void
 
-  // Load initial state from electron-store
-  loadSettings: () => Promise<void>
+  // Load initial state from electron-store and subscribe to cross-window changes
+  loadSettings: () => Promise<() => void>
 }
 
 const defaultSettings = {
@@ -61,14 +82,25 @@ const defaultSettings = {
   animationsEnabled: true,
   notificationsEnabled: true,
   compactMode: false,
-  favorites: [],
+  favorites: [] as string[],
   hasCompletedOnboarding: false,
-  authorizedDirs: [],
+  authorizedDirs: [] as string[],
   workspace: {
     limitAccess: true,
     autoSave: true,
     watch: true,
     heartbeat: '2h' as const,
+  },
+  tts: {
+    enabled: false,
+    speed: 1.0,
+    volume: 1.0,
+    autoPlay: false,
+    provider: null,
+  },
+  stt: {
+    enabled: true,
+    autoStart: false,
   },
 }
 
@@ -78,7 +110,8 @@ export const useSettingsStore = create<SettingsState>((set) => ({
 
   loadSettings: async () => {
     try {
-      const res = await window.openclaw?.settings.get()
+      // electron-store is the single source of truth for UI settings
+      const res = await window.electronAPI?.settings.get()
       if (res?.success && res.data) {
         set({
           theme: res.data.theme,
@@ -93,47 +126,94 @@ export const useSettingsStore = create<SettingsState>((set) => ({
             limitAccess: res.data.workspace?.limitAccess ?? true,
             autoSave: res.data.workspace?.autoSave ?? true,
             watch: res.data.workspace?.watch ?? true,
-            heartbeat: (['30m', '1h', '2h', '4h'].includes(res.data.workspace?.heartbeat) ? res.data.workspace?.heartbeat : '2h') as '30m' | '1h' | '2h' | '4h',
+            heartbeat: (['30m', '1h', '2h', '4h'].includes(res.data.workspace?.heartbeat)
+              ? res.data.workspace?.heartbeat : '2h') as '30m' | '1h' | '2h' | '4h',
+          },
+          tts: {
+            enabled: res.data.tts?.enabled ?? false,
+            speed: typeof res.data.tts?.speed === 'number' ? res.data.tts.speed : 1.0,
+            volume: typeof res.data.tts?.volume === 'number' ? res.data.tts.volume : 1.0,
+            autoPlay: res.data.tts?.autoPlay ?? false,
+            provider: res.data.tts?.provider ?? null,
+          },
+          stt: {
+            enabled: res.data.stt?.enabled ?? true,
+            autoStart: res.data.stt?.autoStart ?? false,
           },
         })
       }
     } catch {
       // electron-store unavailable — keep renderer defaults
     }
+
+    // Listen for cross-window electron-store changes (broadcast from main process)
+    const unsubscribe = window.electronAPI?.settings.onChanged?.(({ settings: s }) => {
+      set({
+        theme: s.theme,
+        fontSize: s.fontSize,
+        animationsEnabled: s.animationsEnabled,
+        notificationsEnabled: s.notificationsEnabled,
+        compactMode: s.compactMode,
+        favorites: Array.isArray(s.favorites) ? s.favorites : [],
+        hasCompletedOnboarding: s.hasCompletedOnboarding ?? false,
+        authorizedDirs: Array.isArray(s.authorizedDirs) ? s.authorizedDirs : [],
+        workspace: {
+          limitAccess: s.workspace?.limitAccess ?? true,
+          autoSave: s.workspace?.autoSave ?? true,
+          watch: s.workspace?.watch ?? true,
+          heartbeat: (['30m', '1h', '2h', '4h'].includes(s.workspace?.heartbeat)
+            ? s.workspace?.heartbeat : '2h') as '30m' | '1h' | '2h' | '4h',
+        },
+        tts: {
+          enabled: s.tts?.enabled ?? false,
+          speed: typeof s.tts?.speed === 'number' ? s.tts.speed : 1.0,
+          volume: typeof s.tts?.volume === 'number' ? s.tts.volume : 1.0,
+          autoPlay: s.tts?.autoPlay ?? false,
+          provider: s.tts?.provider ?? null,
+        },
+        stt: {
+          enabled: s.stt?.enabled ?? true,
+          autoStart: s.stt?.autoStart ?? false,
+        },
+      })
+    })
+    return () => { unsubscribe?.() }
   },
+
+  // ── Persist to electron-store only (single source of truth) ──────────────
 
   setTheme: async (theme) => {
     set({ theme })
-    await window.openclaw?.settings.set('theme', theme)
+    await window.electronAPI?.settings.set('theme', theme)
   },
 
   setFontSize: async (fontSize) => {
     set({ fontSize })
-    await window.openclaw?.settings.set('fontSize', fontSize)
+    await window.electronAPI?.settings.set('fontSize', fontSize)
   },
 
   setAnimationsEnabled: async (animationsEnabled) => {
     set({ animationsEnabled })
-    await window.openclaw?.settings.set('animationsEnabled', animationsEnabled)
+    await window.electronAPI?.settings.set('animationsEnabled', animationsEnabled)
   },
 
   setNotificationsEnabled: async (notificationsEnabled) => {
     set({ notificationsEnabled })
-    await window.openclaw?.settings.set('notificationsEnabled', notificationsEnabled)
-    // Notify main process immediately
+    await window.electronAPI?.settings.set('notificationsEnabled', notificationsEnabled)
+    // Notify main process immediately for system-level notifications
     await window.electronAPI?.notifications?.setEnabled?.(notificationsEnabled)
   },
 
   setCompactMode: async (compactMode) => {
     set({ compactMode })
-    await window.openclaw?.settings.set('compactMode', compactMode)
+    await window.electronAPI?.settings.set('compactMode', compactMode)
   },
 
   addFavorite: async (path) => {
     set(s => {
       if (s.favorites.includes(path)) return s
       const next = [...s.favorites, path]
-      window.openclaw?.settings.set('favorites', next)
+      window.electronAPI?.settings.set('favorites', next)
       return { favorites: next }
     })
   },
@@ -141,21 +221,21 @@ export const useSettingsStore = create<SettingsState>((set) => ({
   removeFavorite: async (path) => {
     set(s => {
       const next = s.favorites.filter(p => p !== path)
-      window.openclaw?.settings.set('favorites', next)
+      window.electronAPI?.settings.set('favorites', next)
       return { favorites: next }
     })
   },
 
   setHasCompletedOnboarding: async (value) => {
     set({ hasCompletedOnboarding: value })
-    await window.openclaw?.settings.set('hasCompletedOnboarding', value)
+    await window.electronAPI?.settings.set('hasCompletedOnboarding', value)
   },
 
   addAuthorizedDir: async (path) => {
     set(s => {
       if (s.authorizedDirs.includes(path)) return s
       const next = [...s.authorizedDirs, path]
-      window.openclaw?.settings.set('authorizedDirs', next)
+      window.electronAPI?.settings.set('authorizedDirs', next)
       return { authorizedDirs: next }
     })
   },
@@ -163,59 +243,77 @@ export const useSettingsStore = create<SettingsState>((set) => ({
   removeAuthorizedDir: async (path) => {
     set(s => {
       const next = s.authorizedDirs.filter(p => p !== path)
-      window.openclaw?.settings.set('authorizedDirs', next)
+      window.electronAPI?.settings.set('authorizedDirs', next)
       return { authorizedDirs: next }
     })
   },
 
+  // Workspace settings — persisted to electron-store only
+  // Gateway receives these as runtime config via openclaw.config.patch() during app init
   setWorkspaceLimitAccess: async (value) => {
     set(s => ({ workspace: { ...s.workspace, limitAccess: value } }))
-    await window.openclaw?.settings.set('workspace.limitAccess', value)
-    if (window.openclaw) window.openclaw.config.patch({ limitAccess: value }).catch(() => {})
+    await window.electronAPI?.settings.set('workspace.limitAccess', value)
   },
 
   setWorkspaceAutoSave: async (value) => {
     set(s => ({ workspace: { ...s.workspace, autoSave: value } }))
-    await window.openclaw?.settings.set('workspace.autoSave', value)
-    if (window.openclaw) window.openclaw.config.patch({ autoSave: value }).catch(() => {})
+    await window.electronAPI?.settings.set('workspace.autoSave', value)
   },
 
   setWorkspaceWatch: async (value) => {
     set(s => ({ workspace: { ...s.workspace, watch: value } }))
-    await window.openclaw?.settings.set('workspace.watch', value)
-    if (window.openclaw) window.openclaw.config.patch({ watch: value }).catch(() => {})
+    await window.electronAPI?.settings.set('workspace.watch', value)
   },
 
   setWorkspaceHeartbeat: async (value) => {
     set(s => ({ workspace: { ...s.workspace, heartbeat: value } }))
-    await window.openclaw?.settings.set('workspace.heartbeat', value)
-    if (window.openclaw) window.openclaw.config.patch({ heartbeat: value }).catch(() => {})
+    await window.electronAPI?.settings.set('workspace.heartbeat', value)
   },
 
-  // Sync workspace config from Gateway to local electron-store (one-time on mount)
-  syncWorkspaceFromGateway: async () => {
-    if (!window.openclaw) return
-    try {
-      const res = await window.openclaw.config.get()
-      if (res?.success && res.data) {
-        const cfg = res.data as Record<string, unknown>
-        const patches: Array<{ key: string; value: unknown }> = []
-        if (typeof cfg.limitAccess === 'boolean') patches.push({ key: 'workspace.limitAccess', value: cfg.limitAccess })
-        if (typeof cfg.autoSave === 'boolean') patches.push({ key: 'workspace.autoSave', value: cfg.autoSave })
-        if (typeof cfg.watch === 'boolean') patches.push({ key: 'workspace.watch', value: cfg.watch })
-        if (['30m', '1h', '2h', '4h'].includes(cfg.heartbeat as string)) {
-          patches.push({ key: 'workspace.heartbeat', value: cfg.heartbeat })
-        }
-        for (const { key, value } of patches) {
-          await window.openclaw.settings.set(key, value)
-        }
-      }
-    } catch {}
+  // ── TTS Settings ──────────────────────────────────────────────────────────
+
+  setTtsEnabled: async (enabled) => {
+    set(s => ({ tts: { ...s.tts, enabled } }))
+    await window.electronAPI?.settings.set('tts.enabled', enabled)
+  },
+
+  setTtsSpeed: async (speed) => {
+    const clamped = Math.min(2, Math.max(0.5, speed))
+    set(s => ({ tts: { ...s.tts, speed: clamped } }))
+    await window.electronAPI?.settings.set('tts.speed', clamped)
+  },
+
+  setTtsVolume: async (volume) => {
+    const clamped = Math.min(1, Math.max(0, volume))
+    set(s => ({ tts: { ...s.tts, volume: clamped } }))
+    await window.electronAPI?.settings.set('tts.volume', clamped)
+  },
+
+  setTtsAutoPlay: async (autoPlay) => {
+    set(s => ({ tts: { ...s.tts, autoPlay } }))
+    await window.electronAPI?.settings.set('tts.autoPlay', autoPlay)
+  },
+
+  setTtsProvider: async (provider) => {
+    set(s => ({ tts: { ...s.tts, provider } }))
+    await window.electronAPI?.settings.set('tts.provider', provider)
+  },
+
+  // ── STT Settings ───────────────────────────────────────────────────────────
+
+  setSttEnabled: async (enabled) => {
+    set(s => ({ stt: { ...s.stt, enabled } }))
+    await window.electronAPI?.settings.set('stt.enabled', enabled)
+  },
+
+  setSttAutoStart: async (autoStart) => {
+    set(s => ({ stt: { ...s.stt, autoStart } }))
+    await window.electronAPI?.settings.set('stt.autoStart', autoStart)
   },
 
   resetSettings: async () => {
     try {
-      const res = await window.openclaw?.settings.reset()
+      const res = await window.electronAPI?.settings.reset()
       if (res?.success && res.data) {
         set({
           theme: res.data.theme,
@@ -230,7 +328,19 @@ export const useSettingsStore = create<SettingsState>((set) => ({
             limitAccess: res.data.workspace?.limitAccess ?? true,
             autoSave: res.data.workspace?.autoSave ?? true,
             watch: res.data.workspace?.watch ?? true,
-            heartbeat: (['30m', '1h', '2h', '4h'].includes(res.data.workspace?.heartbeat) ? res.data.workspace?.heartbeat : '2h') as '30m' | '1h' | '2h' | '4h',
+            heartbeat: (['30m', '1h', '2h', '4h'].includes(res.data.workspace?.heartbeat)
+              ? res.data.workspace?.heartbeat : '2h') as '30m' | '1h' | '2h' | '4h',
+          },
+          tts: {
+            enabled: res.data.tts?.enabled ?? false,
+            speed: typeof res.data.tts?.speed === 'number' ? res.data.tts.speed : 1.0,
+            volume: typeof res.data.tts?.volume === 'number' ? res.data.tts.volume : 1.0,
+            autoPlay: res.data.tts?.autoPlay ?? false,
+            provider: res.data.tts?.provider ?? null,
+          },
+          stt: {
+            enabled: res.data.stt?.enabled ?? true,
+            autoStart: res.data.stt?.autoStart ?? false,
           },
         })
       }

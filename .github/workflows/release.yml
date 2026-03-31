@@ -8,45 +8,134 @@ on:
 permissions:
   contents: write
 
+env:
+  NODE_VERSION: "22"
+
 jobs:
-  release:
+  # ── Build all platforms in parallel ────────────────────────────────────────
+  build:
+    name: Build ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-latest, windows-latest, ubuntu-latest]
+        include:
+          - os: macos-latest
+            platform: darwin
+            arch: arm64
+          - os: windows-latest
+            platform: win32
+            arch: x64
+          - os: ubuntu-latest
+            platform: linux
+            arch: x64
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: ${{ env.NODE_VERSION }}
           cache: 'pnpm'
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+        working-directory: client
+
+      - name: Download OpenClaw source
+        run: node scripts/download-openclaw.mjs
+        working-directory: client
 
       - name: Build main process
         run: node scripts/build-main.mjs
+        working-directory: client
 
       - name: Build renderer
         run: pnpm run build
+        working-directory: client
 
-      - name: Build macOS
-        if: matrix.os == 'macos-latest'
-        run: pnpm exec electron-builder --mac --publish always
+      - name: Build ${{ matrix.platform }} (${{ matrix.arch }})
+        run: pnpm exec electron-builder --${{ matrix.platform }} --${{ matrix.arch }} --publish never
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+        working-directory: client
 
-      - name: Build Windows
-        if: matrix.os == 'windows-latest'
-        run: pnpm exec electron-builder --win --publish always
+      - name: Notarize macOS build
+        if: matrix.platform == 'darwin'
+        run: |
+          APP_PATH=$(find client/release -name "*.app" -type d | head -1)
+          ZIP_PATH=$(find client/release -name "*.zip" -type f | head -1)
+          echo "App: $APP_PATH"
+          echo "Zip: $ZIP_PATH"
+          node client/scripts/notarize.mjs --app "$APP_PATH" --zip "$ZIP_PATH"
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
 
-      - name: Build Linux
-        if: matrix.os == 'ubuntu-latest'
-        run: pnpm exec electron-builder --linux --publish always
-
-      - name: Upload artifacts
+      - name: Upload ${{ matrix.platform }} artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.os }}-artifacts
-          path: release/**
-          retention-days: 30
+          name: ${{ matrix.platform }}-${{ matrix.arch }}-artifacts
+          path: |
+            client/release/**/*.dmg
+            client/release/**/*.exe
+            client/release/**/*.AppImage
+            client/release/**/*.deb
+            client/release/**/*.zip
+            client/release/**/*.blockmap
+          retention-days: 7
+
+  # ── Create GitHub Release (runs after all builds succeed) ───────────────────
+  create-release:
+    name: Create GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download macOS artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: darwin-arm64-artifacts
+          path: artifacts/darwin-arm64
+
+      - name: Download Windows artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: win32-x64-artifacts
+          path: artifacts/win32-x64
+
+      - name: Download Linux artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: linux-x64-artifacts
+          path: artifacts/linux-x64
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          body: |
+            ## SynClaw v${{ github.ref_name }}
+
+            **AI Agent Desktop Client** — 安全地操作用户本地文件系统，数据永不离开设备。
+
+            ### Downloads
+
+            Downloads are attached below as release assets:
+            - **macOS**: `.dmg` (Apple Silicon)
+            - **Windows**: `.exe` installer
+            - **Linux**: `.AppImage`
+
+            ### What's New
+            See [CHANGELOG.md](./CHANGELOG.md) for full release notes.
+          draft: true
+          prerelease: ${{ contains(github.ref_name, 'beta') || contains(github.ref_name, 'alpha') }}
+          generate_release_notes: true
+          files: |
+            artifacts/darwin-arm64/*
+            artifacts/win32-x64/*
+            artifacts/linux-x64/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -129,6 +129,62 @@ synclaw/
 
 ---
 
+## macOS 分发与公证签名
+
+SynClaw 使用 Apple Notarization 确保在 macOS Gatekeeper 下零警告运行。
+
+### 前置要求
+
+- 付费 Apple Developer 账号（[developer.apple.com](https://developer.apple.com)）
+- 应用专用密码（[appleid.apple.com](https://appleid.apple.com) → 安全 → 应用专用密码）
+
+### 配置步骤
+
+**1. 导出代码签名证书（.p12）**
+
+```bash
+# 从钥匙串导出为 p12 格式
+security export -k login.keychain -t identities -P "your-cert-password" -o synclaw-cert.p12
+# 转为 base64 供 CI 使用
+base64 -i synclaw-cert.p12 | pbcopy
+```
+
+**2. 配置 GitHub Secrets**
+
+在仓库 `Settings → Secrets and variables → Actions` 中添加：
+
+| Secret 名称 | 说明 |
+|-------------|------|
+| `APPLE_ID` | Apple Developer 账号邮箱 |
+| `APPLE_TEAM_ID` | 团队 ID（Membership 页面可见） |
+| `APPLE_APP_SPECIFIC_PASSWORD` | 应用专用密码 |
+| `CSC_LINK` | 证书 base64 或路径 |
+| `CSC_KEY_PASSWORD` | 证书导出密码 |
+
+**3. 本地公证（可选）**
+
+```bash
+cd client
+export APPLE_ID=your@email.com
+export APPLE_APP_SPECIFIC_PASSWORD=xxxx-xxxx-xxxx-xxxx
+export APPLE_TEAM_ID=ABC123DEF4
+node scripts/notarize.mjs --app release/latest-mac/SynClaw.app
+```
+
+**4. 验证公证结果**
+
+```bash
+# 验证 ticket 有效
+xcrun stapler validate SynClaw.app
+# 结果应为：The ticket is valid
+
+# Gatekeeper 检查
+spctl -a -t exec -vv SynClaw.app
+# 结果应为：source=Developer ID
+```
+
+---
+
 ## License
 
 MIT

@@ -56,19 +56,6 @@ interface AppState {
   files: FileItem[]
   setFiles: (files: FileItem[]) => void
 
-  // Tasks
-  selectedTask: {
-    id: string
-    title: string
-    description: string
-    status: 'pending' | 'planning' | 'in_progress' | 'ai_review' | 'human_review' | 'completed'
-    progress: number
-    subtasks: { id: string; title: string; completed: boolean }[]
-    logs: string[]
-    createdAt: number
-    updatedAt: number
-  } | null
-  setSelectedTask: (task: AppState['selectedTask']) => void
 
   // Loading states
   isLoading: boolean
@@ -113,7 +100,7 @@ export const useAppStore = create<AppState>((set) => ({
   setSettingsSection: (section) => set({ settingsSection: section }),
 
   // Model
-  currentModel: 'GLM-4-Turbo',
+  currentModel: '',
   setCurrentModel: (model) => set({ currentModel: model }),
 
   // Files
@@ -122,9 +109,6 @@ export const useAppStore = create<AppState>((set) => ({
   files: [],
   setFiles: (files) => set({ files }),
 
-  // Selected task
-  selectedTask: null,
-  setSelectedTask: (task) => set({ selectedTask: task }),
 
   // Loading
   isLoading: false,

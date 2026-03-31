@@ -7,7 +7,7 @@
 
 **Core Value:** 用户可以通过自然语言对话，安全地操作用户本地文件系统，且数据永不离开用户设备。
 
-**Current milestone:** v1.0 MVP — 构建修复、首次引导、文件安全、技能市场、打包发布
+**Current milestone:** v1.1 全面优化与安全加固 — Phase 0 安全加固、Phase 1 Workspace 统一、Phase 2 OpenClaw 能力对接、Phase 3 代码质量提升、Phase 4 打包发布
 
 **Key decisions:**
 - Electron + OpenClaw Gateway 架构（不做 Go 后端）
@@ -32,7 +32,8 @@
 
 **Directory structure:**
 - `client/` — Electron 客户端源码
-- `client/src/main/` — Electron 主进程（index.ts, openclaw.ts, gateway-bridge.ts, ipc-handlers.ts, tray.ts, notifications.ts, updater.ts）
+- `client/src/main/` — Electron 主进程（index.ts, openclaw.ts, gateway-bridge.ts, logger.ts, app-settings.ts, ipc-handlers/, tray.ts, notifications.ts, updater.ts）
+- `client/src/main/ipc-handlers/` — IPC handler 模块化拆分（gateway.ts, file.ts, shell.ts, app.ts, clawhub.ts, path-validation.ts）
 - `client/src/preload/` — Preload 脚本（contextBridge API）
 - `client/src/renderer/` — React 渲染进程（components/, stores/, hooks/, lib/）
 - `openclaw-source/` — OpenClaw 源码（下载到 `client/resources/openclaw-source/`）
@@ -84,12 +85,18 @@
 - `settings:*` — 设置持久化
 - `config:*` — Gateway 配置
 
-**已知缺口（需修复）：**
-- OpenClaw `dist/` 目录缺失（需构建时编译）
-- `file:unwatch` API 在 preload 缺失
-- 首次启动引导未实现
-- 授权目录白名单未实现
-- 技能市场 UI 仅骨架
+**已知缺口（已修复 / 待后续）：**
+- ✅ OpenClaw ≥ 2026.3.28 版本锁定（已升级至 npm latest）
+- ✅ IPC handlers 巨石文件（已拆分为 gateway.ts/file.ts/shell.ts/app.ts/clawhub.ts，已修复）
+- ✅ Gateway token 认证（从配置文件读取真实 token，已修复）
+- ✅ settingsStore 双写混乱（统一走 electron-store，已修复）
+- ✅ taskStore event 类型（已完整覆盖 task:* 事件，已修复）
+- ✅ 统一日志系统（引入 electron-log，已修复）
+- ✅ TypeScript 类型（零 tsc 错误，已修复）
+- ✅ Sandbox 对接（Gateway 连接后自动通过 config.patch 应用安全加固配置，已修复）
+- ✅ Control UI 入口（GatewayPanel 添加"控制面板"按钮，已修复）
+- ✅ SettingsView 巨石拆分（3215行 → 195行主壳 + 13个独立面板组件，已修复）
+- ✅ limitAccess 配置传播（Gateway 连接后实时重推沙箱配置，用户切换后生效，已修复）
 <!-- gsd-architecture-end -->
 
 <!-- gsd-workflow-start source:GSD defaults -->

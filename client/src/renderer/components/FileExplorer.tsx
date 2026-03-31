@@ -1,8 +1,11 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { motion } from 'framer-motion'
-import { FolderOpen, File, ChevronRight, Home, RefreshCw, ChevronLeft, LayoutGrid, List, Star, Clock, Trash2, Edit2, Copy, FolderInput, FolderPlus, FilePlus } from 'lucide-react'
+import { FolderOpen, File, ChevronRight, Home, RefreshCw, ChevronLeft, LayoutGrid, List, Star, Clock, Trash2, Edit2, Copy, FolderInput, FolderPlus, FilePlus, ShieldAlert } from 'lucide-react'
 import { useAppStore } from '../stores/appStore'
 import { useSettingsStore } from '../stores/settingsStore'
+// 原始 store 引用（用于在 useCallback 内实时读取 limitAccess / authorizedDirs）
+import { useSettingsStore as rawSettingsStore } from '../stores/settingsStore'
+import { useToast } from './Toast'
 import { t } from '../i18n'
 
 interface FileItem {
@@ -21,6 +24,7 @@ interface ContextMenuState {
 export function FileExplorer() {
   const { currentPath, setCurrentPath, files, setFiles } = useAppStore()
   const { favorites, addFavorite, removeFavorite } = useSettingsStore()
+  const toast = useToast()
   const [loading, setLoading] = useState(false)
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list')
   const [pathHistory, setPathHistory] = useState<string[]>([])
@@ -38,19 +42,40 @@ export function FileExplorer() {
   const [newItemType, setNewItemType] = useState<'file' | 'folder' | null>(null)
   const [newItemName, setNewItemName] = useState('')
   const [creating, setCreating] = useState(false)
+  // 标记是否已成功导航到某目录（区分「未导航」与「目录为空」）
+  const [hasNavigated, setHasNavigated] = useState(false)
   const newItemInputRef = useRef<HTMLInputElement>(null)
   const renameInputRef = useRef<HTMLInputElement>(null)
   const contextMenuRef = useRef<HTMLDivElement>(null)
 
+  // ── Authorization check ────────────────────────────────────────────────
+  const validatePath = useCallback((targetPath: string): boolean => {
+    const { workspace, authorizedDirs } = rawSettingsStore.getState()
+    if (!workspace.limitAccess) return true
+    if (!authorizedDirs.length) return false
+    return authorizedDirs.some(dir => targetPath.startsWith(dir + '/') || targetPath === dir)
+  }, [])
+
   // ── Load directory ───────────────────────────────────────────────────────
   const loadDirectory = useCallback(async (dirPath: string) => {
+    const { workspace, authorizedDirs } = rawSettingsStore.getState()
+    if (workspace.limitAccess && !authorizedDirs.length) {
+      toast.warning('请先在设置中添加授权目录，AI 才能操作文件', 5000)
+      setLoading(false)
+      return
+    }
+    if (!validatePath(dirPath)) {
+      toast.error(`权限不足：${dirPath} 不在授权目录范围内`, 5000)
+      setLoading(false)
+      return
+    }
     setLoading(true)
     setPreviewContent(null)
     setPreviewFile(null)
     try {
       if (window.electronAPI?.file) {
         const result = await window.electronAPI.file.list(dirPath)
-        if (result.success && result.data) {
+        if (result?.success && result.data) {
           const sorted = [...result.data].sort((a, b) => {
             if (a.isDirectory && !b.isDirectory) return -1
             if (!a.isDirectory && b.isDirectory) return 1
@@ -58,24 +83,23 @@ export function FileExplorer() {
           })
           setFiles(sorted)
           setCurrentPath(dirPath)
+          setHasNavigated(true)
           setPathHistory(prev => [...prev, dirPath])
+        } else if (result?.success && !result.data) {
+          setFiles([])
+          setCurrentPath(dirPath)
+        } else if (result?.error) {
+          toast.error(result.error, 4000)
+          setLoading(false)
+          return
         }
       } else {
-        setFiles([
-          { name: 'Documents', path: dirPath + '/Documents', isDirectory: true },
-          { name: 'Downloads', path: dirPath + '/Downloads', isDirectory: true },
-          { name: 'Desktop', path: dirPath + '/Desktop', isDirectory: true },
-          { name: 'Projects', path: dirPath + '/Projects', isDirectory: true },
-          { name: 'readme.txt', path: dirPath + '/readme.txt', isDirectory: false },
-          { name: 'notes.md', path: dirPath + '/notes.md', isDirectory: false }
-        ])
-        setCurrentPath(dirPath)
-        setPathHistory(prev => [...prev, dirPath])
+        setLoading(false)
       }
-    } finally {
+    } catch {
       setLoading(false)
     }
-  }, [setFiles, setCurrentPath])
+  }, [setFiles, setCurrentPath, validatePath, toast])
 
   // ── Preview file ─────────────────────────────────────────────────────────
   const previewFileContent = useCallback(async (item: FileItem) => {
@@ -122,9 +146,8 @@ export function FileExplorer() {
     if (window.electronAPI?.app) {
       const home = await window.electronAPI.app.getPath('home')
       loadDirectory(home)
-    } else {
-      loadDirectory('/Users/kaka')
     }
+    // Electron 环境必须通过 API 获取主目录，不存在 fallback
   }
 
   const handleRefresh = () => {
@@ -534,21 +557,29 @@ export function FileExplorer() {
               <span className="truncate">{path.split('/').pop()}</span>
             </motion.button>
           ))}
-          {/* Fixed shortcuts */}
-          {[
-            { icon: Clock, label: '主目录', path: '/Users/kaka' },
-            { icon: Trash2, label: '回收站', path: '/Users/kaka/.Trash' }
-          ].map((item) => (
-            <motion.button
-              key={item.label}
-              onClick={() => loadDirectory(item.path)}
-              className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition-colors text-sm"
-              whileHover={{ x: 2 }}
-            >
-              <item.icon className="w-4 h-4 shrink-0" />
-              <span className="truncate">{item.label}</span>
-            </motion.button>
-          ))}
+          {/* Fixed shortcuts — 由 Electron API 动态获取，不硬编码 */}
+          <motion.button
+            onClick={async () => {
+              const home = await window.electronAPI?.app?.getPath('home')
+              if (home) loadDirectory(home)
+            }}
+            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition-colors text-sm"
+            whileHover={{ x: 2 }}
+          >
+            <Clock className="w-4 h-4 shrink-0" />
+            <span className="truncate">主目录</span>
+          </motion.button>
+          <motion.button
+            onClick={async () => {
+              const trash = await window.electronAPI?.app?.getPath('trash')
+              if (trash) loadDirectory(trash)
+            }}
+            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition-colors text-sm"
+            whileHover={{ x: 2 }}
+          >
+            <Trash2 className="w-4 h-4 shrink-0" />
+            <span className="truncate">回收站</span>
+          </motion.button>
           {favorites.length === 0 && (
             <p className="text-[10px] text-slate-600 px-3 mt-1">右键文件即可收藏</p>
           )}
@@ -595,6 +626,23 @@ export function FileExplorer() {
                 </form>
               )}
               {files.map((item, index) => renderItem(item, index))}
+              {/* 无授权目录警告横幅（区分「目录为空」与「未配置授权目录」） */}
+              {hasNavigated && files.length === 0 && (
+                <div
+                  className="mt-4 mx-2 px-4 py-3 rounded-xl border flex items-start gap-3"
+                  style={{ background: 'rgba(252,93,30,0.08)', borderColor: 'rgba(252,93,30,0.25)' }}
+                >
+                  <ShieldAlert className="w-4 h-4 shrink-0 mt-0.5" style={{ color: 'var(--accent1)' }} />
+                  <div>
+                    <p className="text-xs font-medium" style={{ color: 'var(--accent1)' }}>
+                      当前目录为空或未配置授权目录
+                    </p>
+                    <p className="text-xs mt-0.5" style={{ color: 'var(--text-sec)' }}>
+                      如需 AI 操作文件，请在「设置 → 文件安全」中添加授权目录
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
           ) : (
             <div className="grid grid-cols-4 xl:grid-cols-6 gap-4">
@@ -620,6 +668,23 @@ export function FileExplorer() {
                 </form>
               )}
               {files.map((item, index) => renderItem(item, index))}
+              {/* 无授权目录警告横幅 */}
+              {hasNavigated && files.length === 0 && (
+                <div
+                  className="col-span-full mt-4 mx-2 px-4 py-3 rounded-xl border flex items-start gap-3"
+                  style={{ background: 'rgba(252,93,30,0.08)', borderColor: 'rgba(252,93,30,0.25)' }}
+                >
+                  <ShieldAlert className="w-4 h-4 shrink-0 mt-0.5" style={{ color: 'var(--accent1)' }} />
+                  <div>
+                    <p className="text-xs font-medium" style={{ color: 'var(--accent1)' }}>
+                      当前目录为空或未配置授权目录
+                    </p>
+                    <p className="text-xs mt-0.5" style={{ color: 'var(--text-sec)' }}>
+                      如需 AI 操作文件，请在「设置 → 文件安全」中添加授权目录
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>

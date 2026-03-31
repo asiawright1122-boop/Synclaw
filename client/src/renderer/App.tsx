@@ -14,23 +14,25 @@ import { GlobalSearch } from './components/GlobalSearch'
 import { ContextMenu, useContextMenu } from './components/ContextMenu'
 import { ToastContainer } from './components/Toast'
 import { OnboardingView } from './components/OnboardingView'
+import { ExecApprovalModal } from './components/ExecApprovalModal'
 import { X } from 'lucide-react'
 
 function App() {
   const { settingsModalOpen, setSettingsModalOpen, setSettingsSection } = useAppStore()
-  const { theme, hasCompletedOnboarding, loadSettings } = useSettingsStore()
+  const { theme, hasCompletedOnboarding, setHasCompletedOnboarding, loadSettings } = useSettingsStore()
   const { menu, showMenuAt, closeMenu } = useContextMenu()
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false)
   const [globalSearchOpen, setGlobalSearchOpen] = useState(false)
   const [settingsLoaded, setSettingsLoaded] = useState(false)
 
-  // Load persisted settings from electron-store on mount
+  // Load persisted settings from electron-store on mount; subscribe to cross-window changes
   useEffect(() => {
-    const load = async () => {
-      await loadSettings()
+    let cleanup: (() => void) | undefined
+    loadSettings().then(fn => {
+      cleanup = fn
       setSettingsLoaded(true)
-    }
-    load()
+    })
+    return () => { cleanup?.() }
   }, [loadSettings])
 
   // Listen for navigation events from main process
@@ -72,10 +74,10 @@ function App() {
     setCommandPaletteOpen(false)
   }, [setSettingsSection, setSettingsModalOpen])
 
-  // 引导完成后重新加载并显示主界面
+  // 引导完成后设置标记，主界面已预先渲染（隐藏在 overlay 下）
   const handleOnboardingComplete = useCallback(() => {
-    window.location.reload()
-  }, [])
+    setHasCompletedOnboarding(true)
+  }, [setHasCompletedOnboarding])
 
   // Apply theme on mount and when theme changes
   useEffect(() => {
@@ -206,6 +208,9 @@ function App() {
 
       {/* Toast Notifications */}
       <ToastContainer />
+
+      {/* Exec Approval Modal */}
+      <ExecApprovalModal />
     </div>
     </>
   )

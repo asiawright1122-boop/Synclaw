@@ -4,29 +4,14 @@
  */
 
 // ── Types ──────────────────────────────────────────────────────────────────
+import {
+  Subscription,
+  SubscriptionPlan,
+  SubscriptionStatus,
+  CreditsTransaction,
+} from '../types/subscription'
 
-export type SubscriptionPlan = 'FREE' | 'STARTER' | 'PRO' | 'TEAM' | 'BYOK'
-export type SubscriptionStatus = 'ACTIVE' | 'PAST_DUE' | 'CANCELED' | 'INCOMPLETE' | 'INCOMPLETE_EXPIRED' | 'TRIALING' | 'UNPAID'
-
-export interface Subscription {
-  id: string
-  plan: SubscriptionPlan
-  status: SubscriptionStatus
-  stripeCurrentPeriodEnd: string | null
-  stripePriceId: string | null
-  creditsBalance: number
-  creditsExpireAt: string | null
-  createdAt: string
-  updatedAt: string
-}
-
-export interface CreditsTransaction {
-  id: string
-  amount: number
-  type: 'PURCHASE' | 'CONSUMPTION' | 'REFERRAL' | 'PROMO' | 'REFUND' | 'SUBSCRIPTION_BONUS'
-  description: string
-  createdAt: string
-}
+export type { Subscription, SubscriptionPlan, SubscriptionStatus, CreditsTransaction }
 
 export interface UsageStats {
   period: 'daily' | 'weekly' | 'monthly' | 'yearly'
@@ -87,10 +72,10 @@ export async function cancelSubscription(reason?: string): Promise<ApiResponse<S
   })
 }
 
-export async function createSubscriptionCheckout(priceId: string): Promise<ApiResponse<{ url: string }>> {
+export async function createSubscriptionCheckout(plan: 'PRO_MONTHLY' | 'PRO_YEARLY' | 'TEAM_MONTHLY' | 'TEAM_YEARLY'): Promise<ApiResponse<{ url: string }>> {
   return apiRequest<{ url: string }>('/subscription/checkout', {
     method: 'POST',
-    body: JSON.stringify({ priceId }),
+    body: JSON.stringify({ plan }),
   })
 }
 

@@ -1,5 +1,11 @@
 /* SynClaw — AutoClaw Ember Light Theme (data-skin="ember", data-theme="light") */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+/*
+ * Fonts are loaded via @fontsource packages (bundled, no external requests):
+ *   @fontsource/inter  — UI font
+ *   @fontsource/jetbrains-mono — monospace font
+ * Import them in the renderer entry point (renderer/index.tsx) instead of this CSS.
+ */
 
 @tailwind base;
 @tailwind components;

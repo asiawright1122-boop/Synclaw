@@ -10,13 +10,10 @@ import * as path from 'path'
 import * as fs from 'fs'
 import { fileURLToPath } from 'url'
 import { getGatewayBridge, type GatewayStatus } from './gateway-bridge.js'
+import logger from './logger.js'
 
 const currentDirPath = path.dirname(fileURLToPath(import.meta.url))
-
-const log = {
-  info: (...args: unknown[]) => console.log(`[Tray] ${new Date().toISOString()}`, ...args),
-  warn: (...args: unknown[]) => console.warn(`[Tray] ${new Date().toISOString()}`, ...args),
-}
+const log = logger.scope('tray')
 
 let tray: Tray | null = null
 let mainWindowRef: BrowserWindow | null = null

@@ -5,6 +5,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import { useAppStore } from '../stores/appStore'
+import { useTaskStore } from '../stores/taskStore'
 import { ChevronUp, ChevronDown, Copy, Trash2, Search, X } from 'lucide-react'
 
 type TabId = 'terminal' | 'output' | 'details'
@@ -43,7 +44,10 @@ function HighlightedText({ text, highlight }: { text: string; highlight: string 
 }
 
 export function BottomPanel() {
-  const { bottomPanelOpen, setBottomPanelOpen, bottomPanelHeight, setBottomPanelHeight, selectedTask } = useAppStore()
+  const { bottomPanelOpen, setBottomPanelOpen, bottomPanelHeight, setBottomPanelHeight } = useAppStore()
+  const { selectedTaskId } = useTaskStore()
+  const tasks = useTaskStore(s => s.tasks)
+  const selectedTask = tasks.find(t => t.id === selectedTaskId) || null
   const [activeTab, setActiveTab] = useState<TabId>('terminal')
   const [terminalLines, setTerminalLines] = useState<TerminalLine[]>([
     { id: '1', timestamp: new Date(), content: '> SynClaw 已就绪', type: 'info' },

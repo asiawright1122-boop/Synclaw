@@ -1,8 +1,20 @@
 /**
- * 订阅相关 API
+ * 订阅相关前端配置
+ * 前端展示用 BYOK/PRO/ULTRA，与后端 SubscriptionPlan (FREE/STARTER/PRO/TEAM/BYOK) 分离
  */
 
-import { api, Subscription, Plan, SubscriptionFeatures, SubscriptionStatus } from './api'
+import type { SubscriptionFeatures } from '../types/subscription'
+import type { Subscription as BackendSubscription } from '../types/subscription'
+import { api } from './api'
+
+// 前端展示用的套餐 ID（与后端 SubscriptionPlan 不同）
+export type Plan = 'BYOK' | 'PRO' | 'ULTRA'
+export type SubscriptionStatus = 'ACTIVE' | 'CANCELED' | 'PAST_DUE' | 'TRIALING' | 'INACTIVE'
+
+// 前端订阅类型：后端数据 + 前端特性映射
+export interface Subscription extends BackendSubscription {
+  features: SubscriptionFeatures
+}
 
 export interface PlanDetails {
   id: Plan
@@ -59,6 +71,24 @@ export const PLANS: PlanDetails[] = [
 
 export function getPlanDetails(plan: Plan): PlanDetails | undefined {
   return PLANS.find(p => p.id === plan)
+}
+
+// 后端 Subscription → 前端 Subscription（补充 features）
+export function toFrontendSubscription(backend: BackendSubscription): Subscription {
+  // 前端 BYOK/PRO/ULTRA 与后端 FREE/STARTER/PRO/TEAM/BYOK 的映射
+  const planNameMap: Record<string, Plan> = {
+    BYOK: 'BYOK',
+    FREE: 'BYOK',
+    STARTER: 'BYOK',
+    PRO: 'PRO',
+    TEAM: 'ULTRA',
+  }
+  const planId = planNameMap[backend.plan] || 'BYOK'
+  const details = getPlanDetails(planId)
+  return {
+    ...backend,
+    features: details?.features ?? PLANS[0].features,
+  }
 }
 
 export function getPlanDisplayName(plan: Plan): string {
@@ -119,7 +149,7 @@ class SubscriptionService {
     try {
       const response = await api.user.getSubscription()
       if (response.success && response.data) {
-        return response.data
+        return toFrontendSubscription(response.data)
       }
     } catch (error) {
       console.error('获取订阅信息失败:', error)
@@ -130,7 +160,7 @@ class SubscriptionService {
   async updateSubscription(plan: Plan): Promise<Subscription | null> {
     const response = await api.user.updateSubscription(plan)
     if (response.success && response.data) {
-      return response.data
+      return toFrontendSubscription(response.data)
     }
     throw new Error(response.error || '更新订阅失败')
   }

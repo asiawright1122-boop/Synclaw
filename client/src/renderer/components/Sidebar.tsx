@@ -12,6 +12,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useAppStore } from '../stores/appStore'
 import { useChatStore } from '../stores/chatStore'
+import { useAvatarStore, type Avatar } from '../stores/avatarStore'
 import { t } from '../i18n'
 import {
   Plus,
@@ -19,26 +20,14 @@ import {
   Clock,
   MessageCircle,
   SlidersHorizontal,
-  Pin,
   Bot,
-  Globe,
-  Eye,
   Loader2,
   RefreshCw,
   Search,
   X,
+  Info,
 } from 'lucide-react'
-
-interface Avatar {
-  id: string
-  name: string
-  description?: string
-  status?: 'online' | 'offline' | 'busy'
-  color?: string
-  icon?: 'claw' | 'bot' | 'globe' | 'eye'
-  pinned?: boolean
-  createdAt?: number
-}
+import { AvatarListPanel } from './AvatarListPanel'
 
 interface CronTask {
   id: string
@@ -64,30 +53,6 @@ const TABS = [
   { id: 'task' as const, icon: Clock, labelKey: 'sidebar.tab.task' },
 ]
 
-const FALLBACK_AVATARS: Avatar[] = [
-  { id: 'ac', name: 'AutoClaw', description: '在线 · 默认', color: '#fc5d1e', icon: 'claw' },
-  { id: 'think', name: '沉思小助手', description: '深度推理与写作', color: '#6b7280', icon: 'bot', pinned: true },
-  { id: 'watch', name: '监控', description: '定时巡检摘要', color: '#4e7db7', icon: 'eye' },
-]
-
-function ClawGlyph({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M7 14c-2 0-3.5-1.5-4-3.5C2.5 8 4 6 6 6c1 0 2 .5 2.5 1.5" />
-      <path d="M17 14c2 0 3.5-1.5 4-3.5C21.5 8 20 6 18 6c-1 0-2 .5-2.5 1.5" />
-      <path d="M9 10c0-1.5 1-2.5 3-2.5s3 1 3 2.5v1c0 3-1.5 5-3 6.5-1.5-1.5-3-3.5-3-6.5v-1Z" />
-      <path d="M12 8V6" />
-    </svg>
-  )
-}
-
-function AvatarRowIcon({ type }: { type: 'claw' | 'bot' | 'globe' | 'eye' }) {
-  if (type === 'claw') return <ClawGlyph className="w-4 h-4 text-white" />
-  if (type === 'globe') return <Globe className="w-4 h-4 text-white" />
-  if (type === 'eye') return <Eye className="w-4 h-4 text-white" />
-  return <Bot className="w-4 h-4 text-white" />
-}
-
 export function Sidebar() {
   const {
     sidebarCollapsed,
@@ -102,12 +67,34 @@ export function Sidebar() {
     activeView,
     setActiveView,
   } = useAppStore()
+  const { avatars } = useAvatarStore()
 
-  // Avatar tab state
-  const [avatars, setAvatars] = useState<Avatar[]>(FALLBACK_AVATARS)
-  const [avatarsLoading, setAvatarsLoading] = useState(false)
-  const [avatarsError, setAvatarsError] = useState<string | null>(null)
-  const [avatarSearch, setAvatarSearch] = useState('')
+  // Landing page (About) state
+  const [landingAvailable, setLandingAvailable] = useState(false)
+
+  // Check landing page availability on mount
+  useEffect(() => {
+    const checkLanding = async () => {
+      try {
+        const result = await window.electronAPI?.landing?.isAvailable()
+        if (result?.success) {
+          setLandingAvailable(result.data ?? false)
+        }
+      } catch (error) {
+        console.error('[Sidebar] Failed to check landing page:', error)
+      }
+    }
+    checkLanding()
+  }, [])
+
+  const handleOpenAbout = useCallback(async () => {
+    if (!window.electronAPI?.landing) return
+    try {
+      await window.electronAPI.landing.show()
+    } catch (error) {
+      console.error('[Sidebar] Failed to open landing page:', error)
+    }
+  }, [])
 
   // Task tab state
   const [cronTasks, setCronTasks] = useState<CronTask[]>([])
@@ -163,43 +150,6 @@ export function Sidebar() {
     }
   }, [activeTab, loadSessions])
 
-  // Load avatars from OpenClaw
-  const loadAvatars = useCallback(async () => {
-    if (!window.openclaw) return
-    setAvatarsLoading(true)
-    setAvatarsError(null)
-    try {
-      const result = await window.openclaw.avatars.list()
-      if (result.success && result.data) {
-        const data = result.data as Array<{
-          id: string
-          name: string
-          description?: string
-          status?: string
-          personality?: string
-        }>
-        const loadedAvatars: Avatar[] = data.map((a, index) => ({
-          id: a.id || String(index),
-          name: a.name || '未命名分身',
-          description: a.description || a.personality || '在线',
-          status: (a.status as Avatar['status']) || 'online',
-          color: ['#fc5d1e', '#6b7280', '#4e7db7', '#2f9e5b', '#a78bfa'][index % 5],
-          icon: (['claw', 'bot', 'globe', 'eye', 'bot'] as const)[index % 5],
-        }))
-        setAvatars(loadedAvatars)
-        // Auto-select first avatar if none selected
-        if (loadedAvatars.length > 0 && !selectedAvatar) {
-          setSelectedAvatar(loadedAvatars[0])
-        }
-      }
-    } catch (error) {
-      console.error('[Sidebar] Failed to load avatars:', error)
-      setAvatarsError('加载分身失败')
-    } finally {
-      setAvatarsLoading(false)
-    }
-  }, [])
-
   // Load cron tasks from OpenClaw
   const loadCronTasks = useCallback(async () => {
     if (!window.openclaw) return
@@ -236,27 +186,6 @@ export function Sidebar() {
     }
   }, [])
 
-  // Subscribe to avatar status changes
-  useEffect(() => {
-    if (!window.openclaw) return
-    const unsubAvatarStatus = window.openclaw.on((event) => {
-      if (event.event === 'avatar:status-changed') {
-        const payload = event.payload as { id: string; status: string }
-        setAvatars((prev) =>
-          prev.map((av) =>
-            av.id === payload.id
-              ? { ...av, status: payload.status as Avatar['status'] }
-              : av
-          )
-        )
-      }
-    })
-
-    return () => {
-      unsubAvatarStatus()
-    }
-  }, [])
-
   // Subscribe to cron events
   useEffect(() => {
     if (!window.openclaw) return
@@ -274,52 +203,12 @@ export function Sidebar() {
 
   // Load data when tab changes — reset search on tab switch
   useEffect(() => {
-    setAvatarSearch('')
     setSessionSearch('')
     setTaskSearch('')
-    if (activeTab === 'avatar') {
-      loadAvatars()
-    } else if (activeTab === 'task') {
+    if (activeTab === 'task') {
       loadCronTasks()
     }
-  }, [activeTab, loadAvatars, loadCronTasks])
-
-  // Handle avatar selection
-  const handleAvatarClick = useCallback(async (avatar: Avatar) => {
-    setSelectedAvatar(avatar)
-  }, [setSelectedAvatar])
-
-  // Handle create new avatar
-  const handleCreateAvatar = useCallback(async () => {
-    if (!window.openclaw) return
-    try {
-      const result = await window.openclaw.avatars.create({
-        name: '新分身',
-        model: 'default',
-      })
-      if (result.success) {
-        loadAvatars()
-      }
-    } catch (error) {
-      console.error('[Sidebar] Failed to create avatar:', error)
-    }
-  }, [loadAvatars])
-
-  // Handle delete avatar
-  const handleDeleteAvatar = useCallback(async (id: string) => {
-    if (!window.openclaw) return
-    try {
-      const result = await window.openclaw.avatars.delete({ id })
-      if (result.success) {
-        loadAvatars()
-        if (selectedAvatar?.id === id) {
-          setSelectedAvatar(null)
-        }
-      }
-    } catch (error) {
-      console.error('[Sidebar] Failed to delete avatar:', error)
-    }
-  }, [loadAvatars, selectedAvatar, setSelectedAvatar])
+  }, [activeTab, loadCronTasks])
 
   // Handle toggle cron task
   const handleToggleTask = useCallback(async (task: CronTask) => {
@@ -360,6 +249,11 @@ export function Sidebar() {
     }
   }, [])
 
+  // Handle avatar click in collapsed sidebar
+  const handleAvatarClick = useCallback((avatar: Avatar) => {
+    setSelectedAvatar(avatar)
+  }, [setSelectedAvatar])
+
   if (sidebarCollapsed) {
     return (
       <div
@@ -379,7 +273,11 @@ export function Sidebar() {
             }}
             title={av.name}
           >
-            <AvatarRowIcon type={av.icon || 'bot'} />
+            {av.emoji ? (
+              <span className="text-base leading-none">{av.emoji}</span>
+            ) : (
+              <Bot className="w-4 h-4 text-white" />
+            )}
           </button>
         ))}
         <div className="flex-1" />
@@ -391,6 +289,17 @@ export function Sidebar() {
         >
           <SlidersHorizontal className="w-4 h-4" />
         </button>
+        {landingAvailable && (
+          <button
+            type="button"
+            onClick={handleOpenAbout}
+            className="w-9 h-9 rounded-xl flex items-center justify-center cursor-pointer"
+            style={{ color: 'var(--text-sec)' }}
+            title="About"
+          >
+            <Info className="w-4 h-4" />
+          </button>
+        )}
       </div>
     )
   }
@@ -428,133 +337,9 @@ export function Sidebar() {
       </div>
 
       {/* 列表区 */}
-      <div className="flex-1 overflow-y-auto py-2">
-        {/* Avatar Tab */}
-        {activeTab === 'avatar' && (
-          <div className="px-2 space-y-0.5">
-            {/* Search bar */}
-            <div
-              className="flex items-center gap-2 px-3 py-2 rounded-xl mb-1 mx-1"
-              style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)' }}
-            >
-              <Search className="w-3.5 h-3.5 shrink-0" style={{ color: 'var(--text-ter)' }} />
-              <input
-                value={avatarSearch}
-                onChange={e => setAvatarSearch(e.target.value)}
-                className="flex-1 bg-transparent border-none outline-none text-xs min-w-0"
-                style={{ color: 'var(--text)' }}
-                placeholder="搜索分身..."
-              />
-              {avatarSearch && (
-                <button
-                  type="button"
-                  onClick={() => setAvatarSearch('')}
-                  className="p-0.5 rounded hover:bg-white/5 transition-colors"
-                  style={{ color: 'var(--text-ter)' }}
-                >
-                  <X className="w-3 h-3" />
-                </button>
-              )}
-            </div>
-
-            <button
-              type="button"
-              onClick={handleCreateAvatar}
-              className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium cursor-pointer"
-              style={{ color: 'var(--accent1)' }}
-            >
-              <Plus className="w-4 h-4" />
-              <span>{t('sidebar.avatar.new')}</span>
-            </button>
-
-            {avatarsLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="w-5 h-5 animate-spin" style={{ color: 'var(--text-sec)' }} />
-              </div>
-            ) : avatarsError ? (
-              <div className="flex flex-col items-center gap-2 py-4">
-                <p className="text-xs" style={{ color: 'var(--text-sec)' }}>{avatarsError}</p>
-                <button
-                  type="button"
-                  onClick={loadAvatars}
-                  className="flex items-center gap-1 text-xs cursor-pointer"
-                  style={{ color: 'var(--accent1)' }}
-                >
-                  <RefreshCw className="w-3 h-3" />
-                  {t('sidebar.avatar.retry')}
-                </button>
-              </div>
-            ) : (() => {
-              const filtered = avatarSearch.trim()
-                ? avatars.filter(av =>
-                    av.name.toLowerCase().includes(avatarSearch.toLowerCase()) ||
-                    (av.description || '').toLowerCase().includes(avatarSearch.toLowerCase())
-                  )
-                : avatars
-              return filtered.length === 0 ? (
-                <div className="flex flex-col items-center gap-2 py-8">
-                  <Bot className="w-8 h-8" style={{ color: 'var(--text-ter)' }} />
-                  <p className="text-xs" style={{ color: 'var(--text-sec)' }}>
-                    {avatarSearch ? '未找到匹配的分身' : t('sidebar.avatar.empty')}
-                  </p>
-                </div>
-              ) : (
-                filtered.map((av) => (
-                  <button
-                    key={av.id}
-                    type="button"
-                    onClick={() => handleAvatarClick(av)}
-                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer transition-all text-left relative group"
-                    style={
-                      selectedAvatar?.id === av.id
-                        ? { background: 'rgba(0,0,0,0.05)' }
-                        : { background: 'transparent' }
-                    }
-                  >
-                    <div
-                      className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 relative"
-                      style={{ background: av.color }}
-                    >
-                      <AvatarRowIcon type={av.icon || 'bot'} />
-                      <span
-                        className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2"
-                        style={{
-                          borderColor: 'var(--bg-sidebar)',
-                          background: av.status === 'online' ? '#22c55e' : av.status === 'busy' ? '#eab308' : '#9ca3af',
-                        }}
-                      />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold truncate" style={{ color: 'var(--text)' }}>
-                        {av.name}
-                      </p>
-                      <p className="text-xs truncate mt-0.5" style={{ color: 'var(--text-sec)' }}>
-                        {av.description || '在线'}
-                      </p>
-                    </div>
-                    <div className="flex flex-col items-end gap-0.5 flex-shrink-0">
-                      {av.pinned ? (
-                        <Pin className="w-3.5 h-3.5" style={{ color: 'var(--text-ter)' }} />
-                      ) : null}
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleDeleteAvatar(av.id)
-                        }}
-                        className="opacity-0 group-hover:opacity-100 w-6 h-6 rounded flex items-center justify-center transition-opacity"
-                        style={{ color: 'var(--text-ter)' }}
-                        title="删除"
-                      >
-                        ×
-                      </button>
-                    </div>
-                  </button>
-                ))
-              )
-            })()}
-          </div>
-        )}
+      <div className="flex-1 overflow-y-auto">
+        {/* Avatar Tab - Use dedicated AvatarListPanel */}
+        {activeTab === 'avatar' && <AvatarListPanel />}
 
         {/* Chat Tab (IM Channels) */}
         {activeTab === 'chat' && (
@@ -797,6 +582,17 @@ export function Sidebar() {
           >
             <MessageCircle className="w-4 h-4" />
           </button>
+          {landingAvailable && (
+            <button
+              type="button"
+              onClick={handleOpenAbout}
+              className="w-9 h-9 rounded-xl flex items-center justify-center hover:bg-black/5"
+              style={{ color: 'var(--text-sec)' }}
+              title="About"
+            >
+              <Info className="w-4 h-4" />
+            </button>
+          )}
           <button
             type="button"
             onClick={() => setSettingsModalOpen(true)}

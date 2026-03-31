@@ -2,12 +2,9 @@ import { spawn, ChildProcess } from 'child_process'
 import * as fs from 'fs'
 import * as path from 'path'
 import { app } from 'electron'
+import logger from './logger.js'
 
-const log = {
-  info: (...args: any[]) => console.log('[OpenClaw]', new Date().toISOString(), ...args),
-  warn: (...args: any[]) => console.warn('[OpenClaw]', new Date().toISOString(), ...args),
-  error: (...args: any[]) => console.error('[OpenClaw]', new Date().toISOString(), ...args)
-}
+const log = logger.scope('openclaw')
 
 export class OpenClawProcess {
   private process: ChildProcess | null = null

@@ -3,6 +3,10 @@
  * 与后端 API 集成，支持认证、订阅、积分、API Key 管理
  */
 
+import type { Subscription, SubscriptionPlan, SubscriptionStatus, CreditsBalance } from '../types/subscription'
+
+export type { Subscription, SubscriptionPlan, SubscriptionStatus, CreditsBalance }
+
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000/api';
 
 export interface ApiResponse<T = unknown> {
@@ -162,35 +166,6 @@ export interface UserProfile extends User {
   bio?: string
   company?: string
   website?: string
-}
-
-export type Plan = 'BYOK' | 'PRO' | 'ULTRA'
-export type SubscriptionStatus = 'ACTIVE' | 'CANCELED' | 'PAST_DUE' | 'TRIALING' | 'INACTIVE'
-
-export interface Subscription {
-  plan: Plan
-  status: SubscriptionStatus
-  currentPeriodStart: string
-  currentPeriodEnd?: string
-  cancelAtPeriodEnd?: boolean
-  features: SubscriptionFeatures
-  trialEndsAt?: string
-}
-
-export interface SubscriptionFeatures {
-  imChannels: number
-  monthlyCredits: number | null
-  cloudSync: boolean
-  prioritySupport: boolean
-  maxAgents?: number
-  advancedAnalytics?: boolean
-}
-
-export interface CreditsBalance {
-  total: number
-  general: number
-  activity: number
-  lifetimeValue?: number
 }
 
 export interface CreditsHistoryItem {

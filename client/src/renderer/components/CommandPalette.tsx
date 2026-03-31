@@ -150,6 +150,14 @@ export function CommandPalette({ isOpen, onClose, onOpenSettings }: CommandPalet
       icon: '🛠',
       action: () => handleSettings('skills'),
     },
+    {
+      id: 'skills-market-panel',
+      label: '技能市场',
+      description: '浏览、安装 ClawHub 技能',
+      category: '技能',
+      icon: '🛒',
+      action: () => handleSettings('skillsMarket'),
+    },
     // 记忆
     {
       id: 'memory-panel',

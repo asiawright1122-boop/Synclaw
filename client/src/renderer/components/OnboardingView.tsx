@@ -38,7 +38,6 @@ function maskKey(key: string): string {
 export function OnboardingView({ onComplete }: OnboardingViewProps) {
   const [step, setStep] = useState<Step>(1)
   const [apiKeyInput, setApiKeyInput] = useState('')
-  const [authorizedDirs, setAuthorizedDirs] = useState<string[]>([])
   const [dirError, setDirError] = useState('')
   const [gatewayStatus, setGatewayStatus] = useState<'checking' | 'ready' | 'error'>('checking')
   const [apiKeySaving, setApiKeySaving] = useState(false)
@@ -49,7 +48,15 @@ export function OnboardingView({ onComplete }: OnboardingViewProps) {
     setHasCompletedOnboarding,
     addAuthorizedDir,
     removeAuthorizedDir,
+    authorizedDirs: storedAuthorizedDirs,
   } = useSettingsStore()
+
+  const [authorizedDirs, setAuthorizedDirs] = useState<string[]>(storedAuthorizedDirs)
+
+  // 同步外部变更（如从设置页面添加的目录）
+  useEffect(() => {
+    setAuthorizedDirs(storedAuthorizedDirs)
+  }, [storedAuthorizedDirs])
 
   // Check gateway status on mount
   useEffect(() => {
@@ -93,8 +100,9 @@ export function OnboardingView({ onComplete }: OnboardingViewProps) {
   }
 
   const handleStep1Skip = async () => {
-    await setHasCompletedOnboarding(true)
-    onComplete()
+    setApiKeyInput('')
+    setApiKeySuccess(false)
+    setStep(2)
   }
 
   const handleAddDir = async () => {
@@ -169,25 +177,41 @@ export function OnboardingView({ onComplete }: OnboardingViewProps) {
           className="px-8 pt-8 pb-4"
           style={{ borderBottom: '1px solid var(--border)' }}
         >
-          <div className="flex items-center gap-3 mb-5">
-            {/* SynClaw logo mark */}
-            <div
-              className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-              style={{ background: 'var(--accent-gradient)' }}
-            >
-              <Sparkles className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <h1
-                className="text-lg font-semibold leading-tight"
-                style={{ color: 'var(--text)' }}
+          <div className="flex items-center justify-between mb-5">
+            <div className="flex items-center gap-3">
+              {/* SynClaw logo mark */}
+              <div
+                className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                style={{ background: 'var(--accent-gradient)' }}
               >
-                开始设置 SynClaw
-              </h1>
-              <p className="text-sm" style={{ color: 'var(--text-sec)' }}>
-                只需几步，完成配置
-              </p>
+                <Sparkles className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h1
+                  className="text-lg font-semibold leading-tight"
+                  style={{ color: 'var(--text)' }}
+                >
+                  开始设置 SynClaw
+                </h1>
+                <p className="text-sm" style={{ color: 'var(--text-sec)' }}>
+                  只需几步，完成配置
+                </p>
+              </div>
             </div>
+            {/* Back button (steps 2 and 3) */}
+            {step > 1 && (
+              <button
+                type="button"
+                onClick={() => setStep(step - 1 as Step)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-colors"
+                style={{ color: 'var(--text-sec)', background: 'var(--bg-elevated)' }}
+                onMouseEnter={e => (e.currentTarget.style.color = 'var(--text)')}
+                onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-sec)')}
+              >
+                <ChevronRight className="w-3.5 h-3.5 rotate-180" />
+                上一步
+              </button>
+            )}
           </div>
 
           {/* Step indicators */}
@@ -427,6 +451,12 @@ export function OnboardingView({ onComplete }: OnboardingViewProps) {
                 {dirError && (
                   <p className="text-xs mb-2 px-1" style={{ color: 'var(--danger)' }}>
                     {dirError}
+                  </p>
+                )}
+
+                {authorizedDirs.length === 0 && (
+                  <p className="text-xs mb-2 px-1" style={{ color: 'var(--text-ter)' }}>
+                    可跳过，稍后在「设置 → 文件安全」中配置
                   </p>
                 )}
 

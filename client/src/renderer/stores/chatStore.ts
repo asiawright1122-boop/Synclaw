@@ -3,6 +3,18 @@
  * Handles message history, streaming responses, and abort functionality
  */
 import { create } from 'zustand'
+import {
+  useExecApprovalStore,
+  type ApprovalDecisionReason,
+  decisionOf,
+  reasonOf,
+} from './execApprovalStore'
+import { useToastStore } from '../components/Toast'
+
+// Development-only debug logger — silent in production builds
+const debug = import.meta.env.DEV
+  ? (label: string, ...args: unknown[]) => console.debug(`[ChatStore] ${label}`, ...args)
+  : (_label: string, ..._args: unknown[]) => {}
 
 export interface ChatMessage {
   id: string
@@ -133,14 +145,13 @@ export const useChatStore = create<ChatState>((set, get) => ({
   clearMessages: () => set({ messages: [] }),
 
   // Async actions
+  // 对话历史由 OpenClaw Gateway 自动持久化到 transcript JSONL
+  // 此处仅通过 Gateway API 加载历史
   loadHistory: async () => {
     if (!window.openclaw) return
     const { sessionKey } = get()
     try {
-      const result = await window.openclaw.chat.history({
-        sessionKey,
-        limit: 50,
-      })
+      const result = await window.openclaw.chat.history({ sessionKey, limit: 50 })
       if (result.success && result.data) {
         const history = result.data as Array<{
           id?: string
@@ -157,7 +168,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
         set({ messages })
       }
     } catch (error) {
-      console.error('[ChatStore] Failed to load history:', error)
+      console.error('[ChatStore] Failed to load history from Gateway:', error)
     }
   },
 
@@ -366,40 +377,83 @@ export const useChatStore = create<ChatState>((set, get) => ({
         }
       }
 
-      // Exec approval events
+      // Exec approval events — delegate to execApprovalStore
       if (event.event === 'exec.approval.requested') {
         const payload = event.payload as ExecApprovalEvent
-        console.log('[ChatStore] Exec approval requested:', payload)
+
+        // Build a human-readable command string
+        const raw = payload.command ?? ''
+        const cmd = raw.trim()
+          || `${payload.nodeId ?? 'exec'}: run a command`
+
+        // Enqueue the approval; the modal will show via execApprovalStore
+        useExecApprovalStore.getState().enqueue(
+          {
+            id: payload.id ?? `approval-${Date.now()}`,
+            command: cmd,
+            executable: cmd.split(' ')[0] ?? cmd,
+            args: cmd.includes(' ') ? cmd.split(' ').slice(1) : [],
+            nodeId: payload.nodeId,
+            reason: undefined,
+          },
+          (v: ApprovalDecisionReason) => {
+            // Called when user resolves or timeout fires — forward to Gateway
+            if (!window.openclaw) return
+            const decision = decisionOf(v)
+            const approved = decision === 'approved'
+            window.openclaw.exec.approval.resolve({
+              id: payload.id,
+              approved,
+              decision: decision === 'denied' ? 'deny' : 'allow-once',
+              reason: reasonOf(v),
+            }).catch((err) => {
+              console.error('[ChatStore] exec.approval.resolve failed:', err)
+            })
+            // Notify via toast
+            useToastStore.getState().addToast({
+              type: approved ? 'success' : 'warning',
+              message: approved
+                ? '命令已批准执行'
+                : '命令已拒绝',
+              duration: 2000,
+            })
+          }
+        )
       }
       if (event.event === 'exec.approval.resolved') {
         const payload = event.payload as ExecApprovalEvent
-        console.log('[ChatStore] Exec approval resolved:', payload)
+        debug('Exec approval resolved:', payload)
+        // Clean up any stale entries for this id
+        const store = useExecApprovalStore.getState()
+        if (payload.id && store.pending.find((e) => e.id === payload.id)) {
+          store.resolveById(payload.id, payload.approved ? 'approved' : 'denied')
+        }
       }
 
       // Device pair events
       if (event.event === 'device.pair.requested') {
         const payload = event.payload as DevicePairEvent
-        console.log('[ChatStore] Device pair requested:', payload)
+        debug('Device pair requested:', payload)
       }
       if (event.event === 'device.pair.resolved') {
         const payload = event.payload as DevicePairEvent
-        console.log('[ChatStore] Device pair resolved:', payload)
+        debug('Device pair resolved:', payload)
       }
 
       // Node pair events
       if (event.event === 'node.pair.requested') {
         const payload = event.payload as NodePairEvent
-        console.log('[ChatStore] Node pair requested:', payload)
+        debug('Node pair requested:', payload)
       }
       if (event.event === 'node.pair.resolved') {
         const payload = event.payload as NodePairEvent
-        console.log('[ChatStore] Node pair resolved:', payload)
+        debug('Node pair resolved:', payload)
       }
 
       // Node invoke request events
       if (event.event === 'node.invoke.request') {
         const payload = event.payload as NodeInvokeEvent
-        console.log('[ChatStore] Node invoke request:', payload)
+        debug('Node invoke request:', payload)
       }
 
       // Heartbeat / presence events

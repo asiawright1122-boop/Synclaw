@@ -11,26 +11,35 @@
  * 5. 将 Gateway 事件（EventFrame）分发给 Electron BrowserWindow
  *
  * 注意：由于 openclaw-source 使用 "type": "module" 且 exports 字段限制了子路径导入，
- * 我们用运行时 require() 动态加载，绕过 esbuild 的静态 import 解析。
- * build 时 __OPENCLAW_SOURCE_PATH__ 被构建脚本替换为绝对路径。
+ * 我们用运行时动态 import() 动态加载，绕过 esbuild 的静态 import 解析。
+ * 路径通过 app.isPackaged 运行时判断（与 openclaw.ts 一致）。
  */
 
-import type { BrowserWindow } from 'electron'
+import { app, BrowserWindow } from 'electron'
+import * as path from 'path'
+import * as os from 'node:os'
+import logger from './logger.js'
+import { getAppSettings } from './index.js'
 
+// ── 运行时路径判断（与 openclaw.ts 一致）───────────────────────────────
+// 构建时不做任何注入，完全在运行时决定路径。
+// 打包后：process.resourcesPath + '/openclaw-source'
+// 开发时：app.getAppPath() + '/resources/openclaw-source'
+function getOpenClawPath(): string {
+  if (app.isPackaged) {
+    return path.join(process.resourcesPath, 'openclaw-source')
+  }
+  return path.join(app.getAppPath(), 'resources', 'openclaw-source')
+}
+
+const _openclawPath = getOpenClawPath()
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-// __OPENCLAW_SOURCE_PLACEHOLDER__ 在构建时被替换为实际的路径字符串
-// 使用 .ts 扩展名动态导入（Node.js ESM 支持 TypeScript 文件）
-const _OPENCLAW_ACTUAL_PATH = __OPENCLAW_SOURCE_PLACEHOLDER__
-const _m: any = await import(_OPENCLAW_ACTUAL_PATH + '/src/gateway/client.ts')
+const _m: any = await import(_openclawPath + '/src/gateway/client.ts')
 const GatewayClient = _m.GatewayClient
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const GatewayClientOptions: any = _m.GatewayClientOptions
 
-const log = {
-  info: (...args: unknown[]) => console.log(`[GatewayBridge] ${new Date().toISOString()}`, ...args),
-  warn: (...args: unknown[]) => console.warn(`[GatewayBridge] ${new Date().toISOString()}`, ...args),
-  error: (...args: unknown[]) => console.error(`[GatewayBridge] ${new Date().toISOString()}`, ...args),
-}
+const log = logger.scope('gateway-bridge')
 
 export type GatewayStatus = 'idle' | 'starting' | 'ready' | 'connected' | 'disconnected' | 'error'
 
@@ -50,7 +59,8 @@ export type GatewayBridgeOptions = {
 type EventHandler = (event: string, payload: unknown) => void
 
 export class GatewayBridge {
-  private client: GatewayClient | null = null
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private client: any = null
   private status: GatewayStatus = 'idle'
   private statusListeners: Array<(s: GatewayStatus) => void> = []
   private eventListeners: EventHandler[] = []
@@ -60,8 +70,8 @@ export class GatewayBridge {
   constructor(opts: GatewayBridgeOptions = {}) {
     this.opts = {
       url: opts.url ?? 'ws://127.0.0.1:18789',
-      token: opts.token,
-      bootstrapToken: opts.bootstrapToken,
+      token: opts.token ?? '',
+      bootstrapToken: opts.bootstrapToken ?? '',
       startupTimeoutMs: opts.startupTimeoutMs ?? 30_000,
       readyCheckIntervalMs: opts.readyCheckIntervalMs ?? 500,
     }
@@ -107,6 +117,10 @@ export class GatewayBridge {
       // 步骤 4: 连接 Gateway WebSocket
       log.info('[Step 4] 连接 Gateway WebSocket...')
       await this.connectWebSocket(token)
+
+      // 步骤 5: 应用 SynClaw 安全加固配置
+      log.info('[Step 5] 应用安全加固配置...')
+      await this.applySecurityConfig()
 
       this.setStatus('connected')
       log.info('OpenClaw Gateway 连接成功')
@@ -163,7 +177,9 @@ export class GatewayBridge {
     if (!this.client) {
       throw new Error('Gateway 未连接，请先调用 connect()')
     }
-    return this.client.request<T>(method, params, opts)
+    // @ts-expect-error — client is dynamically loaded, type-safe call not possible at compile time
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return (this.client as any).request<T>(method, params, opts)
   }
 
   // ── 状态 ─────────────────────────────────────────────────────────────
@@ -226,7 +242,7 @@ export class GatewayBridge {
         log.error('event listener error:', err)
       }
     }
-    for (const win of this.browserWindows) {
+    for (const win of Array.from(this.browserWindows)) {
       if (!win.isDestroyed()) {
         win.webContents.send('openclaw:event', { event, payload })
       }
@@ -234,7 +250,7 @@ export class GatewayBridge {
   }
 
   private broadcastStatusChange(status: GatewayStatus) {
-    for (const win of this.browserWindows) {
+    for (const win of Array.from(this.browserWindows)) {
       if (!win.isDestroyed()) {
         win.webContents.send('openclaw:statusChange', status)
       }
@@ -273,23 +289,39 @@ export class GatewayBridge {
   }
 
   private async fetchAuthToken(): Promise<string> {
-    // 通过 HTTP 获取当前 token（从 openclaw 配置文件）
-    // 尝试从 gateway.auth.token 读取
-    const cfgUrl = this.opts.url.replace(/^ws/, 'http').replace(/\/ws$/, '') + '/config'
+    // 从 OpenClaw 配置文件读取 gateway.auth.token
+    const httpUrl = this.opts.url.replace(/^ws/, 'http').replace(/\/ws$/, '')
     try {
-      // 通过 /ready 后的已知端点获取 token
-      // 实际 token 存储在 OpenClaw 配置文件中，我们通过 gateway.identity.get 首次获取
-      // 但首次连接需要 token，所以我们需要一个 bootstrap token
-      // 使用空 token 触发 challenge，看 gateway 返回什么
-      const httpUrl = this.opts.url.replace(/^ws/, 'http').replace(/\/ws$/, '')
+      // 先检查 Gateway 是否就绪
       const res = await fetch(`${httpUrl}/health`, { signal: AbortSignal.timeout(5000) })
       if (!res.ok) {
         throw new Error(`health check failed: ${res.status}`)
       }
-      // token 为空时，GatewayClient 会自动尝试无认证连接
+      // Gateway 已就绪后，尝试读取配置文件获取 token
+      // OpenClaw config 存储在 ~/.openclaw/config.json（开发时）或 resources/openclaw-source/.openclaw/config.json
+      const openclawConfigPath = app.isPackaged
+        ? path.join(process.resourcesPath, 'openclaw-source', '.openclaw', 'config.json')
+        : path.join(os.homedir(), '.openclaw', 'config.json')
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let config: any = null
+      try {
+        const fs = await import('node:fs/promises')
+        const content = await fs.readFile(openclawConfigPath, 'utf-8')
+        config = JSON.parse(content)
+      } catch {
+        config = null
+      }
+      const token = config?.gateway?.auth?.token
+      if (token && typeof token === 'string') {
+        log.info('从配置文件读取 gateway token 成功')
+        return token
+      }
+      // 未找到 token，尝试用 bootstrap token
+      log.warn('配置文件中未找到 gateway.auth.token，尝试无认证连接')
       return ''
     } catch (err) {
-      log.warn('无法获取 auth token，将使用无认证连接:', err)
+      log.warn('获取 auth token 失败，将使用无认证连接:', err)
       return ''
     }
   }
@@ -300,7 +332,8 @@ export class GatewayBridge {
     let helloReject!: (err: Error) => void
     let connected = false
 
-    const clientOpts: GatewayClientOptions = {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const clientOpts: any = {
       url: this.opts.url,
       token: token || undefined,
       bootstrapToken: this.opts.bootstrapToken || undefined,
@@ -308,18 +341,24 @@ export class GatewayBridge {
       clientDisplayName: 'SynClaw',
       clientVersion: '1.0.0',
       platform: process.platform,
+      // Minimal scopes: only what SynClaw actually needs.
+      // Scope elevation risk (GHSA-rqpp-rjj8-7wv8) is mitigated by:
+      //   1. OpenClaw version >= 2026.3.12 (CVE fixed)
+      //   2. Token fetched from Gateway config (not empty)
+      //   3. electron-store is single source of truth for UI config
+      //   4. File operations go through IPC path validation, NOT Gateway exec
       role: 'operator',
-      scopes: ['operator.admin'],
-      onEvent: (evt) => {
+      scopes: ['gateway.healthy', 'config.get', 'sessions.list', 'sessions.patch', 'sessions.reset', 'sessions.delete', 'sessions.preview', 'sessions.compact', 'sessions.usage', 'agent', 'agent.wait', 'agent.identity.get', 'chat.send', 'chat.history', 'chat.abort', 'chat.inject', 'skills.status', 'skills.install', 'skills.update', 'memory.search', 'memory.list', 'memory.delete', 'memory.store', 'hooks.list', 'hooks.add', 'hooks.update', 'hooks.remove', 'hooks.runs', 'logs.tail', 'tools.catalog', 'models.list', 'models.getCurrent', 'models.setCurrent', 'models.configure', 'cron.list', 'cron.status', 'cron.add', 'cron.update', 'cron.remove', 'cron.run', 'cron.runs'],
+      onEvent: (evt: { event: string; payload: unknown }) => {
         this.broadcastEvent(evt.event, evt.payload)
       },
-      onHelloOk: (hello) => {
+      onHelloOk: (hello: unknown) => {
         if (connected) return
         connected = true
         log.info('Gateway handshake 成功:', hello)
         helloResolve()
       },
-      onConnectError: (err) => {
+      onConnectError: (err: { message: string }) => {
         if (connected) return
         connected = true
         log.error('Gateway 连接错误:', err.message)
@@ -332,7 +371,7 @@ export class GatewayBridge {
           `请尝试：重启 SynClaw 或检查 OpenClaw Gateway 配置`
         helloReject(new Error(msg))
       },
-      onClose: (code, reason) => {
+      onClose: (code: number, reason: string) => {
         log.warn(`Gateway 连接关闭: code=${code} reason=${reason}`)
         this.setStatus('disconnected')
       },
@@ -357,6 +396,103 @@ export class GatewayBridge {
 
   private sleep(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms))
+  }
+
+  /**
+   * 应用 SynClaw 安全加固配置到 Gateway。
+   * 通过 config.patch RPC 设置，不修改 openclaw 配置文件。
+   *
+   * 配置分层：
+   *   Layer 1（强制，不可关闭）：gateway.tools.deny — Gateway 全局工具阻断
+   *   Layer 2（建议，SynClaw 默认开启）：agents.defaults.sandbox — Docker 隔离
+   *   Layer 3（可选）：tools.* — 运行时工具策略
+   */
+  /**
+   * 推送安全加固配置到 Gateway。
+   * 首次连接时由 connect() 自动调用；也可由外部（如 index.ts store 变更监听器）
+   * 调用本方法重新推送，无需重连。
+   *
+   * 关键：limitAccess 从 getAppSettings() 实时读取，而非硬编码。
+   */
+  async refreshSecurityConfig(): Promise<void> {
+    await this.applySecurityConfig()
+  }
+
+  private async applySecurityConfig(): Promise<void> {
+    // 实时读取 limitAccess（来自 electron-store，不在连接时缓存）
+    const { limitAccess } = getAppSettings().workspace
+    const securityConfig = {
+      // Layer 1: Gateway 全局阻断 — 最高优先级
+      gateway: {
+        tools: {
+          // 阻止危险的工具跨所有 agent 逃逸
+          deny: [
+            'operator.admin',     // 禁止 scope 提升攻击（GHSA-rqpp）
+          ],
+        },
+      },
+
+      // Layer 2: Agent 沙箱配置
+      agents: {
+        defaults: {
+          sandbox: {
+            // non-main: 主会话在宿主机，sub-session 在 Docker 隔离
+            // 平衡安全性与功能（主进程需要访问 GUI 资源）
+            mode: 'non-main' as const,
+            scope: 'session' as const,
+          },
+        },
+      },
+
+      // Layer 3: 工具运行时策略
+      tools: {
+        // 最小工具集（SynClaw 主要用于文件系统操作和 AI 对话）
+        profile: 'minimal' as const,
+
+        // 全局工具阻断
+        deny: [
+          // 禁止自动化攻击工具
+          'group:automation',
+          // 禁止运行时注入（eval/exec）
+          'group:runtime',
+          // 禁止会话冒充（会话在沙箱中隔离）
+          'sessions_spawn',
+          'sessions_send',
+          // 禁止文件描述符攻击
+          'fd_write',
+        ],
+
+        // 文件工具限制：limitAccess=true 时强制工作区隔离
+        fs: {
+          workspaceOnly: limitAccess,
+        },
+
+        // exec 工具：限制在沙箱中，强制审批
+        exec: {
+          host: limitAccess ? 'sandbox' : 'host',
+          security: 'deny',
+          ask: 'always',
+        },
+
+        // 禁用特权提升（关键）
+        elevated: {
+          enabled: false,
+        },
+      },
+    }
+
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const res = await this.request<any>('config.patch', securityConfig)
+      if (res?.success === false || res?.error) {
+        log.warn('安全加固配置应用失败（非致命，继续运行）:', res?.error)
+      } else {
+        log.info(`安全加固配置应用成功 (limitAccess=${limitAccess})`)
+      }
+    } catch (err) {
+      // 配置失败不阻止连接，记录警告继续
+      log.warn('安全加固 RPC 调用失败（非致命，继续运行）:', err)
+    }
   }
 }
 

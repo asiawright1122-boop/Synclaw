@@ -3,17 +3,21 @@
  * 已接入 OpenClaw Gateway
  * 包含 Markdown 渲染、动画增强、右键菜单支持
  */
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo, memo } from 'react'
 import { useAppStore } from '../stores/appStore'
 import { useChatStore } from '../stores/chatStore'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Send, Bot, User, ChevronDown, Paperclip, BadgeCheck, MessageCircle, X, Copy, Check } from 'lucide-react'
+import { Send, Bot, User, ChevronDown, Paperclip, BadgeCheck, MessageCircle, X, Copy, Check, Volume2, Settings } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import rehypeHighlight from 'rehype-highlight'
 import type { OpenClawStatus } from '../types/electron'
 import type { ContextMenuItem } from '../hooks/useContextMenu'
 import { t } from '../i18n'
+import { AvatarSelector } from './AvatarSelector'
+import { VoiceModePanel } from './VoiceModePanel'
+import { useTTS } from '../hooks/useTTS'
+import { useSpeechRecognition } from '../hooks/useSpeechRecognition'
 import 'highlight.js/styles/github-dark.css'
 
 function formatFileSize(bytes: number): string {
@@ -141,9 +145,38 @@ interface MessageBubbleProps {
   onContextMenu: (e: React.MouseEvent) => void
 }
 
-function MessageBubble({ message, onContextMenu }: MessageBubbleProps) {
+const MessageBubble = memo(({ message, onContextMenu }: MessageBubbleProps) => {
   const isUser = message.role === 'user'
   const isAssistant = message.role === 'assistant'
+
+  // Memoize markdown components to avoid recreating on each render
+  const markdownComponents = useMemo(() => ({
+    code: ({ className, children, ...props }: React.HTMLAttributes<HTMLElement> & { className?: string }) => {
+      const isInline = !className
+      if (isInline) {
+        return (
+          <code
+            style={{
+              background: 'var(--bg-subtle)',
+              padding: '0.125rem 0.375rem',
+              borderRadius: 4,
+              fontSize: '0.875em',
+              fontFamily: "'JetBrains Mono', monospace",
+            }}
+            {...props}
+          >
+            {children}
+          </code>
+        )
+      }
+      return (
+        <CodeBlock className={className}>
+          {children as React.ReactNode}
+        </CodeBlock>
+      )
+    },
+    pre: ({ children }: React.HTMLAttributes<HTMLElement>) => <>{children}</>,
+  }), [])
 
   return (
     <motion.div
@@ -222,33 +255,7 @@ function MessageBubble({ message, onContextMenu }: MessageBubbleProps) {
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
               rehypePlugins={[rehypeHighlight]}
-              components={{
-                code: ({ className, children, ...props }) => {
-                  const isInline = !className
-                  if (isInline) {
-                    return (
-                      <code
-                        style={{
-                          background: 'var(--bg-subtle)',
-                          padding: '0.125rem 0.375rem',
-                          borderRadius: 4,
-                          fontSize: '0.875em',
-                          fontFamily: "'JetBrains Mono', monospace",
-                        }}
-                        {...props}
-                      >
-                        {children}
-                      </code>
-                    )
-                  }
-                  return (
-                    <CodeBlock className={className}>
-                      {children}
-                    </CodeBlock>
-                  )
-                },
-                pre: ({ children }) => <>{children}</>,
-              }}
+              components={markdownComponents}
             >
               {message.content}
             </ReactMarkdown>
@@ -259,7 +266,7 @@ function MessageBubble({ message, onContextMenu }: MessageBubbleProps) {
       </div>
     </motion.div>
   )
-}
+}, (prev, next) => prev.message.id === next.message.id && prev.message.content === next.message.content && prev.message.thinking === next.message.thinking)
 
 interface ChatViewProps {
   onShowContextMenu?: (items: ContextMenuItem[], x: number, y: number) => void
@@ -271,6 +278,8 @@ export function ChatView({ onShowContextMenu }: ChatViewProps) {
   const [models, setModels] = useState<ModelOption[]>([])
   const [connectionStatus, setConnectionStatus] = useState<OpenClawStatus>('disconnected')
   const [attachments, setAttachments] = useState<AttachmentFile[]>([])
+  const [voiceModeOpen, setVoiceModeOpen] = useState(false)
+  const [autoPlayTTS, setAutoPlayTTS] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const modelMenuRef = useRef<HTMLDivElement>(null)
@@ -281,10 +290,55 @@ export function ChatView({ onShowContextMenu }: ChatViewProps) {
   const initRef = useRef(init)
   initRef.current = init
 
+  // TTS hook for auto-playing AI responses
+  const { isAvailable: ttsAvailable, speak } = useTTS()
+
+  // STT hook for voice input
+  const { isSupported: sttSupported } = useSpeechRecognition()
+
   // Auto-scroll to bottom when messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
+
+  // Auto-play TTS when AI response completes
+  const lastAssistantMessageRef = useRef<string | null>(null)
+  useEffect(() => {
+    if (!autoPlayTTS || !ttsAvailable) return
+
+    const lastMessage = messages[messages.length - 1]
+    if (!lastMessage || lastMessage.role !== 'assistant') return
+
+    // Check if this is a new completed response (not still streaming)
+    if (lastMessage.content !== lastAssistantMessageRef.current) {
+      lastAssistantMessageRef.current = lastMessage.content
+
+      // Only speak if message is complete (no thinking indicator)
+      if (!lastMessage.thinking && lastMessage.content.trim()) {
+        // Small delay to allow streaming to complete
+        const timer = setTimeout(() => {
+          speak(lastMessage.content).catch(console.error)
+        }, 500)
+        return () => clearTimeout(timer)
+      }
+    }
+  }, [messages, autoPlayTTS, ttsAvailable, speak])
+
+  // Load auto-play preference
+  useEffect(() => {
+    const loadPrefs = async () => {
+      try {
+        const res = await window.electronAPI?.settings.get()
+        if (res?.success && res.data) {
+          const data = res.data as unknown as Record<string, unknown>
+          setAutoPlayTTS((data.ttsAutoPlay as boolean) ?? false)
+        }
+      } catch {
+        // Ignore
+      }
+    }
+    loadPrefs()
+  }, [])
 
   // Close model dropdown when clicking outside
   useEffect(() => {
@@ -460,11 +514,22 @@ export function ChatView({ onShowContextMenu }: ChatViewProps) {
       },
       { label: '', onClick: () => {}, separator: true } as unknown as ContextMenuItem,
       {
+        label: '朗读',
+        icon: <Volume2 className="w-4 h-4" />,
+        onClick: () => speak(message.content).catch(console.error),
+      },
+      {
         label: '全选',
         onClick: () => document.execCommand('selectAll'),
       },
     ], e.clientX, e.clientY)
   }
+
+  // Handle transcript from voice input
+  const handleVoiceTranscript = useCallback((text: string) => {
+    setInput(text)
+    inputRef.current?.focus()
+  }, [])
 
   return (
     <div className="h-full flex flex-col overflow-hidden" style={{ background: 'var(--bg-container)' }}>
@@ -742,6 +807,27 @@ export function ChatView({ onShowContextMenu }: ChatViewProps) {
             ) : null}
           </div>
 
+          {/* Avatar selector */}
+          <AvatarSelector />
+
+          {/* Voice mode button */}
+          {(ttsAvailable || sttSupported) && (
+            <button
+              type="button"
+              onClick={() => setVoiceModeOpen(!voiceModeOpen)}
+              className={`p-2 rounded-full flex-shrink-0 mb-0.5 transition-colors ${
+                voiceModeOpen ? 'bg-opacity-20' : 'hover:bg-black/[0.05]'
+              }`}
+              style={{
+                color: voiceModeOpen ? 'var(--accent1)' : 'var(--text-ter)',
+                background: voiceModeOpen ? 'rgba(252, 93, 30, 0.1)' : undefined,
+              }}
+              title={voiceModeOpen ? t('voice.closePanel') : t('voice.openPanel')}
+            >
+              {voiceModeOpen ? <Settings className="w-[18px] h-[18px]" /> : <Volume2 className="w-[18px] h-[18px]" />}
+            </button>
+          )}
+
           {sending ? (
             <motion.button
               type="button"
@@ -770,6 +856,15 @@ export function ChatView({ onShowContextMenu }: ChatViewProps) {
             </motion.button>
           )}
         </div>
+
+        {/* Voice Mode Panel */}
+        <AnimatePresence>
+          {voiceModeOpen && (
+            <VoiceModePanel
+              onTranscript={handleVoiceTranscript}
+            />
+          )}
+        </AnimatePresence>
       </div>
     </div>
   )
