@@ -6,8 +6,8 @@
   "model_profile": "balanced",
   "executor_model": "sonnet",
   "planner_model": "sonnet",
-  "milestone_version": "v1.0",
-  "milestone_name": "MVP",
+  "milestone_version": "v1.2",
+  "milestone_name": "用户体验与分发完善",
   "workflow": {
     "research": false,
     "plan_check": true,
