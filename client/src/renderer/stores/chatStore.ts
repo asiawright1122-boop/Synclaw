@@ -76,6 +76,10 @@ interface ChatState {
   sessionKey: string
   sending: boolean
   currentRunId: string | null
+  /** ID of the active safety timeout; cleared when done/error fires */
+  safetyTimeoutId: ReturnType<typeof setTimeout> | null
+  /** Guard against multiple concurrent init() calls */
+  _initCleanup: (() => void) | null
 
   // Actions
   setSessionKey: (key: string) => void
@@ -102,13 +106,17 @@ export const useChatStore = create<ChatState>((set, get) => ({
   sessionKey: 'default',
   sending: false,
   currentRunId: null,
+  safetyTimeoutId: null,
+  _initCleanup: null,
 
   // Sync actions
   setSessionKey: (sessionKey) => set({ sessionKey }),
 
-  // Switch session: update sessionKey, clear messages, and load history
+  // Switch session: abort ongoing run, clear messages, and load history
   switchSession: async (sessionKey: string) => {
-    set({ sessionKey, messages: [], currentRunId: null })
+    const { abortRun } = get()
+    await abortRun()       // Stop any ongoing stream before switching
+    set({ sessionKey, messages: [], currentRunId: null, safetyTimeoutId: null })
     await get().loadHistory()
   },
 
@@ -194,9 +202,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
     let currentRunId: string | null = null
 
-    // Safety timeout — clear sending state after 5 minutes if done event never fires
-    const safetyTimeout = setTimeout(() => {
-      const messages = get().messages
+    // Safety timeout — store ID so the 'done' event can clear it
+    const timeoutId = setTimeout(() => {
+      const messages = useChatStore.getState().messages
       const lastAssistant = [...messages].reverse().find((m) => m.role === 'assistant')
       if (lastAssistant) {
         const isEmpty = lastAssistant.content.trim() === ''
@@ -205,9 +213,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
           : lastAssistant.content + '\n\n[响应超时]'
         get().updateMessage(lastAssistant.id, { content, thinking: false })
       }
-      setSending(false)
-      set({ currentRunId: null })
+      get().setSending(false)
+      set({ currentRunId: null, safetyTimeoutId: null })
     }, 5 * 60 * 1000)
+    set({ safetyTimeoutId: timeoutId })
 
     try {
       // Build agent params with attachments
@@ -236,7 +245,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
         set({ currentRunId: currentRunId ?? null })
         // Stream events will clear sending via the 'done' event in init()
       } else if (result.error) {
-        clearTimeout(safetyTimeout)
+        clearTimeout(timeoutId)
+        set({ safetyTimeoutId: null })
         updateMessage(assistantMsgId, {
           content: `Error: ${result.error}`,
           thinking: false,
@@ -244,14 +254,16 @@ export const useChatStore = create<ChatState>((set, get) => ({
         setSending(false)
         return
       } else {
-        clearTimeout(safetyTimeout)
+        clearTimeout(timeoutId)
+        set({ safetyTimeoutId: null })
         // success=true but no data — treat as non-fatal, stop thinking state
         updateMessage(assistantMsgId, { thinking: false })
         setSending(false)
         return
       }
     } catch (error) {
-      clearTimeout(safetyTimeout)
+      clearTimeout(timeoutId)
+      set({ safetyTimeoutId: null })
       console.error('[ChatStore] Agent error:', error)
       updateMessage(assistantMsgId, {
         content: 'Connection error. Please check if OpenClaw Gateway is running.',
@@ -293,6 +305,13 @@ export const useChatStore = create<ChatState>((set, get) => ({
   init: async () => {
     if (!window.openclaw) {
       return () => {}
+    }
+
+    // Idempotency guard: if init() was already called, clean up old listeners first
+    const existingCleanup = get()._initCleanup
+    if (existingCleanup) {
+      existingCleanup()
+      set({ _initCleanup: null })
     }
 
     // Load chat history on init
@@ -344,6 +363,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
             if (lastAsstFinal) {
               get().updateMessage(lastAsstFinal.id, { thinking: false })
             }
+            const timeoutId = get().safetyTimeoutId
+            if (timeoutId !== null) {
+              clearTimeout(timeoutId)
+              set({ safetyTimeoutId: null })
+            }
             get().setSending(false)
             set({ currentRunId: null })
             break
@@ -357,6 +381,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
                 content: errorTarget.content + `\n\nError: ${payload.error}`,
                 thinking: false,
               })
+            }
+            const timeoutId = get().safetyTimeoutId
+            if (timeoutId !== null) {
+              clearTimeout(timeoutId)
+              set({ safetyTimeoutId: null })
             }
             get().setSending(false)
             set({ currentRunId: null })
@@ -399,10 +428,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
           (v: ApprovalDecisionReason) => {
             // Called when user resolves or timeout fires — forward to Gateway
             if (!window.openclaw) return
+            const approvalId = payload.id ?? `approval-${Date.now()}`
             const decision = decisionOf(v)
             const approved = decision === 'approved'
             window.openclaw.exec.approval.resolve({
-              id: payload.id,
+              id: approvalId,
               approved,
               decision: decision === 'denied' ? 'deny' : 'allow-once',
               reason: reasonOf(v),
@@ -469,10 +499,13 @@ export const useChatStore = create<ChatState>((set, get) => ({
       }
     })
 
-    // Return cleanup function
-    return () => {
+    // Return cleanup function that also clears the stored reference
+    const cleanup = () => {
       unsubAgent()
       unsubTick()
+      set({ _initCleanup: null })
     }
+    set({ _initCleanup: cleanup })
+    return cleanup
   },
 }))

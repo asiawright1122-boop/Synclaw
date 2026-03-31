@@ -53,6 +53,26 @@ const TABS = [
   { id: 'task' as const, icon: Clock, labelKey: 'sidebar.tab.task' },
 ]
 
+/** Reusable About button — avoids duplicating markup in collapsed bar and footer */
+function AboutButton({ landingAvailable, onClick, className }: {
+  landingAvailable: boolean
+  onClick: () => void
+  className?: string
+}) {
+  if (!landingAvailable) return null
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={className ?? 'w-9 h-9 rounded-xl flex items-center justify-center hover:bg-black/5'}
+      style={{ color: 'var(--text-sec)' }}
+      title="About"
+    >
+      <Info className="w-4 h-4" />
+    </button>
+  )
+}
+
 export function Sidebar() {
   const {
     sidebarCollapsed,
@@ -289,17 +309,7 @@ export function Sidebar() {
         >
           <SlidersHorizontal className="w-4 h-4" />
         </button>
-        {landingAvailable && (
-          <button
-            type="button"
-            onClick={handleOpenAbout}
-            className="w-9 h-9 rounded-xl flex items-center justify-center cursor-pointer"
-            style={{ color: 'var(--text-sec)' }}
-            title="About"
-          >
-            <Info className="w-4 h-4" />
-          </button>
-        )}
+        <AboutButton landingAvailable={landingAvailable} onClick={handleOpenAbout} />
       </div>
     )
   }
@@ -582,17 +592,7 @@ export function Sidebar() {
           >
             <MessageCircle className="w-4 h-4" />
           </button>
-          {landingAvailable && (
-            <button
-              type="button"
-              onClick={handleOpenAbout}
-              className="w-9 h-9 rounded-xl flex items-center justify-center hover:bg-black/5"
-              style={{ color: 'var(--text-sec)' }}
-              title="About"
-            >
-              <Info className="w-4 h-4" />
-            </button>
-          )}
+          <AboutButton landingAvailable={landingAvailable} onClick={handleOpenAbout} />
           <button
             type="button"
             onClick={() => setSettingsModalOpen(true)}

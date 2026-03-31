@@ -75,12 +75,9 @@ export class OpenClawProcess {
       })
 
       this.process.on('error', (err) => {
-        if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
-          log.error(`OpenClaw 启动失败: 找不到 tsx 可执行文件，请确认 openclaw-source 已下载`)
-        } else {
-          log.error('OpenClaw 启动失败:', err)
-        }
+        log.error('OpenClaw 启动失败:', err)
         this.process = null
+        reject(err)
       })
 
       this.process.on('exit', (code, signal) => {
@@ -98,14 +95,19 @@ export class OpenClawProcess {
   stop(): void {
     if (this.process) {
       log.info('正在停止 OpenClaw 进程...')
+      this.process.removeAllListeners('exit')
+      this.process.removeAllListeners('error')
+      this.process.removeAllListeners('data')
       this.process.kill('SIGTERM')
       this.process = null
     }
   }
 
-  restart(): Promise<void> {
+  restart(attempt = 0): Promise<void> {
     this.stop()
-    return new Promise<void>(resolve => setTimeout(() => resolve(), 1000))
+    // Exponential backoff: 1s, 2s, 4s, 8s (max 10s)
+    const delay = Math.min(1000 * Math.pow(2, attempt), 10_000)
+    return new Promise<void>(resolve => setTimeout(() => resolve(), delay))
       .then(() => this.start())
   }
 

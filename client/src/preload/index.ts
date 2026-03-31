@@ -146,7 +146,7 @@ const electronAPI = {
 
   app: {
     getVersion: (): Promise<ApiResponse<string>> => ipcRenderer.invoke('app:getVersion'),
-    getPath: (name: 'home' | 'appData' | 'userData' | 'temp' | 'desktop' | 'documents'): Promise<ApiResponse<string>> =>
+    getPath: (name: 'home' | 'temp' | 'desktop' | 'documents'): Promise<ApiResponse<string>> =>
       ipcRenderer.invoke('app:getPath', name),
     setAutoLaunch: (enabled: boolean): Promise<ApiResponse> =>
       ipcRenderer.invoke('app:setAutoLaunch', enabled),
@@ -170,6 +170,23 @@ const electronAPI = {
   notifications: {
     setEnabled: (enabled: boolean): Promise<ApiResponse> =>
       ipcRenderer.invoke('notifications:setEnabled', enabled),
+  },
+
+  // ── App Settings (electron-store) ──────────────────────────────────
+  // Note: electron-store settings are exposed here AND via openclaw.settings.
+  // Both paths are correct; openclaw.settings is the canonical one.
+  settings: {
+    get: (): Promise<ApiResponse<Record<string, unknown>>> =>
+      ipcRenderer.invoke('settings:get') as Promise<ApiResponse<Record<string, unknown>>>,
+    set: (key: string, value: unknown): Promise<ApiResponse> =>
+      ipcRenderer.invoke('settings:set', key, value),
+    reset: (): Promise<ApiResponse<Record<string, unknown>>> =>
+      ipcRenderer.invoke('settings:reset') as Promise<ApiResponse<Record<string, unknown>>>,
+    onChanged: (callback: (data: { key: string; value: unknown; settings: Record<string, unknown> }) => void): (() => void) => {
+      const handler = (_event: Electron.IpcRendererEvent, data: { key: string; value: unknown; settings: Record<string, unknown> }) => callback(data)
+      ipcRenderer.on('settings:changed', handler)
+      return () => ipcRenderer.removeListener('settings:changed', handler)
+    },
   },
 
   // Navigation events from main process
@@ -698,9 +715,10 @@ const openclaw = {
       ipcRenderer.invoke('web:report-usage', { events }),
     /**
      * 撤销桌面设备 token（退出账号时调用）。
+     * @param apiToken - 用户的 API token，用于对服务器端撤销请求进行认证
      */
-    revoke: (): Promise<ApiResponse> =>
-      ipcRenderer.invoke('web:revoke'),
+    revoke: (apiToken?: string): Promise<ApiResponse> =>
+      ipcRenderer.invoke('web:revoke', { apiToken }),
   },
 
   // ── Events ────────────────────────────────────────────────────────

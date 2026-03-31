@@ -14,7 +14,27 @@ import os from 'node:os'
 
 const log = logger.scope('web')
 
-const WEB_API_BASE = process.env.WEB_API_BASE ?? 'http://localhost:3000/api'
+const WEB_API_BASE = process.env.WEB_API_BASE
+if (!WEB_API_BASE) {
+  throw new Error('WEB_API_BASE environment variable is required — set it to your web platform API base URL (e.g. https://api.yoursite.com/api)')
+}
+
+const MAX_EVENTS_PER_BATCH = 100
+const reportUsageRateLimit = new Map<string, { count: number; resetAt: number }>()
+const RATE_LIMIT = 60        // max 60 reportUsage calls
+const RATE_WINDOW_MS = 60_000 // per minute
+
+function checkReportUsageRateLimit(deviceToken: string): boolean {
+  const now = Date.now()
+  const entry = reportUsageRateLimit.get(deviceToken)
+  if (!entry || now > entry.resetAt) {
+    reportUsageRateLimit.set(deviceToken, { count: 1, resetAt: now + RATE_WINDOW_MS })
+    return true
+  }
+  if (entry.count >= RATE_LIMIT) return false
+  entry.count++
+  return true
+}
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -121,9 +141,20 @@ ipcMain.handle(
       const deviceToken = settings.web.deviceToken
 
       if (!deviceToken) {
-        // 未注册设备，跳过上报（不影响核心功能）
         log.debug('[web:report-usage] 未注册设备，跳过')
         return { success: true, skipped: true }
+      }
+
+      // 限流检查
+      if (!checkReportUsageRateLimit(deviceToken)) {
+        log.warn('[web:report-usage] 请求过于频繁，跳过上报')
+        return { success: false, error: '请求过于频繁', skipped: true }
+      }
+
+      // 事件数量限制
+      if (events.length > MAX_EVENTS_PER_BATCH) {
+        log.warn(`[web:report-usage] 事件数量 ${events.length} 超过限制 ${MAX_EVENTS_PER_BATCH}`)
+        return { success: false, error: `事件数量超过限制 (max=${MAX_EVENTS_PER_BATCH})` }
       }
 
       const res = await apiRequest('/usage-events', {
@@ -149,15 +180,17 @@ ipcMain.handle(
 /**
  * web:revoke — 撤销设备 token（退出账号时调用）
  */
-ipcMain.handle('web:revoke', async () => {
+ipcMain.handle('web:revoke', async (_event, { apiToken }: { apiToken?: string }) => {
   try {
     const settings = getAppSettings()
     const deviceId = settings.web.deviceId
-    const apiToken = '' // 需要从 renderer 传入
+    const validToken = typeof apiToken === 'string' && apiToken.length > 0 ? apiToken : undefined
 
-    if (deviceId) {
-      // 调用 DELETE /api/device-tokens/[id]（可选，不影响本地）
-      await apiRequest(`/device-tokens/${deviceId}`, { method: 'DELETE', token: apiToken })
+    if (deviceId && validToken) {
+      // 调用 DELETE /api/device-tokens/[id]（需有效认证 token）
+      await apiRequest(`/device-tokens/${deviceId}`, { method: 'DELETE', token: validToken })
+    } else if (deviceId && !validToken) {
+      log.warn('[web:revoke] 无 apiToken，服务器端撤销跳过（本地状态仍清除）')
     }
 
     setAppSetting('web.deviceToken', '')

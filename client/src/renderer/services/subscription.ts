@@ -22,20 +22,29 @@ export interface UsageStats {
 }
 
 // ── API Base URL ────────────────────────────────────────────────────────────
-
+// 在 Electron 渲染进程中，'/api' 请求由主进程代理（BrowserWindow.webRequest）
+// 主进程需要配置 X-Api-Token header 或代理到 SynClaw web 后端
 const API_BASE = '/api'
+
+// ── Token Provider ──────────────────────────────────────────────────────────
+// 由调用方（App.tsx / chatStore）通过 setApiToken() 注入
+let _apiToken: string | null = null
+export function setApiToken(token: string | null) { _apiToken = token }
 
 async function apiRequest<T>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<ApiResponse<T>> {
   try {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    }
+    if (_apiToken) {
+      headers['Authorization'] = `Bearer ${_apiToken}`
+    }
     const response = await fetch(`${API_BASE}${endpoint}`, {
       ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers,
-      },
+      headers: { ...headers, ...(options.headers as Record<string, string> | undefined) },
     })
 
     const data = await response.json()
@@ -81,8 +90,9 @@ export async function createSubscriptionCheckout(plan: 'PRO_MONTHLY' | 'PRO_YEAR
 
 // ── Credits API ─────────────────────────────────────────────────────────────
 
-export async function getCreditsBalance(): Promise<ApiResponse<number>> {
-  return apiRequest<number>('/subscription')
+// getCreditsBalance 返回整个 Subscription 对象，调用方取 .creditsBalance
+export async function getCreditsBalance(): Promise<ApiResponse<Subscription>> {
+  return apiRequest<Subscription>('/subscription')
 }
 
 export async function getCreditsHistory(params?: {
