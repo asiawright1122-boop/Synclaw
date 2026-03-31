@@ -10,6 +10,39 @@ export interface ApiResponse<T = unknown> {
   error?: string
 }
 
+export interface ClawHubSkillSummary {
+  name: string
+  description: string
+  emoji?: string
+  eligible: boolean
+  disabled: boolean
+  blockedByAllowlist: boolean
+  source?: string
+  bundled: boolean
+  primaryEnv?: string
+  homepage?: string
+  missing: { bins: string[]; anyBins: string[]; env: string[]; config: string[]; os: string[] }
+  install: Array<{ kind: string; label: string; [key: string]: unknown }>
+}
+
+export interface ClawHubListResult {
+  workspaceDir: string
+  managedSkillsDir: string
+  skills: ClawHubSkillSummary[]
+}
+
+export interface ClawHubSearchResult {
+  results: Array<{ name: string; description: string; version?: string; author?: string; downloads?: number; [key: string]: unknown }>
+}
+
+export interface ClawHubCheckResult {
+  summary: { total: number; eligible: number; disabled: number; blocked: number; missingRequirements: number }
+  eligible: string[]
+  disabled: string[]
+  blocked: string[]
+  missingRequirements: Array<{ name: string; missing: ClawHubSkillSummary['missing']; install: ClawHubSkillSummary['install'] }>
+}
+
 export interface AppSettings {
   theme: 'light' | 'dark' | 'system'
   fontSize: number
@@ -86,6 +119,9 @@ const electronAPI = {
       ipcRenderer.on('file:changed', handler)
       return () => ipcRenderer.removeListener('file:changed', handler)
     },
+    /** 查询路径是否在授权范围内（不执行实际操作，用于 UI 实时反馈） */
+    validatePath: (filePath: string): Promise<ApiResponse<{ authorized: boolean; reason?: string }>> =>
+      ipcRenderer.invoke('file:validate', filePath) as Promise<ApiResponse<{ authorized: boolean; reason?: string }>>,
   },
 
   dialog: {
@@ -98,28 +134,37 @@ const electronAPI = {
   },
 
   shell: {
-    openPath: (filePath: string): Promise<string> =>
+    openPath: (filePath: string): Promise<ApiResponse> =>
       ipcRenderer.invoke('shell:openPath', filePath),
     openExternal: (url: string): Promise<void> =>
       ipcRenderer.invoke('shell:openExternal', url),
     showItemInFolder: (filePath: string): Promise<void> =>
       ipcRenderer.invoke('shell:showItemInFolder', filePath),
-    expandTilde: (inputPath: string): Promise<string> =>
+    expandTilde: (inputPath: string): Promise<ApiResponse<string>> =>
       ipcRenderer.invoke('path:expandTilde', inputPath),
   },
 
   app: {
-    getVersion: (): Promise<string> => ipcRenderer.invoke('app:getVersion'),
-    getPath: (name: 'home' | 'appData' | 'userData' | 'temp' | 'desktop' | 'documents'): Promise<string> =>
+    getVersion: (): Promise<ApiResponse<string>> => ipcRenderer.invoke('app:getVersion'),
+    getPath: (name: 'home' | 'appData' | 'userData' | 'temp' | 'desktop' | 'documents'): Promise<ApiResponse<string>> =>
       ipcRenderer.invoke('app:getPath', name),
     setAutoLaunch: (enabled: boolean): Promise<ApiResponse> =>
       ipcRenderer.invoke('app:setAutoLaunch', enabled),
-    getAutoLaunch: (): Promise<boolean> =>
+    getAutoLaunch: (): Promise<ApiResponse<boolean>> =>
       ipcRenderer.invoke('app:getAutoLaunch'),
     downloadUpdate: (): Promise<ApiResponse> =>
       ipcRenderer.invoke('app:downloadUpdate'),
     installUpdate: (): Promise<ApiResponse> =>
       ipcRenderer.invoke('app:installUpdate'),
+  },
+
+  landing: {
+    isAvailable: (): Promise<ApiResponse<boolean>> =>
+      ipcRenderer.invoke('landing:isAvailable'),
+    show: (): Promise<ApiResponse> =>
+      ipcRenderer.invoke('landing:show'),
+    hide: (): Promise<ApiResponse> =>
+      ipcRenderer.invoke('landing:hide'),
   },
 
   notifications: {
@@ -134,8 +179,6 @@ const electronAPI = {
     return () => ipcRenderer.removeListener('navigate', handler)
   },
 }
-
-// ── Update API ──────────────────────────────────────────────────────
 
 contextBridge.exposeInMainWorld('updates', {
   onUpdateAvailable: (callback: (info: { version: string; releaseDate?: string }) => void): (() => void) => {
@@ -242,6 +285,27 @@ const openclaw = {
       ipcRenderer.invoke('openclaw:agents:files:get', params),
     set: (params: { agentId: string; name: string; content: string }): Promise<ApiResponse> =>
       ipcRenderer.invoke('openclaw:agents:files:set', params),
+  },
+
+  // ── ClawHub ───────────────────────────────────────────────────────
+
+  clawhub: {
+    status: (): Promise<ApiResponse<{ installed: boolean; version: string | null; error?: string }>> =>
+      ipcRenderer.invoke('clawhub:status'),
+    list: (): Promise<ApiResponse<ClawHubListResult>> =>
+      ipcRenderer.invoke('clawhub:list'),
+    search: (query: string): Promise<ApiResponse<ClawHubSearchResult>> =>
+      ipcRenderer.invoke('clawhub:search', query),
+    install: (name: string, version?: string): Promise<ApiResponse<{ ok: boolean; message: string; stdout?: string; stderr?: string }>> =>
+      ipcRenderer.invoke('clawhub:install', name, version),
+    update: (name?: string, version?: string): Promise<ApiResponse<{ ok: boolean; message: string; stdout?: string }>> =>
+      ipcRenderer.invoke('clawhub:update', name, version),
+    check: (): Promise<ApiResponse<ClawHubCheckResult>> =>
+      ipcRenderer.invoke('clawhub:check'),
+    uninstall: (name: string): Promise<ApiResponse<{ ok: boolean; message: string; stdout?: string }>> =>
+      ipcRenderer.invoke('clawhub:uninstall', name),
+    installCli: (): Promise<ApiResponse<{ ok: boolean; message: string; version?: string | null }>> =>
+      ipcRenderer.invoke('clawhub:installCli'),
   },
 
   // ── Skills ────────────────────────────────────────────────────────
@@ -592,6 +656,12 @@ const openclaw = {
       ipcRenderer.invoke('settings:set', key, value),
     reset: (): Promise<ApiResponse<AppSettings>> =>
       ipcRenderer.invoke('settings:reset') as Promise<ApiResponse<AppSettings>>,
+    /** 监听其他进程对 electron-store 的修改（多窗口同步） */
+    onChanged: (callback: (data: { key: string; value: unknown; settings: AppSettings }) => void): (() => void) => {
+      const handler = (_event: Electron.IpcRendererEvent, data: { key: string; value: unknown; settings: AppSettings }) => callback(data)
+      ipcRenderer.on('settings:changed', handler)
+      return () => ipcRenderer.removeListener('settings:changed', handler)
+    },
   },
 
   // ── UI Actions ─────────────────────────────────────────────────────
@@ -600,6 +670,37 @@ const openclaw = {
     openCredits: () => ipcRenderer.invoke('ui:openCredits'),
     openSettings: () => ipcRenderer.invoke('ui:openSettings'),
     openAvatarCreate: () => ipcRenderer.invoke('ui:openAvatarCreate'),
+  },
+
+  // ── Web Platform Bridge (SynClaw ↔ web) ──────────────────────────────
+  // 负责将 AI 用量事件上报到 web 平台，同时管理桌面设备注册。
+  web: {
+    /**
+     * 注册桌面设备到 web 平台（获取 device token）。
+     * @param apiToken - 用户登录后从 web API 获取的 JWT token
+     */
+    register: (apiToken: string): Promise<ApiResponse<{ id: string; token: string }>> =>
+      ipcRenderer.invoke('web:register', { apiToken }) as Promise<ApiResponse<{ id: string; token: string }>>,
+    /**
+     * 上报 AI 用量事件到 web 平台。
+     * events 由 chatStore 在每次 session/message/token 事件时收集，批量上报。
+     * 非致命：未注册设备时自动跳过，不影响核心功能。
+     */
+    reportUsage: (events: Array<{
+      eventType: 'SESSION_START' | 'MESSAGE_SENT' | 'TOKENS_CONSUMED'
+      model?: string
+      inputTokens?: number
+      outputTokens?: number
+      sessionId?: string
+      messageCount?: number
+      metadata?: Record<string, unknown>
+    }>): Promise<ApiResponse & { skipped?: boolean }> =>
+      ipcRenderer.invoke('web:report-usage', { events }),
+    /**
+     * 撤销桌面设备 token（退出账号时调用）。
+     */
+    revoke: (): Promise<ApiResponse> =>
+      ipcRenderer.invoke('web:revoke'),
   },
 
   // ── Events ────────────────────────────────────────────────────────

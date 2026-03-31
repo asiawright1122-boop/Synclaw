@@ -32,6 +32,23 @@ export interface AppSettings {
     watch: boolean
     heartbeat: '30m' | '1h' | '2h' | '4h'
   }
+  tts: {
+    enabled: boolean
+    speed: number
+    volume: number
+    autoPlay: boolean
+    provider: string | null
+  }
+  stt: {
+    enabled: boolean
+    autoStart: boolean
+  }
+  web: {
+    deviceToken: string
+    deviceId: string
+    deviceName: string
+    lastReportedAt: string | null
+  }
 }
 
 export interface FileInfo {
@@ -46,6 +63,39 @@ export interface FileStat {
   isFile: boolean
   created: string
   modified: string
+}
+
+export interface ClawHubSkillSummary {
+  name: string
+  description: string
+  emoji?: string
+  eligible: boolean
+  disabled: boolean
+  blockedByAllowlist: boolean
+  source?: string
+  bundled: boolean
+  primaryEnv?: string
+  homepage?: string
+  missing: { bins: string[]; anyBins: string[]; env: string[]; config: string[]; os: string[] }
+  install: Array<{ kind: string; label: string; [key: string]: unknown }>
+}
+
+export interface ClawHubListResult {
+  workspaceDir: string
+  managedSkillsDir: string
+  skills: ClawHubSkillSummary[]
+}
+
+export interface ClawHubSearchResult {
+  results: Array<{ name: string; description: string; version?: string; author?: string; downloads?: number; [key: string]: unknown }>
+}
+
+export interface ClawHubCheckResult {
+  summary: { total: number; eligible: number; disabled: number; blocked: number; missingRequirements: number }
+  eligible: string[]
+  disabled: string[]
+  blocked: string[]
+  missingRequirements: Array<{ name: string; missing: ClawHubSkillSummary['missing']; install: ClawHubSkillSummary['install'] }>
 }
 
 export interface ElectronAPI {
@@ -71,6 +121,8 @@ export interface ElectronAPI {
     watch: (dirPath: string) => Promise<ApiResponse>
     unwatch: (dirPath: string) => Promise<ApiResponse>
     onFileChange: (callback: (data: { dirPath: string; event: string; filename: string | null }) => void) => () => void
+    /** 查询路径是否在授权范围内（不执行实际操作） */
+    validatePath: (filePath: string) => Promise<ApiResponse<{ authorized: boolean; reason?: string }>>
   }
   dialog: {
     openFile: (options?: Electron.OpenDialogOptions) => Promise<Electron.OpenDialogReturnValue>
@@ -85,7 +137,7 @@ export interface ElectronAPI {
   }
   app: {
     getVersion: () => Promise<string>
-    getPath: (name: 'home' | 'appData' | 'userData' | 'temp' | 'desktop' | 'documents') => Promise<string>
+    getPath: (name: 'home' | 'appData' | 'userData' | 'temp' | 'desktop' | 'documents' | 'trash') => Promise<string>
     setAutoLaunch: (enabled: boolean) => Promise<ApiResponse>
     getAutoLaunch: () => Promise<boolean>
     downloadUpdate: () => Promise<ApiResponse>
@@ -93,6 +145,31 @@ export interface ElectronAPI {
   }
   notifications: {
     setEnabled: (enabled: boolean) => Promise<ApiResponse>
+  }
+  // Landing page (About)
+  landing: {
+    isAvailable: () => Promise<ApiResponse<boolean>>
+    show: () => Promise<ApiResponse>
+    hide: () => Promise<ApiResponse>
+  }
+  // App Settings (electron-store)
+  settings: {
+    get: () => Promise<ApiResponse<AppSettings>>
+    set: (key: string, value: unknown) => Promise<ApiResponse>
+    reset: () => Promise<ApiResponse<AppSettings>>
+    /** 监听其他窗口对 electron-store 的修改 */
+    onChanged: (callback: (data: { key: string; value: unknown; settings: AppSettings }) => void) => () => void
+  }
+  // ClawHub
+  clawhub: {
+    status: () => Promise<ApiResponse<{ installed: boolean; version: string | null; error?: string }>>
+    list: () => Promise<ApiResponse<ClawHubListResult>>
+    search: (query: string) => Promise<ApiResponse<ClawHubSearchResult>>
+    install: (name: string, version?: string) => Promise<ApiResponse<{ ok: boolean; message: string; stdout?: string; stderr?: string }>>
+    update: (name?: string, version?: string) => Promise<ApiResponse<{ ok: boolean; message: string; stdout?: string }>>
+    check: () => Promise<ApiResponse<ClawHubCheckResult>>
+    uninstall: (name: string) => Promise<ApiResponse<{ ok: boolean; message: string; stdout?: string }>>
+    installCli: () => Promise<ApiResponse<{ ok: boolean; message: string; version?: string | null }>>
   }
   // Navigation events from main process
   onNavigate: (callback: (data: { page: string }) => void) => () => void
@@ -390,6 +467,8 @@ export interface OpenClawAPI {
     get: () => Promise<ApiResponse<AppSettings>>
     set: (key: string, value: unknown) => Promise<ApiResponse>
     reset: () => Promise<ApiResponse<AppSettings>>
+    /** 监听其他窗口对 electron-store 的修改 */
+    onChanged: (callback: (data: { key: string; value: unknown; settings: AppSettings }) => void) => () => void
   }
 
   // UI actions
@@ -404,6 +483,21 @@ export interface OpenClawAPI {
 
   // Events
   on: (callback: (e: OpenClawEvent) => void) => () => void
+
+  // Web Platform Bridge
+  web: {
+    register: (apiToken: string) => Promise<ApiResponse<{ id: string; token: string }>>
+    reportUsage: (events: Array<{
+      eventType: 'SESSION_START' | 'MESSAGE_SENT' | 'TOKENS_CONSUMED'
+      model?: string
+      inputTokens?: number
+      outputTokens?: number
+      sessionId?: string
+      messageCount?: number
+      metadata?: Record<string, unknown>
+    }>) => Promise<ApiResponse & { skipped?: boolean }>
+    revoke: () => Promise<ApiResponse>
+  }
 }
 
 // ── Subscription & Credits Types ─────────────────────────────────────────────
