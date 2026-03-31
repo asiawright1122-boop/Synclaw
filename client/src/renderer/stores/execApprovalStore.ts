@@ -97,7 +97,8 @@ export const useExecApprovalStore = create<ExecApprovalState>((set, get) => ({
         set((s) => ({
           pending: s.pending.filter((e) => e.id !== id),
           current: s.current?.id === id ? null : s.current,
-          isVisible: s.current?.id !== id && s.pending.some((e) => e.id !== id),
+          // After removing this entry, keep modal visible if there are remaining pending entries
+          isVisible: s.pending.length > 1,
         }))
       }
     }, timeoutMs)
