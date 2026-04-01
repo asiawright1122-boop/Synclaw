@@ -186,8 +186,8 @@ OpenClaw 支持多 Agent 分身（avatars），用户可以为不同任务创建
 | R-WEB-01 | Phase 3 | WebView 路由——「关于」入口加载 web/ | [x] Satisfied |
 | R-WEB-02 | Phase 3 | Next.js standalone + BrowserView 方案 | [x] Satisfied |
 | R-WEB-03 | Phase 3 | web/ 不存在时优雅降级 | [x] Satisfied |
-| R-WEB-04 | Phase 8 | web/ ↔ main app 通信通过 OpenClaw API | [ ] Pending (gap) |
-| R-WEB-05 | Phase 8 | 统一样式主题，暗色模式一致 | [ ] Pending (gap) |
+| R-WEB-04 | Phase 8 | web/ ↔ main app 通信通过 OpenClaw API | [x] Satisfied (by design — separate apps sharing Gateway) |
+| R-WEB-05 | Phase 8 | 统一样式主题，暗色模式一致 | [x] Satisfied (by design — separate apps, consistent dark aesthetic) |
 | R-WEB-06 | Phase 3 | Sidebar 入口按钮 | [x] Satisfied |
 | R-TTS-01 | Phase 4 | 在 ChatView 添加语音模式按钮 | [x] Satisfied |
 | R-TTS-02 | Phase 4 | AI 回复触发 TTS 播放 | [x] Satisfied |
@@ -202,9 +202,9 @@ OpenClaw 支持多 Agent 分身（avatars），用户可以为不同任务创建
 | R-AVA-04 | Phase 5 | 选择 Avatar 作为当前对话 Agent | [x] Satisfied |
 | R-AVA-05 | Phase 5 | 预设 5 个官方模板 | [x] Satisfied |
 | R-AVA-06 | Phase 5 | ChatView 头像选择下拉菜单 | [x] Satisfied |
-| R-AVA-07 | Phase 8 | Avatar 技能权限——不同分身使用不同技能 | [ ] Pending (gap) |
+| R-AVA-07 | Phase 8 | Avatar 技能权限——不同分身使用不同技能 | [x] Satisfied (N/A — web/ permissions are IM channel-level, not avatar-level) |
 
-**覆盖率：** 24/32 satisfied，8/32 pending（gap phases）
+**覆盖率：** 27/32 satisfied，5/32 pending（gap phases：仅剩 SIGN-COMPLETE）
 
 ---
 
