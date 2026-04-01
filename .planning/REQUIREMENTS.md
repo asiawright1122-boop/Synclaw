@@ -192,7 +192,7 @@ OpenClaw 支持多 Agent 分身（avatars），用户可以为不同任务创建
 | R-TTS-01 | Phase 4 | 在 ChatView 添加语音模式按钮 | [x] Satisfied |
 | R-TTS-02 | Phase 4 | AI 回复触发 TTS 播放 | [x] Satisfied |
 | R-TTS-03 | Phase 4 | TTS 播放控制：播放/暂停/停止、语速调节 | [x] Satisfied |
-| R-TTS-04 | Phase 7 | 显示播放文本的高亮位置（streaming TTS 同步） | [ ] Pending (gap) |
+| R-TTS-04 | Phase 7 | 显示播放文本的高亮位置（streaming TTS 同步） | [x] Satisfied |
 | R-TTS-05 | Phase 4 | 语音识别输入（Speech-to-Text） | [x] Satisfied |
 | R-TTS-06 | Phase 4 | TTS 状态持久化（electron-store） | [x] Satisfied |
 | R-TTS-07 | Phase 4 | 移动端/触控优化 | [x] Satisfied |
@@ -204,7 +204,7 @@ OpenClaw 支持多 Agent 分身（avatars），用户可以为不同任务创建
 | R-AVA-06 | Phase 5 | ChatView 头像选择下拉菜单 | [x] Satisfied |
 | R-AVA-07 | Phase 8 | Avatar 技能权限——不同分身使用不同技能 | [ ] Pending (gap) |
 
-**覆盖率：** 23/32 satisfied，9/32 pending（gap phases）
+**覆盖率：** 24/32 satisfied，8/32 pending（gap phases）
 
 ---
 
