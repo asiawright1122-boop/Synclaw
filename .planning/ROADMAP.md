@@ -35,7 +35,10 @@
 5. `execApprovalStore` tests verify approval queue, approve/deny/approve-once decisions, and timeout logic
 6. `useTTS` hook tests verify play/stop/pause/resume and currentWordIndex updates
 
-**Plans:** TBD
+**Plans:** 1 plan
+
+Plans:
+- [ ] 10-test-unit/10-PLAN.md — Vitest setup + unit tests for 5 core stores/hooks
 
 ---
 
@@ -124,7 +127,7 @@
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 10. TEST-UNIT | 0/1 | Not started | - |
+| 10. TEST-UNIT | 0/1 | Planning complete | - |
 | 11. TEST-E2E | 0/1 | Not started | - |
 | 12. UX-POLISH | 0/1 | Not started | - |
 | 13. SECURITY | 0/1 | Not started | - |
