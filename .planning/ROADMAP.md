@@ -13,7 +13,7 @@
 - [x] **Phase 11: TEST-E2E** — Chat E2E + Playwright CI config ✅
 - [x] **Phase 12: UX-POLISH** — Empty states + loading skeletons + keyboard shortcuts ✅
 - [x] **Phase 13: SECURITY** — electron-store encryption guide + WEB_API_BASE graceful degradation ✅
-- [ ] **Phase 14: DEPLOY** — macOS signing UI + README signing guide + electron-builder config
+- [x] **Phase 14: DEPLOY** — macOS signing UI + README signing guide + electron-builder config ✅
 
 ---
 
@@ -132,7 +132,14 @@
 3. README.md contains clear signing configuration section explaining how to set APPLE_ID, APPLE_APP_SPECIFIC_PASSWORD, and APPLE_TEAM_ID
 4. electron-builder.yml has notarize: autoSubmit: true configured for automatic signing when credentials are provided
 
-**Plans:** TBD
+**Plans:** ✅ COMPLETED
+- `14-deploy/14-PLAN.md` — Plan for DEPLOY requirements
+- `ipc-handlers/shell.ts` — Added `app:getSigningStatus` handler with `codesign -d` detection
+- `preload/index.ts` — Added `app.getSigningStatus()` bridge
+- `electron.d.ts` — Added `getSigningStatus` to ElectronAPI interface
+- `AboutPanel.tsx` — Signing status card: signed (green shield), unsigned (orange alert + guide button), not_macos (info)
+- README.md — Already has complete signing guide (lines 132-185)
+- electron-builder.yml — Already has `notarize: autoSubmit: true` (line 64-67)
 
 ---
 
@@ -144,7 +151,7 @@
 | 11. TEST-E2E | 1/1 | COMPLETED | 2026-04-01 |
 | 12. UX-POLISH | 1/1 | COMPLETED | 2026-04-01 |
 | 13. SECURITY | 1/1 | COMPLETED | 2026-04-01 |
-| 14. DEPLOY | 0/1 | Not started | - |
+| 14. DEPLOY | 1/1 | COMPLETED | 2026-04-01 |
 
 ---
 

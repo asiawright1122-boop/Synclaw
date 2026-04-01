@@ -69,9 +69,9 @@ v1.2 macOS 公证缺失导致用户看到「来自不明开发者」警告；Pha
 
 ### 功能需求
 
-- [ ] **DEPLOY-01**: 设置→关于面板：显示 macOS 签名状态（已签名/未签名/签名中）+ 未签名时显示「配置签名」按钮
-- [ ] **DEPLOY-02**: README.md 更新签名配置说明：用户提供 Apple ID 后，在 `.env` 中填入 `APPLE_ID`/`APPLE_APP_SPECIFIC_PASSWORD`/`APPLE_TEAM_ID`，运行 `pnpm build` 即可完成公证
-- [ ] **DEPLOY-03**: `electron-builder.yml` 配置 `notarize: autoSubmit: true`，用户填入凭据后自动触发公证流程
+- [x] **DEPLOY-01**: 设置→关于面板：显示 macOS 签名状态（已签名/未签名/签名中）+ 未签名时显示「配置签名」按钮 ✅
+- [x] **DEPLOY-02**: README.md 更新签名配置说明：用户提供 Apple ID 后，在 `.env` 中填入 `APPLE_ID`/`APPLE_APP_SPECIFIC_PASSWORD`/`APPLE_TEAM_ID`，运行 `pnpm build` 即可完成公证 ✅
+- [x] **DEPLOY-03**: `electron-builder.yml` 配置 `notarize: autoSubmit: true`，用户填入凭据后自动触发公证流程 ✅
 
 ---
 
@@ -130,9 +130,9 @@ v1.2 macOS 公证缺失导致用户看到「来自不明开发者」警告；Pha
 | SEC-02 | Phase 13 | Done |
 | SEC-03 | Phase 13 | Done |
 | SEC-04 | Phase 13 | Done |
-| DEPLOY-01 | Phase 14 | Pending |
-| DEPLOY-02 | Phase 14 | Pending |
-| DEPLOY-03 | Phase 14 | Pending |
+| DEPLOY-01 | Phase 14 | Done |
+| DEPLOY-02 | Phase 14 | Done |
+| DEPLOY-03 | Phase 14 | Done |
 
 **Coverage:**
 - v1 requirements: 23 total
