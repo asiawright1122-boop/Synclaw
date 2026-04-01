@@ -14,12 +14,8 @@ import os from 'node:os'
 
 const log = logger.scope('web')
 
-const WEB_API_BASE = process.env.WEB_API_BASE
-if (!WEB_API_BASE) {
-  throw new Error('WEB_API_BASE environment variable is required — set it to your web platform API base URL (e.g. https://api.yoursite.com/api)')
-}
-
 const MAX_EVENTS_PER_BATCH = 100
+
 const reportUsageRateLimit = new Map<string, { count: number; resetAt: number }>()
 const RATE_LIMIT = 60        // max 60 reportUsage calls
 const RATE_WINDOW_MS = 60_000 // per minute
@@ -38,10 +34,22 @@ function checkReportUsageRateLimit(deviceToken: string): boolean {
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
+/**
+ * Get WEB_API_BASE — prioritizes env var, falls back to settings-persisted value.
+ * This enables graceful degradation: the app works even if WEB_API_BASE is unset.
+ */
+function getWebApiBase(): string | undefined {
+  return process.env.WEB_API_BASE || getAppSettings().security.webApiBase || undefined
+}
+
 async function apiRequest(
   path: string,
   opts: RequestInit & { token?: string } = {},
 ): Promise<{ ok: boolean; status: number; data?: unknown; error?: string }> {
+  const base = getWebApiBase()
+  if (!base) {
+    return { ok: false, status: 0, error: 'WEB_API_BASE is not configured' }
+  }
   const { token, ...fetchOpts } = opts
   try {
     const headers: Record<string, string> = {
@@ -50,7 +58,7 @@ async function apiRequest(
     if (token) {
       headers['Authorization'] = `Bearer ${token}`
     }
-    const res = await fetch(`${WEB_API_BASE}${path}`, {
+    const res = await fetch(`${base}${path}`, {
       ...fetchOpts,
       headers: { ...headers, ...fetchOpts.headers },
     })
@@ -80,6 +88,10 @@ function getDeviceName(): string {
  */
 ipcMain.handle('web:register', async (_event, { apiToken }: { apiToken: string }) => {
   try {
+    if (!getWebApiBase()) {
+      log.debug('[web:register] WEB_API_BASE 未配置，跳过注册')
+      return { success: true, skipped: true }
+    }
     const settings = getAppSettings()
     const existingId = settings.web.deviceId
     const existingToken = settings.web.deviceToken

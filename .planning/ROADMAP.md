@@ -12,7 +12,7 @@
 - [x] **Phase 10: TEST-UNIT** — Vitest setup + unit tests for 5 core stores/hooks ✅
 - [x] **Phase 11: TEST-E2E** — Chat E2E + Playwright CI config ✅
 - [x] **Phase 12: UX-POLISH** — Empty states + loading skeletons + keyboard shortcuts ✅
-- [ ] **Phase 13: SECURITY** — electron-store encryption guide + WEB_API_BASE graceful degradation
+- [x] **Phase 13: SECURITY** — electron-store encryption guide + WEB_API_BASE graceful degradation ✅
 - [ ] **Phase 14: DEPLOY** — macOS signing UI + README signing guide + electron-builder config
 
 ---
@@ -108,7 +108,13 @@
 4. App starts successfully when WEB_API_BASE is not configured
 5. web:register, web:report-usage, and web:revoke handlers return `{ skipped: true }` without error when WEB_API_BASE is unset
 
-**Plans:** TBD
+**Plans:** ✅ COMPLETED
+- `13-security/13-PLAN.md` — Full task plan for all 4 SEC requirements
+- `ipc-handlers/security.ts` — 3 IPC handlers (status, generateKey, setWebApiBase)
+- `ipc-handlers/web.ts` — Lazy WEB_API_BASE init, graceful skip in web:register
+- `app-settings.ts` — Added security.webApiBase + security.encryptionEnabled fields
+- `SecurityPanel.tsx` — Encryption status + key modal + WEB_API_BASE config UI
+- `electron.d.ts` — Added security to ElectronAPI + AppSettings types
 
 ---
 
@@ -137,7 +143,7 @@
 | 10. TEST-UNIT | 1/1 | COMPLETED | 2026-04-01 |
 | 11. TEST-E2E | 1/1 | COMPLETED | 2026-04-01 |
 | 12. UX-POLISH | 1/1 | COMPLETED | 2026-04-01 |
-| 13. SECURITY | 0/1 | Not started | - |
+| 13. SECURITY | 1/1 | COMPLETED | 2026-04-01 |
 | 14. DEPLOY | 0/1 | Not started | - |
 
 ---
