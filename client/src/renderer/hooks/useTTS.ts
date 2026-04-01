@@ -3,6 +3,12 @@
  *
  * Wraps window.openclaw.tts.* API and provides audio playback via HTMLAudioElement.
  * Gracefully degrades if TTS is unavailable.
+ *
+ * NOTE: window.openclaw.tts.convert() is a request-response API — it returns a
+ * complete audio URL, NOT a stream. It does NOT provide word-level timing data.
+ * Word synchronization for TTS playback is simulated using estimated per-word
+ * duration: estimatedWordDuration = audio.duration / wordCount, updated via
+ * HTMLAudioElement's ontimeupdate event.
  */
 import { useState, useCallback, useEffect, useRef } from 'react'
 
@@ -23,6 +29,8 @@ export interface TTSState {
   volume: number
   isLoading: boolean
   error: string | null
+  /** 0-based index of the word currently being spoken (estimated via timeUpdate) */
+  currentWordIndex: number
 }
 
 export interface TTSControls {
@@ -34,6 +42,10 @@ export interface TTSControls {
   setVolume: (volume: number) => void
   enableProvider: (providerId: string) => Promise<void>
   disableProvider: () => Promise<void>
+  /** Start word highlight tracking for the current speech */
+  startHighlightTracking: () => void
+  /** Stop word highlight tracking */
+  stopHighlightTracking: () => void
 }
 
 const DEFAULT_SPEED = 1.0
@@ -52,9 +64,15 @@ export function useTTS(): TTSState & TTSControls {
   const [volume, setVolumeState] = useState(DEFAULT_VOLUME)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  /** 0-based index of the word being spoken (-1 when idle) */
+  const [currentWordIndex, setCurrentWordIndex] = useState(-1)
 
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const currentAudioUrl = useRef<string | null>(null)
+  /** Words split from currentText for word-sync highlight */
+  const wordsRef = useRef<string[]>([])
+  /** Estimated duration per word in seconds */
+  const estimatedWordDurationRef = useRef(0)
 
   // Initialize: check TTS availability and load providers
   const initialize = useCallback(async () => {
@@ -83,6 +101,19 @@ export function useTTS(): TTSState & TTSControls {
       console.error('[useTTS] Failed to initialize TTS:', err)
       setIsAvailable(false)
     }
+  }, [])
+
+  // Word-sync highlight tracking callbacks
+  const startHighlightTracking = useCallback(() => {
+    setCurrentWordIndex(-1)
+    wordsRef.current = []
+    estimatedWordDurationRef.current = 0
+  }, [])
+
+  const stopHighlightTracking = useCallback(() => {
+    setCurrentWordIndex(-1)
+    wordsRef.current = []
+    estimatedWordDurationRef.current = 0
   }, [])
 
   useEffect(() => {
@@ -124,6 +155,10 @@ export function useTTS(): TTSState & TTSControls {
     setIsLoading(true)
     setError(null)
     setCurrentText(text)
+    // Split text into words for sync highlight tracking
+    wordsRef.current = text.trim().split(/\s+/)
+    estimatedWordDurationRef.current = 0
+    setCurrentWordIndex(-1)
 
     try {
       const res = await window.openclaw.tts.convert({ text })
@@ -149,6 +184,13 @@ export function useTTS(): TTSState & TTSControls {
       audio.playbackRate = speed
       audio.volume = volume
 
+      // Capture duration once metadata is loaded (before play starts)
+      audio.onloadedmetadata = () => {
+        if (wordsRef.current.length > 0 && !isNaN(audio.duration) && audio.duration > 0) {
+          estimatedWordDurationRef.current = audio.duration / wordsRef.current.length
+        }
+      }
+
       audio.onplay = () => {
         setIsPlaying(true)
         setIsPaused(false)
@@ -162,6 +204,7 @@ export function useTTS(): TTSState & TTSControls {
       audio.onended = () => {
         setIsPlaying(false)
         setIsPaused(false)
+        setCurrentWordIndex(-1)
         setCurrentText('')
         if (currentAudioUrl.current) {
           URL.revokeObjectURL(currentAudioUrl.current)
@@ -174,6 +217,18 @@ export function useTTS(): TTSState & TTSControls {
         setError('Audio playback failed')
         setIsPlaying(false)
         setIsPaused(false)
+      }
+
+      // Track playback progress for word-sync highlight
+      audio.ontimeupdate = () => {
+        const words = wordsRef.current
+        const perWord = estimatedWordDurationRef.current
+        if (words.length === 0 || perWord <= 0) return
+        const idx = Math.min(
+          Math.floor(audio.currentTime / perWord),
+          words.length - 1
+        )
+        setCurrentWordIndex(idx)
       }
 
       audioRef.current = audio
@@ -201,6 +256,9 @@ export function useTTS(): TTSState & TTSControls {
     }
     setIsPlaying(false)
     setIsPaused(false)
+    setCurrentWordIndex(-1)
+    wordsRef.current = []
+    estimatedWordDurationRef.current = 0
     setCurrentText('')
   }, [])
 
@@ -284,5 +342,8 @@ export function useTTS(): TTSState & TTSControls {
     setVolume,
     enableProvider,
     disableProvider,
+    currentWordIndex,
+    startHighlightTracking,
+    stopHighlightTracking,
   }
 }
