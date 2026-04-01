@@ -89,6 +89,21 @@ export function OnboardingView({ onComplete }: OnboardingViewProps) {
       const res = await window.openclaw?.skills?.update?.({ apiKey: apiKeyInput.trim() })
       if (res?.success) {
         setApiKeySuccess(true)
+        // Re-validate Gateway connection after saving the API key
+        let connectionOk = false
+        try {
+          const status = await window.openclaw?.getStatus?.()
+          connectionOk = status === 'ready' || status === 'connected'
+        } catch {
+          connectionOk = false
+        }
+        if (!connectionOk) {
+          setGatewayStatus('error')
+          setApiKeyError('API Key 已保存，但 Gateway 连接失败。请确认 OpenClaw 已启动，或前往「设置 → Gateway」查看状态。')
+          setApiKeySaving(false)
+          return
+        }
+        setGatewayStatus('ready')
         setStep(2)
       } else {
         setApiKeyError(res?.error ? `保存失败：${res.error}` : '保存 API Key 时出错，请重试')
