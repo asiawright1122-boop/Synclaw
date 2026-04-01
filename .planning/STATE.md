@@ -2,26 +2,26 @@
 gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: milestone
-status: Ready to plan
-last_updated: "2026-04-01T01:56:10.571Z"
+status: Milestone Near-Complete
+last_updated: "2026-04-01T01:45:00.000Z"
 progress:
   total_phases: 9
-  completed_phases: 7
+  completed_phases: 8
   total_plans: 8
-  completed_plans: 7
+  completed_plans: 8
 ---
 
-# STATE.md — SynClaw v1.2 用户体验与分发完善
+# STATE.md — SynClaw
 
-**Version:** v1.2
-**Started:** 2026-03-30
-**Target:** 完善分发能力、提升用户体验
+**v1.2 Milestone Near-Complete**（8/9 phases, 27/32 requirements, 84%）
+**Next:** Phase 9 SIGN-COMPLETE（需 Apple ID）或新 milestone 规划
 
 ## Project Reference
 
-See: `.planning/PROJECT.md`
-See: `.planning/REQUIREMENTS.md` — v1.2 详细需求
-See: `.planning/ROADMAP.md` — v1.2 阶段路线图
+See: `.planning/PROJECT.md` — current project state
+See: `.planning/milestones/v1.2-MILESTONE-ARCHIVE.md` — v1.2 complete milestone details
+See: `.planning/milestones/v1.2-REQUIREMENTS.md` — archived v1.2 requirements
+See: `.planning/ROADMAP.md` — current roadmap
 
 **Core value:** 用户可以通过自然语言对话，安全地操作用户本地文件系统，且数据永不离开用户设备。
 
@@ -35,6 +35,8 @@ See: `.planning/ROADMAP.md` — v1.2 阶段路线图
 | 4 | TTS | TTS / Talk Mode UI | OpenClaw talk API | ✅ 完成 | 2026-03-31 |
 | 5 | AVA | Avatar 多分身体系落地 | OpenClaw avatars API | ✅ 完成 | 2026-03-31 |
 | 6 | EXEC-ENH | Exec 审批增强 | — | ✅ 完成 | 2026-04-01 |
+| 7 | TTS-ENH | TTS 流式同步增强 | — | ✅ 完成 | 2026-04-01 |
+| 8 | WEB-VERIFY | web/ 子仓库集成验证 | — | ✅ 完成 | 2026-04-01 |
 
 ## Decisions
 
@@ -43,7 +45,10 @@ See: `.planning/ROADMAP.md` — v1.2 阶段路线图
 - Phase 3 WEB 集成 Next.js standalone server 到 Electron BrowserView
 - Phase 1 EXEC 完整审批链路：Gateway event → chatStore → execApprovalStore → Modal → Gateway resolve
 - Phase 6 EXEC-ENH 补齐审批增强：approve-once 类型 + 仅本次批准按钮 + 超时 reason 字段
+- Phase 7 TTS-ENH 流式同步高亮：currentWordIndex + ontimeupdate + word-by-word 渲染
+- Phase 8 WEB-VERIFY 研究确认：Gateway 通信 by design，主题语义一致，权限为 IM channel 级别
 - **全部验证通过**：tsc 零错误（2026-03-31/04-01）+ 代码走读确认
+- v1.2 milestone 已归档至 `.planning/milestones/`
 
 ## Blockers
 
@@ -52,15 +57,11 @@ See: `.planning/ROADMAP.md` — v1.2 阶段路线图
 | Apple Developer ID（macOS 公证） | 用户自行提供 |
 | web/ 子仓库依赖 | 独立 git 工作，不阻塞主规划 |
 
-## Active Debug Sessions
-
-*(None)*
-
 ## Notes
 
-- 子仓库 `web/` 独立管理，`.planning/` 文档不进入 web 提交
-- v1.1 Phase 0-4 全部完成，零 TS 错误，构建通过
+- v1.2 **near-complete**：8/9 phases done，27/32 requirements（84%）
 - macOS 公证需要：Apple Developer ID + app-specific password + 签名证书（需用户提供）
-- v1.2 EXEC/WEB/TTS/AVA 4/5 阶段完成 + EXEC-ENH 6 完成，仅剩 SIGN 等待用户提供 Apple ID
-- **验证方法**：tsc --noEmit 零错误 + 代码走读 + 文件存在性核查（2026-03-31/04-01）
+- 子仓库 `web/` 独立管理，`.planning/` 文档不进入 web 提交
+- v1.2 完整归档：`.planning/milestones/v1.2-MILESTONE-ARCHIVE.md`
+- **验证方法**：tsc --noEmit 零错误 + 代码走读 + 文件存在性核查
 - **E2E 测试**：5 个 spec 存在（app/avatar/exec-approval/landing-page/tts），需在完整环境中运行
