@@ -1,6 +1,6 @@
 # SynClaw
 
-> SynClaw 是 **OpenClaw** 的 Electron 桌面壳，让用户拥有炫酷的本地 AI 助手，安全地操作用户本地文件系统。
+> SynClaw 是 **OpenClaw** 的 Electron 桌面客户端，让用户拥有炫酷的本地 AI 助手，安全地操作用户本地文件系统。
 
 [![CI](https://github.com/synclaw/synclaw/actions/workflows/ci.yml/badge.svg)](https://github.com/synclaw/synclaw/actions/workflows/ci.yml)
 
@@ -23,7 +23,7 @@
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│              SynClaw Electron (桌面壳)                │
+│              SynClaw Electron (客户端)                │
 ├─────────────────────────────────────────────────────┤
 │  Renderer: React 18 + TypeScript + Tailwind + Zustand
 │  Main: Electron 28 + gateway-bridge.ts              │
