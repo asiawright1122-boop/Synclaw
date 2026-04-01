@@ -1,58 +1,98 @@
----
-gsd_state_version: 1.0
-milestone: v1.3
-milestone_name: launch-ready
-status: Defining Requirements
-last_updated: "2026-04-01T02:10:00.000Z"
----
+# STATE.md — SynClaw v1.3
 
-# STATE.md — SynClaw
+**Updated:** 2026-04-01
 
-**v1.3 首发就绪冲刺**（Defining Requirements）
-**Next:** Phase 1 planning
+---
 
 ## Project Reference
 
-See: `.planning/PROJECT.md` — current project state
-See: `.planning/milestones/v1.2-MILESTONE-ARCHIVE.md` — v1.2 complete milestone
-See: `.planning/ROADMAP.md` — current roadmap (pending v1.3 phases)
-See: `.planning/PRODUCT_REVIEW.md` — PM audit findings
+**Project:** SynClaw — Electron desktop client for OpenClaw Gateway
+**Core Value:** 用户可以通过自然语言对话，安全地操作用户本地文件系统，且数据永不离开用户设备。
+**Current Milestone:** v1.3 首发就绪冲刺 (Launch-Ready Sprint)
+**Target:** Ship a production-ready SynClaw with testing, security hardening, UX polish, and distribution readiness
+
+---
 
 ## Current Position
 
-| Field | Value |
-|-------|-------|
-| Phase | Not started (defining requirements) |
-| Plan | — |
-| Status | Defining requirements |
-| Last activity | 2026-04-01 — Milestone v1.3 started |
+**Phase:** Roadmap created (planning in progress)
+**Next Phase:** Phase 10 — TEST-UNIT
 
-## v1.2 Summary
+**Milestone Progress:**
+| Phase | Status | Plans | Requirements |
+|-------|--------|-------|--------------|
+| 10. TEST-UNIT | Not started | 0/1 | 6 (TEST-01 to TEST-06) |
+| 11. TEST-E2E | Not started | 0/1 | 2 (TEST-07, TEST-08) |
+| 12. UX-POLISH | Not started | 0/1 | 9 (UX-01 to UX-09) |
+| 13. SECURITY | Not started | 0/1 | 4 (SEC-01 to SEC-04) |
+| 14. DEPLOY | Not started | 0/1 | 3 (DEPLOY-01 to DEPLOY-03) |
 
-- 8/9 phases complete, 27/32 requirements (84%)
-- Phase 9 SIGN blocked by Apple ID (user action required)
-- v1.2 archived to `.planning/milestones/v1.2-MILESTONE-ARCHIVE.md`
+**Overall:** 0/23 requirements completed (0%)
 
-## PM Audit Findings
+---
 
-| Priority | Finding | Recommendation |
-|----------|---------|----------------|
-| P0 | macOS 公证缺失 | 配置化 — 用户自助填写 Apple ID |
-| P1 | Empty states 不完整 | 为每个面板添加引导 CTA |
-| P1 | 无 Chat Flow E2E | 添加核心对话路径测试 |
-| P1 | 无单元测试 | Vitest 覆盖 stores/hooks |
-| P2 | electron-store 未强制加密 | Onboarding 引导启用 |
-| P2 | WEB_API_BASE 必需崩溃 | graceful degradation |
-| P2 | 快捷键仅 2 个 | 扩展至 6 个标准快捷键 |
+## Performance Metrics
 
-## Decisions
+| Metric | Value | Notes |
+|--------|-------|-------|
+| Total Phases | 5 | Phase 10-14 |
+| Total Requirements | 23 | 100% mapped |
+| Requirements This Session | 0 | Roadmap just created |
+| Phases Planned | 0 | Awaiting planning |
 
-- v1.3 聚焦"首发就绪"：修完所有阻塞 + 质量打磨
-- v1.2 macOS 公证：配置化（用户提供 Apple ID），不需要改代码
-- PM 审计确认为误报：GatewayPanel、ModelsPanel、McpPanel、SkillsMarketPanel 均已完整实现
+---
 
-## Next Steps
+## Accumulated Context
 
-- Define v1.3 requirements → `.planning/REQUIREMENTS.md`
-- Create v1.3 roadmap → `.planning/ROADMAP.md`
-- Execute Phase 1 → `/gsd-plan-phase 1`
+### Key Decisions
+
+| Decision | Rationale | Status |
+|----------|-----------|--------|
+| Two-tier shortcuts system | Global (main) for Cmd+,, Context (renderer) for Esc/Cmd+Shift+S | Pending implementation |
+| Mock Gateway for E2E | No real API key needed in CI | Pending implementation |
+| Component-level empty states | Per-panel EmptyState sub-components | Pending implementation |
+| Encryption: UX flow first, Keychain later | No keytar in v1.3, use env var | Pending implementation |
+| WEB_API_BASE optional | Web features silently skip when unset | Pending implementation |
+
+### Known Blockers
+
+| Blocker | Impact | Resolution |
+|---------|--------|------------|
+| None | - | Roadmap created, ready for planning |
+
+### Research Flags
+
+| Flag | Phase | Notes |
+|------|-------|-------|
+| Vitest mocking complexity | 10 | window.openclaw must be mocked before store tests |
+| Escape handler LIFO | 12 | Must close topmost modal first |
+| Shortcut conflicts | 12 | Avoid Cmd+H, Cmd+M, Cmd+Tab, Cmd+Space (system-reserved) |
+| electron-store migration bug | 13 | Library tracks its own version, use explicit checks |
+| Playwright flaky tests | 11 | Use waitForResponse over waitForTimeout |
+
+---
+
+## Session Continuity
+
+**Last Session:** 2026-04-01 — v1.3 roadmap created
+**Next Action:** `/gsd-plan-phase 10` — Plan Phase 10: TEST-UNIT
+**Workspace:** `/Users/kaka/Desktop/synclaw`
+**Branch:** (current branch)
+
+---
+
+## Phase Dependencies
+
+```
+Phase 10 (TEST-UNIT)
+       ↓
+Phase 11 (TEST-E2E) ← depends on 10
+Phase 12 (UX-POLISH) ← depends on 10
+Phase 13 (SECURITY) ← depends on 10
+       ↓
+Phase 14 (DEPLOY) ← depends on 13
+```
+
+---
+
+*State last updated: 2026-04-01*
