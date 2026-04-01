@@ -20,6 +20,7 @@ import './ipc-handlers/shell.js'
 import './ipc-handlers/app.js'
 import './ipc-handlers/clawhub.js'
 import './ipc-handlers/web.js'
+import './ipc-handlers/security.js'
 
 // Legacy API: index.ts calls this to trigger registration.
 // With ESM side-effect imports, registration happens on file load;
