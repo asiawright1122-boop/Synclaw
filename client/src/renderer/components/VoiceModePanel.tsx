@@ -28,6 +28,7 @@ export function VoiceModePanel({ onTranscript }: VoiceModePanelProps) {
     isPlaying,
     isPaused,
     currentText,
+    currentWordIndex,
     speed,
     volume,
     isLoading: ttsLoading,
@@ -293,11 +294,38 @@ export function VoiceModePanel({ onTranscript }: VoiceModePanelProps) {
               <Square className="w-4 h-4" />
             </button>
 
-            {/* Current playing text preview */}
+            {/* Current playing text preview with word-sync highlight */}
             {currentText && (
-              <div className="flex-1 text-xs truncate px-2" style={{ color: 'var(--text-sec)' }}>
-                <span className="opacity-60">{t('voice.playing')}:</span>{' '}
-                <span className="truncate">{currentText.slice(0, 50)}{currentText.length > 50 ? '...' : ''}</span>
+              <div className="flex-1 min-w-0 px-2">
+                <div className="text-xs mb-0.5" style={{ color: 'var(--text-sec)' }}>
+                  <span className="opacity-60">{t('voice.playing')}: </span>
+                </div>
+                <div className="text-sm leading-relaxed overflow-hidden" style={{ maxHeight: '3.5rem' }}>
+                  {currentText.split(/\s+/).map((word, i) => {
+                    const isCurrent = currentWordIndex >= 0 && i === currentWordIndex
+                    const isHighlighted = currentWordIndex >= 0 && i < currentWordIndex
+                    return (
+                      <span
+                        key={i}
+                        className="inline-block mr-1 transition-all duration-200"
+                        style={
+                          isCurrent
+                            ? {
+                                background: 'rgba(252, 93, 30, 0.25)',
+                                color: 'var(--accent1)',
+                                borderRadius: '3px',
+                                padding: '0 2px',
+                              }
+                            : isHighlighted
+                            ? { color: 'var(--text)', opacity: 0.7 }
+                            : { color: 'var(--text-sec)', opacity: 0.45 }
+                        }
+                      >
+                        {word}
+                      </span>
+                    )
+                  })}
+                </div>
               </div>
             )}
           </>
