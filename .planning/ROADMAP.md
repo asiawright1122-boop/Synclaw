@@ -10,7 +10,7 @@
 ## Phases
 
 - [x] **Phase 10: TEST-UNIT** — Vitest setup + unit tests for 5 core stores/hooks ✅
-- [ ] **Phase 11: TEST-E2E** — Chat E2E + Playwright CI config
+- [x] **Phase 11: TEST-E2E** — Chat E2E + Playwright CI config ✅
 - [ ] **Phase 12: UX-POLISH** — Empty states + loading skeletons + keyboard shortcuts
 - [ ] **Phase 13: SECURITY** — electron-store encryption guide + WEB_API_BASE graceful degradation
 - [ ] **Phase 14: DEPLOY** — macOS signing UI + README signing guide + electron-builder config
@@ -57,7 +57,9 @@ Plans:
 4. Playwright CI configuration runs in headless mode with Gateway mocked
 5. `pnpm test:e2e` passes in CI environment with 2 retries for flaky tests
 
-**Plans:** TBD
+**Plans:** ✅ COMPLETED
+- `11-test-e2e/gateway-mock.cjs` — Gateway mock for E2E (CommonJS, injected via setupFiles)
+- `11-test-e2e/chat.spec.ts` — 7 E2E tests covering chat flow, Enter key, and Gateway API
 
 ---
 
@@ -128,7 +130,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 10. TEST-UNIT | 1/1 | COMPLETED | 2026-04-01 |
-| 11. TEST-E2E | 0/1 | Not started | - |
+| 11. TEST-E2E | 1/1 | COMPLETED | 2026-04-01 |
 | 12. UX-POLISH | 0/1 | Not started | - |
 | 13. SECURITY | 0/1 | Not started | - |
 | 14. DEPLOY | 0/1 | Not started | - |
