@@ -4,7 +4,7 @@
  */
 import { create } from 'zustand'
 
-export type ApprovalDecision = 'approved' | 'denied' | 'deny-all'
+export type ApprovalDecision = 'approved' | 'approved-once' | 'denied' | 'deny-all'
 export type ApprovalDecisionReason = ApprovalDecision | { decision: ApprovalDecision; reason: string }
 
 /** Extract decision string from a plain decision or a decision-with-reason */
