@@ -12,7 +12,7 @@
     "build:renderer": "vite build",
     "build:main": "node scripts/build-main.mjs",
     "preview": "vite preview",
-    "electron:dev": "concurrently -k \"vite\" \"wait-on http://localhost:5173 && electron .\"",
+    "electron:dev": "concurrently -k \"vite --port 5174\" \"wait-on http://localhost:5174 && electron .\"",
     "electron:build": "npm run openclaw:sync && npm run build && electron-builder",
     "electron:build:mac": "npm run openclaw:sync && npm run build && electron-builder --mac --publish never",
     "electron:build:win": "npm run openclaw:sync && npm run build && electron-builder --win",
