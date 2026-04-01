@@ -1,20 +1,14 @@
 ---
 gsd_state_version: 1.0
 milestone: v1.2
-milestone_name: 用户体验与分发完善
-status: Planning
-last_updated: "2026-03-31T00:00:00.000Z"
+milestone_name: milestone
+status: Ready to plan
+last_updated: "2026-04-01T01:33:59.378Z"
 progress:
-  total_phases: 5
-  completed_phases: 4
-  total_plans: 0
-  completed_plans: 0
-verification:
-  tsc: "✅ zero errors (2026-03-31)"
-  exec_phase: "✅ 384-line ExecApprovalModal + Zustand store + full approval chain"
-  web_phase: "✅ BrowserView + Next.js standalone server + Sidebar about entry"
-  tts_phase: "✅ VoiceModePanel + useTTS/useSpeechRecognition hooks + TtsPanel settings"
-  ava_phase: "✅ AvatarListPanel + AvatarEditModal + avatarStore + 5 templates + E2E"
+  total_phases: 9
+  completed_phases: 6
+  total_plans: 6
+  completed_plans: 6
 ---
 
 # STATE.md — SynClaw v1.2 用户体验与分发完善

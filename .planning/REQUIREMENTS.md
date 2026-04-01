@@ -172,7 +172,7 @@ OpenClaw 支持多 Agent 分身（avatars），用户可以为不同任务创建
 |--------|-------|------|------|
 | R-EXEC-01 | Phase 1 | 监听 exec.approval.requested，显示审批弹窗 | [x] Satisfied |
 | R-EXEC-02 | Phase 1 | 弹窗内容：命令详情、环境变量、来源 Agent、风险提示 | [x] Satisfied |
-| R-EXEC-03 | Phase 6 | 支持「批准」「拒绝」「仅本次批准」三种操作 | [ ] Pending (gap) |
+| R-EXEC-03 | Phase 6 | 支持「批准」「拒绝」「仅本次批准」三种操作 | [x] Satisfied |
 | R-EXEC-04 | Phase 1 | 批准后调用 resolve；拒绝后调用 resolve(reason) | [x] Satisfied |
 | R-EXEC-05 | Phase 1 | 弹窗自动超时机制（默认 5 分钟） | [x] Satisfied |
 | R-EXEC-06 | Phase 1 | 多个待审批请求排队显示 | [x] Satisfied |
@@ -204,7 +204,7 @@ OpenClaw 支持多 Agent 分身（avatars），用户可以为不同任务创建
 | R-AVA-06 | Phase 5 | ChatView 头像选择下拉菜单 | [x] Satisfied |
 | R-AVA-07 | Phase 8 | Avatar 技能权限——不同分身使用不同技能 | [ ] Pending (gap) |
 
-**覆盖率：** 22/32 satisfied，10/32 pending（gap phases）
+**覆盖率：** 23/32 satisfied，9/32 pending（gap phases）
 
 ---
 
