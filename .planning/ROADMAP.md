@@ -11,7 +11,7 @@
 
 - [x] **Phase 10: TEST-UNIT** — Vitest setup + unit tests for 5 core stores/hooks ✅
 - [x] **Phase 11: TEST-E2E** — Chat E2E + Playwright CI config ✅
-- [ ] **Phase 12: UX-POLISH** — Empty states + loading skeletons + keyboard shortcuts
+- [x] **Phase 12: UX-POLISH** — Empty states + loading skeletons + keyboard shortcuts ✅
 - [ ] **Phase 13: SECURITY** — electron-store encryption guide + WEB_API_BASE graceful degradation
 - [ ] **Phase 14: DEPLOY** — macOS signing UI + README signing guide + electron-builder config
 
@@ -35,10 +35,8 @@
 5. `execApprovalStore` tests verify approval queue, approve/deny/approve-once decisions, and timeout logic
 6. `useTTS` hook tests verify play/stop/pause/resume and currentWordIndex updates
 
-**Plans:** 1 plan
-
-Plans:
-- [ ] 10-test-unit/10-PLAN.md — Vitest setup + unit tests for 5 core stores/hooks
+**Plans:** ✅ COMPLETED
+- `10-test-unit/10-PLAN.md` — Vitest setup + unit tests for 5 core stores/hooks ✅
 
 ---
 
@@ -82,7 +80,14 @@ Plans:
 8. Cmd+Shift+S toggles sidebar expand/collapse
 9. Cmd+/ opens keyboard shortcuts reference modal showing all available shortcuts
 
-**Plans:** TBD
+**Plans:** ✅ COMPLETED
+- `12-ux-polish/12-PLAN.md` — Full task plan for all 9 UX requirements
+- `TaskBoard.tsx` — Empty state with ClawLogo + "开启你的第一个任务" + create CTA
+- `IMPanel.tsx` — Empty state text updated to "开始新对话"
+- `AvatarListPanel.tsx` — 5 template quick-create cards using AVATAR_TEMPLATES
+- `McpPanel.tsx` — Empty state merged with quick template grid
+- `ChatView.tsx` — Skeleton loading animation (user + 2 assistant bubbles)
+- `App.tsx` — Cmd+, Cmd+Shift+S, Escape LIFO, Cmd+/, ShortcutsModal component
 
 **UI hint:** yes
 
@@ -131,7 +136,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | 10. TEST-UNIT | 1/1 | COMPLETED | 2026-04-01 |
 | 11. TEST-E2E | 1/1 | COMPLETED | 2026-04-01 |
-| 12. UX-POLISH | 0/1 | Not started | - |
+| 12. UX-POLISH | 1/1 | COMPLETED | 2026-04-01 |
 | 13. SECURITY | 0/1 | Not started | - |
 | 14. DEPLOY | 0/1 | Not started | - |
 

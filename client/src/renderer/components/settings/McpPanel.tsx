@@ -498,64 +498,55 @@ function McpPanel() {
         </>
       )}
 
-      {/* 空状态 */}
+      {/* 空状态 + 快速添加模板 */}
       {servers.length === 0 && tools.length === 0 && !loading && (
-        <div
-          className="mt-8 rounded-[12px] border py-16 px-6 text-center"
-          style={{ borderColor: 'var(--border)' }}
-        >
-          <p className="text-sm font-medium" style={{ color: 'var(--text)' }}>
-            尚未配置 MCP 服务
-          </p>
-          <p className="text-xs mt-2 max-w-sm mx-auto" style={{ color: 'var(--text-ter)' }}>
-            点击「添加服务」连接你的第一个 MCP 工具提供方。
-          </p>
+        <div className="mt-8">
+          <div className="text-center mb-6">
+            <p className="text-sm font-semibold mb-1" style={{ color: 'var(--text)' }}>
+              配置你的第一个 MCP 服务
+            </p>
+            <p className="text-xs max-w-sm mx-auto" style={{ color: 'var(--text-sec)' }}>
+              MCP 服务扩展 SynClaw 的能力，访问文件、搜索、数据库等
+            </p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {QUICK_TEMPLATES.map(tpl => (
+              <Card key={tpl.id}>
+                <div className="px-4 py-3 flex items-start gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-sm font-semibold" style={{ color: 'var(--text)' }}>
+                        {tpl.name}
+                      </span>
+                      <span
+                        className="text-[10px] px-1.5 py-0.5 rounded font-medium"
+                        style={{ background: 'rgba(99,102,241,0.1)', color: '#6366f1' }}
+                      >
+                        {tpl.type === 'stdio' ? 'Stdio' : 'HTTP'}
+                      </span>
+                    </div>
+                    <p className="text-xs" style={{ color: 'var(--text-sec)' }}>
+                      {tpl.desc}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleQuickAdd(tpl)}
+                    disabled={saving || servers.some(s => s.name === tpl.name)}
+                    className={`${pillBtn(true)} text-xs shrink-0`}
+                    style={{
+                      background: servers.some(s => s.name === tpl.name) ? 'var(--success)' : 'var(--accent1)',
+                      opacity: saving ? 0.5 : 1,
+                    }}
+                  >
+                    {servers.some(s => s.name === tpl.name) ? '已添加' : saving ? <Spinner size={12} /> : '+ 快速添加'}
+                  </button>
+                </div>
+              </Card>
+            ))}
+          </div>
         </div>
       )}
-
-      {/* 快速添加模板 */}
-      <p className="text-sm font-semibold mt-10 mb-1" style={{ color: 'var(--text)' }}>
-        快速添加模板
-      </p>
-      <p className="text-xs mb-4" style={{ color: 'var(--text-ter)' }}>
-        一键添加常用 MCP 服务
-      </p>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-        {QUICK_TEMPLATES.map(tpl => (
-          <Card key={tpl.id}>
-            <div className="px-4 py-3 flex items-start gap-3">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-sm font-semibold" style={{ color: 'var(--text)' }}>
-                    {tpl.name}
-                  </span>
-                  <span
-                    className="text-[10px] px-1.5 py-0.5 rounded font-medium"
-                    style={{ background: 'rgba(99,102,241,0.1)', color: '#6366f1' }}
-                  >
-                    {tpl.type === 'stdio' ? 'Stdio' : 'HTTP'}
-                  </span>
-                </div>
-                <p className="text-xs" style={{ color: 'var(--text-sec)' }}>
-                  {tpl.desc}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => handleQuickAdd(tpl)}
-                disabled={saving || servers.some(s => s.name === tpl.name)}
-                className={`${pillBtn(true)} text-xs shrink-0`}
-                style={{
-                  background: servers.some(s => s.name === tpl.name) ? 'var(--success)' : 'var(--accent1)',
-                  opacity: saving ? 0.5 : 1,
-                }}
-              >
-                {servers.some(s => s.name === tpl.name) ? '已添加' : saving ? <Spinner size={12} /> : '+ 添加'}
-              </button>
-            </div>
-          </Card>
-        ))}
-      </div>
     </div>
   )
 }

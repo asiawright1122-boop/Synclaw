@@ -666,6 +666,52 @@ export function ChatView({ onShowContextMenu }: ChatViewProps) {
                   </motion.div>
                 ))}
               </AnimatePresence>
+
+              {/* AI 响应骨架屏 — sending 时显示 */}
+              <AnimatePresence>
+                {sending && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="space-y-4"
+                  >
+                    {/* User thought skeleton (right-aligned) */}
+                    <div className="flex gap-3 flex-row-reverse">
+                      <div className="w-8 h-8 rounded-full" style={{ background: 'var(--accent1)' }} />
+                      <div
+                        className="max-w-[70%] px-4 py-3 rounded-2xl space-y-2"
+                        style={{ background: 'var(--accent1)', borderTopLeftRadius: 4, borderTopRightRadius: 16, borderBottomLeftRadius: 16, borderBottomRightRadius: 16 }}
+                      >
+                        <div className="h-3 rounded-full animate-pulse" style={{ background: 'rgba(255,255,255,0.25)', width: '60%' }} />
+                      </div>
+                    </div>
+                    {/* Assistant response skeletons (left-aligned) */}
+                    {[1, 2].map((i) => (
+                      <div key={i} className="flex gap-3">
+                        <div className="w-8 h-8 rounded-full" style={{ background: 'var(--accent-gradient)' }} />
+                        <div
+                          className="max-w-[70%] px-4 py-3 rounded-2xl space-y-2"
+                          style={{
+                            background: 'var(--bg-elevated)',
+                            border: '1px solid var(--border)',
+                            borderTopLeftRadius: 16,
+                            borderTopRightRadius: 4,
+                            borderBottomLeftRadius: 16,
+                            borderBottomRightRadius: 16,
+                          }}
+                        >
+                          <div className="h-3 rounded-full animate-pulse" style={{ background: 'var(--border)', animationDelay: `${i * 150}ms` }} />
+                          <div className="h-3 rounded-full animate-pulse" style={{ background: 'var(--border)', width: '80%', animationDelay: `${i * 150 + 100}ms` }} />
+                          {i === 1 && <div className="h-3 rounded-full animate-pulse" style={{ background: 'var(--border)', width: '55%' }} />}
+                        </div>
+                      </div>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
               <div ref={messagesEndRef} />
             </motion.div>
           )}
