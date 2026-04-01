@@ -246,14 +246,95 @@ client/e2e/avatar.spec.ts                           ← 新建 E2E
 
 ---
 
+## Phase 6: EXEC-ENH — Exec 审批增强
+
+**目标：** 完善审批弹窗功能，补齐 R-EXEC-03 缺失的「永久批准」选项。
+
+### 6.1 阶段计划
+
+- [ ] **T-EXEC-ENH-01**: 研究 Gateway exec API 是否支持 `approve-once` / `approve-all` 策略
+- [ ] **T-EXEC-ENH-02**: 在 `ExecApprovalModal.tsx` 添加「仅本次批准」和/或「始终批准」按钮
+- [ ] **T-EXEC-ENH-03**: 在 `execApprovalStore.ts` 支持 `approve-once` 决策类型，超时拒绝附带 reason 字段
+- [ ] **T-EXEC-ENH-04**: 验收测试
+
+### 6.2 关闭的缺口
+
+- R-EXEC-03: 缺少「永久批准」按钮
+- tech debt: 超时拒绝 reason 字段
+
+---
+
+## Phase 7: TTS-ENH — TTS 流式同步增强
+
+**目标：** 实现 AI 回复 TTS 播放时的文本同步高亮，让用户看到正在朗读的位置。
+
+### 7.1 阶段计划
+
+- [ ] **T-TTS-ENH-01**: 研究 OpenClaw `talk.tts.stream` API 是否返回 word-level timing
+- [ ] **T-TTS-ENH-02**: 在 `useTTS.ts` 暴露 `currentWordIndex` 或 `currentTime` 回调
+- [ ] **T-TTS-ENH-03**: 在 `ChatView.tsx` 或 `VoiceModePanel.tsx` 实现流式文本同步高亮
+- [ ] **T-TTS-ENH-04**: 验收测试
+
+### 7.2 关闭的缺口
+
+- R-TTS-04: 流式 TTS 同步高亮缺失
+
+---
+
+## Phase 8: WEB-VERIFY — web/ 子仓库集成验证
+
+**目标：** 验证 web/ 子仓库与主应用的集成完整性，确认通信机制和主题一致性。
+
+### 8.1 阶段计划
+
+- [ ] **T-WEB-VERIFY-01**: 检查 `web/` 子仓库是否实现了 OpenClaw API 通信
+- [ ] **T-WEB-VERIFY-02**: 验证 web/ Next.js app 暗色主题与主 app 一致
+- [ ] **T-WEB-VERIFY-03**: 研究 avatar-templates.ts 技能权限字段是否应映射到 Gateway
+- [ ] **T-WEB-VERIFY-04**: 验收测试（web/ 功能、E2E）
+
+### 8.2 关闭的缺口
+
+- R-WEB-04: web ↔ main app 通信未完全确认
+- R-WEB-05: 主题一致性待验证
+- R-AVA-07: 技能权限字段定义不明确
+
+---
+
+## Phase 9: SIGN-COMPLETE — macOS 公证完成
+
+**目标：** 使用户能通过 Apple Notarization，彻底消除 Gatekeeper 安全警告。
+
+⚠️ **前置条件：** 用户需要提供 Apple Developer ID + app-specific password + 证书
+
+### 9.1 阶段计划
+
+- [ ] **T-SIGN-01**: 用户在 GitHub Secrets 配置 Apple ID 等凭证（或本地提供）
+- [ ] **T-SIGN-02**: 将 `.env.example` 凭证占位符替换为真实值（如本地测试）
+- [ ] **T-SIGN-03**: 验证 `electron-builder notarize` 流程跑通（CI 或本地）
+- [ ] **T-SIGN-04**: 更新 README.md 添加分发说明（Apple ID 配置指南）
+- [ ] **T-SIGN-05**: 验收测试（`spctl -a -t exec -vv` 验证通过）
+
+### 9.2 关闭的缺口
+
+- R-SIGN-01: notarize block 填入真实值
+- R-SIGN-02: CI notarize step 激活
+- R-SIGN-03: dmg 公证验证
+- R-SIGN-05: README 分发说明更新
+
+---
+
 ## 进度概览
 
 ```
-Phase 1: EXEC  ██████████ 100%  ✅ 完成（验证：2026-03-31）
-Phase 2: SIGN  ░░░░░░░░░  0%  ⏳ 等待用户提供 Apple ID
-Phase 3: WEB   ██████████ 100%  ✅ 完成（验证：2026-03-31）
-Phase 4: TTS   ██████████ 100%  ✅ 完成（验证：2026-03-31）
-Phase 5: AVA   ██████████ 100%  ✅ 完成（验证：2026-03-31）
+Phase 1: EXEC       ██████████ 100%  ✅ 完成（验证：2026-03-31）
+Phase 2: SIGN      ░░░░░░░░░  0%  ⏳ 等待用户提供 Apple ID
+Phase 3: WEB        ██████████ 100%  ✅ 完成（验证：2026-03-31）
+Phase 4: TTS        ██████████ 100%  ✅ 完成（验证：2026-03-31）
+Phase 5: AVA        ██████████ 100%  ✅ 完成（验证：2026-03-31）
+Phase 6: EXEC-ENH  ░░░░░░░░░  0%  📋 Gap 修复规划中
+Phase 7: TTS-ENH    ░░░░░░░░░  0%  📋 Gap 修复规划中
+Phase 8: WEB-VERIFY ░░░░░░░░░  0%  📋 Gap 修复规划中
+Phase 9: SIGN-CPLETE ░░░░░░░░░  0%  📋 Gap 修复规划中（阻塞）
 ```
 
 **验证结果（2026-03-31）：**
@@ -270,7 +351,7 @@ Phase 5: AVA   ██████████ 100%  ✅ 完成（验证：2026-0
 
 ## 里程碑完成条件
 
-所有 5 个阶段通过以下验收：
+所有 7 个阶段（原 5 个 + gap 修复 4 个）通过以下验收：
 
 | 阶段 | 验收条件 | 状态 |
 |------|---------|------|
@@ -279,5 +360,15 @@ Phase 5: AVA   ██████████ 100%  ✅ 完成（验证：2026-0
 | Phase 3: WEB | 打包 .app 包含 web/ 资源，入口正常加载 | ✅ 代码已实现，待打包验证 |
 | Phase 4: TTS | TTS 播放/语音识别正常 | ✅ 代码已实现，待实际设备验证 |
 | Phase 5: AVA | Avatar CRUD + 切换正常 | ✅ 代码已实现，E2E spec 存在 |
+| Phase 6: EXEC-ENH | 「永久批准」按钮 + reason 字段 | 📋 待执行 |
+| Phase 7: TTS-ENH | 流式 TTS 同步高亮 | 📋 待执行 |
+| Phase 8: WEB-VERIFY | web/ 集成验证通过 | 📋 待执行 |
+| Phase 9: SIGN-COMPLETE | `spctl` + `xcrun stapler validate` 通过 | ⏳ 等待 Apple ID |
 | 全部 | `cd client && pnpm exec tsc --noEmit` | ✅ 零错误（2026-03-31） |
 | 全部 | Playwright E2E | ⏳ 需完整环境运行 |
+
+**Gap 修复条件（Phase 6-9）：**
+- Phase 6 EXEC-ENH: 「永久批准」按钮存在且功能正常
+- Phase 7 TTS-ENH: TTS 播放时文本同步高亮正常
+- Phase 8 WEB-VERIFY: web/ 集成验证通过（通信 + 主题）
+- Phase 9 SIGN-COMPLETE: macOS 公证验证通过（需用户提供凭证）

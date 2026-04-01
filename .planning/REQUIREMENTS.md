@@ -2,7 +2,7 @@
 
 **Version:** v1.2
 **Date:** 2026-03-30
-**Status:** Planning
+**Status:** Near-Complete — Gap phases planned (4 phases added: 6-9)
 
 ---
 
@@ -163,6 +163,48 @@ OpenClaw 支持多 Agent 分身（avatars），用户可以为不同任务创建
 - [ ] 选择 Avatar 后，新对话使用该分身的 prompt
 - [ ] 官方模板一键创建分身
 - [ ] ChatView 可见当前激活的 Avatar
+
+---
+
+## Traceability Matrix
+
+| REQ-ID | Phase | 描述 | 状态 |
+|--------|-------|------|------|
+| R-EXEC-01 | Phase 1 | 监听 exec.approval.requested，显示审批弹窗 | [x] Satisfied |
+| R-EXEC-02 | Phase 1 | 弹窗内容：命令详情、环境变量、来源 Agent、风险提示 | [x] Satisfied |
+| R-EXEC-03 | Phase 6 | 支持「批准」「拒绝」「仅本次批准」三种操作 | [ ] Pending (gap) |
+| R-EXEC-04 | Phase 1 | 批准后调用 resolve；拒绝后调用 resolve(reason) | [x] Satisfied |
+| R-EXEC-05 | Phase 1 | 弹窗自动超时机制（默认 5 分钟） | [x] Satisfied |
+| R-EXEC-06 | Phase 1 | 多个待审批请求排队显示 | [x] Satisfied |
+| R-EXEC-07 | Phase 1 | 系统通知提醒有新审批请求 | [x] Satisfied |
+| R-SIGN-01 | Phase 9 | electron-builder.yml 配置 notarize 参数 | [ ] Pending (gap) |
+| R-SIGN-02 | Phase 9 | release.yml 添加 notarization step | [ ] Pending (gap) |
+| R-SIGN-03 | Phase 9 | dmg 安装包签名后自动 notarize | [ ] Pending (gap) |
+| R-SIGN-04 | Phase 2 | 创建 notarize.mjs 本地公证脚本 | [x] Satisfied |
+| R-SIGN-05 | Phase 9 | README 更新分发说明 | [ ] Pending (gap) |
+| R-SIGN-06 | Phase 2 | Windows / Linux 签名配置预留接口 | [x] Satisfied |
+| R-WEB-01 | Phase 3 | WebView 路由——「关于」入口加载 web/ | [x] Satisfied |
+| R-WEB-02 | Phase 3 | Next.js standalone + BrowserView 方案 | [x] Satisfied |
+| R-WEB-03 | Phase 3 | web/ 不存在时优雅降级 | [x] Satisfied |
+| R-WEB-04 | Phase 8 | web/ ↔ main app 通信通过 OpenClaw API | [ ] Pending (gap) |
+| R-WEB-05 | Phase 8 | 统一样式主题，暗色模式一致 | [ ] Pending (gap) |
+| R-WEB-06 | Phase 3 | Sidebar 入口按钮 | [x] Satisfied |
+| R-TTS-01 | Phase 4 | 在 ChatView 添加语音模式按钮 | [x] Satisfied |
+| R-TTS-02 | Phase 4 | AI 回复触发 TTS 播放 | [x] Satisfied |
+| R-TTS-03 | Phase 4 | TTS 播放控制：播放/暂停/停止、语速调节 | [x] Satisfied |
+| R-TTS-04 | Phase 7 | 显示播放文本的高亮位置（streaming TTS 同步） | [ ] Pending (gap) |
+| R-TTS-05 | Phase 4 | 语音识别输入（Speech-to-Text） | [x] Satisfied |
+| R-TTS-06 | Phase 4 | TTS 状态持久化（electron-store） | [x] Satisfied |
+| R-TTS-07 | Phase 4 | 移动端/触控优化 | [x] Satisfied |
+| R-AVA-01 | Phase 5 | Avatar 列表页面 | [x] Satisfied |
+| R-AVA-02 | Phase 5 | 创建/编辑 Avatar | [x] Satisfied |
+| R-AVA-03 | Phase 5 | 删除 Avatar（确认对话框） | [x] Satisfied |
+| R-AVA-04 | Phase 5 | 选择 Avatar 作为当前对话 Agent | [x] Satisfied |
+| R-AVA-05 | Phase 5 | 预设 5 个官方模板 | [x] Satisfied |
+| R-AVA-06 | Phase 5 | ChatView 头像选择下拉菜单 | [x] Satisfied |
+| R-AVA-07 | Phase 8 | Avatar 技能权限——不同分身使用不同技能 | [ ] Pending (gap) |
+
+**覆盖率：** 22/32 satisfied，10/32 pending（gap phases）
 
 ---
 
