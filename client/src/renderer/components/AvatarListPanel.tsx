@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Plus, Bot, Loader2, RefreshCw, Search, Trash2, Edit3, Star, X } from 'lucide-react'
 import { useAvatarStore, type Avatar } from '../stores/avatarStore'
 import { AvatarEditModal } from './AvatarEditModal'
+import { t } from '../i18n'
 
 function ClawGlyph({ className }: { className?: string }) {
   return (
@@ -102,7 +103,7 @@ function AvatarCard({ avatar, isActive, onActivate, onEdit, onDelete }: AvatarCa
           }}
           className="w-7 h-7 rounded-lg flex items-center justify-center"
           style={{ background: 'var(--bg-elevated)', color: 'var(--text-sec)' }}
-          title="编辑"
+          title={t('avatar.list.edit')}
         >
           <Edit3 className="w-3.5 h-3.5" />
         </button>
@@ -114,7 +115,7 @@ function AvatarCard({ avatar, isActive, onActivate, onEdit, onDelete }: AvatarCa
           }}
           className="w-7 h-7 rounded-lg flex items-center justify-center"
           style={{ background: 'var(--bg-elevated)', color: '#ef4444' }}
-          title="删除"
+          title={t('avatar.list.delete')}
         >
           <Trash2 className="w-3.5 h-3.5" />
         </button>
@@ -152,10 +153,10 @@ function DeleteConfirmModal({ open, avatar, onConfirm, onCancel, loading }: Dele
             style={{ background: 'var(--bg-container)', border: '1px solid var(--border)' }}
           >
             <h3 className="text-base font-semibold mb-2" style={{ color: 'var(--text)' }}>
-              删除分身
+              {t('avatar.list.delete')}
             </h3>
             <p className="text-sm mb-4" style={{ color: 'var(--text-sec)' }}>
-              确定要删除「{avatar.name}」吗？此操作无法撤销。
+              {t('avatar.list.deleteConfirm')}
             </p>
             <div className="flex items-center gap-3">
               <button
@@ -165,7 +166,7 @@ function DeleteConfirmModal({ open, avatar, onConfirm, onCancel, loading }: Dele
                 style={{ background: 'var(--bg-subtle)', color: 'var(--text-sec)' }}
                 disabled={loading}
               >
-                取消
+                {t('generic.cancel') ?? '取消'}
               </button>
               <button
                 type="button"
@@ -174,7 +175,7 @@ function DeleteConfirmModal({ open, avatar, onConfirm, onCancel, loading }: Dele
                 className="flex-1 py-2 rounded-full text-sm font-medium text-white"
                 style={{ background: '#ef4444' }}
               >
-                {loading ? '删除中...' : '确认删除'}
+                {loading ? t('generic.loading') : t('generic.confirm') ?? '确认删除'}
               </button>
             </div>
           </motion.div>
@@ -292,7 +293,7 @@ export function AvatarListPanel() {
             onChange={e => setSearch(e.target.value)}
             className="flex-1 bg-transparent border-none outline-none text-xs min-w-0"
             style={{ color: 'var(--text)' }}
-            placeholder="搜索分身..."
+            placeholder={t('avatar.list.search')}
           />
           {search && (
             <button
@@ -317,7 +318,7 @@ export function AvatarListPanel() {
             border: '1px solid rgba(245, 158, 11, 0.3)',
           }}
         >
-          演示模式 - 分身数据存储在本地
+          {t('avatar.list.demo')}
         </div>
       )}
 
@@ -337,14 +338,14 @@ export function AvatarListPanel() {
               style={{ color: 'var(--accent1)' }}
             >
               <RefreshCw className="w-3.5 h-3.5" />
-              重试
+              {t('generic.retry')}
             </button>
           </div>
         ) : filteredAvatars.length === 0 ? (
           <div className="flex flex-col items-center gap-3 py-12">
             <Bot className="w-10 h-10" style={{ color: 'var(--text-ter)' }} />
             <p className="text-sm" style={{ color: 'var(--text-sec)' }}>
-              {search ? '未找到匹配的分身' : '还没有分身'}
+              {search ? t('avatar.list.noMatch') : t('avatar.list.empty')}
             </p>
             {!search && (
               <button
@@ -354,7 +355,7 @@ export function AvatarListPanel() {
                 style={{ color: 'var(--accent1)' }}
               >
                 <Plus className="w-4 h-4" />
-                创建第一个分身
+                {t('avatar.list.create')}
               </button>
             )}
           </div>

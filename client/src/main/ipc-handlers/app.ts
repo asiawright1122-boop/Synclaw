@@ -24,10 +24,11 @@ const VALID_SETTINGS_KEYS = [
   'workspace.watch',
   'workspace.heartbeat',
   'privacy.optimizationPlan',
-  'web.deviceToken',
-  'web.deviceId',
-  'web.deviceName',
-  'web.lastReportedAt',
+  // Note: web.deviceToken and web.deviceId are NOT in this list.
+  // They are written exclusively by the main-process web:register handler (web.ts),
+  // which calls setAppSetting directly (not through IPC). Keeping them out of this
+  // list prevents the renderer from writing arbitrary values via settings:set.
+  // These fields are intentionally omitted from the read-write whitelist.
 ]
 
 type SettingsValue = string | number | boolean | string[] | object | null
@@ -46,10 +47,8 @@ const VALUE_VALIDATORS: Record<string, (v: unknown) => v is SettingsValue> = {
   'workspace.heartbeat': (v): v is string => ['30m', '1h', '2h', '4h'].includes(v as string),
   'workspace': (v): v is object => typeof v === 'object' && v !== null,
   'privacy.optimizationPlan': (v): v is boolean => typeof v === 'boolean',
-  'web.deviceToken': (_v): true => true,
-  'web.deviceId': (_v): true => true,
-  'web.deviceName': (_v): true => true,
-  'web.lastReportedAt': (_v): true => true,
+  // web.* keys are main-process only — renderer cannot write via settings:set
+  // so no validators needed for renderer-facing IPC
 }
 
 // ── Settings ────────────────────────────────────────────────────────────

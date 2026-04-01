@@ -27,7 +27,8 @@ type Step = 1 | 2 | 3
 const STEPS: Step[] = [1, 2, 3]
 
 function validateApiKey(key: string): boolean {
-  return key.trim().startsWith('sk-ant-')
+  // Accept any non-empty string of sufficient length; let the Gateway validate the actual key
+  return key.trim().length >= 32
 }
 
 function maskKey(key: string): string {

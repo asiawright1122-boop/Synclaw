@@ -19,7 +19,7 @@ import { X } from 'lucide-react'
 
 function App() {
   const { settingsModalOpen, setSettingsModalOpen, setSettingsSection } = useAppStore()
-  const { theme, hasCompletedOnboarding, setHasCompletedOnboarding, loadSettings } = useSettingsStore()
+  const { theme, hasCompletedOnboarding, setHasCompletedOnboarding, loadSettings, loadError, setLoadError } = useSettingsStore()
   const { menu, showMenuAt, closeMenu } = useContextMenu()
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false)
   const [globalSearchOpen, setGlobalSearchOpen] = useState(false)
@@ -149,6 +149,22 @@ function App() {
       style={{ background: 'var(--bg-layout)', color: 'var(--text)' }}
     >
       <Header />
+      {loadError && (
+        <div
+          role="alert"
+          className="flex items-center gap-3 px-4 py-2 text-sm"
+          style={{ background: 'var(--accent1)', color: '#fff' }}
+        >
+          <span>⚠️ {loadError}</span>
+          <button
+            onClick={() => setLoadError(null)}
+            className="ml-auto underline hover:no-underline"
+            aria-label="Dismiss error"
+          >
+            知道了
+          </button>
+        </div>
+      )}
       <div className="flex-1 flex min-h-0">
         <Sidebar />
         <div className="flex-1 flex flex-col overflow-hidden min-w-0">

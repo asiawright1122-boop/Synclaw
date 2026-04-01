@@ -74,6 +74,10 @@ export interface SettingsState {
 
   // Load initial state from electron-store and subscribe to cross-window changes
   loadSettings: () => Promise<() => void>
+
+  // Error state: set when electron-store loading fails
+  loadError: string | null
+  setLoadError: (msg: string | null) => void
 }
 
 const defaultSettings = {
@@ -107,6 +111,8 @@ const defaultSettings = {
 export const useSettingsStore = create<SettingsState>((set) => ({
   // Start with safe defaults while loading from electron-store
   ...defaultSettings,
+  loadError: null,
+  setLoadError: (msg) => set({ loadError: msg }),
 
   loadSettings: async () => {
     try {
@@ -142,8 +148,12 @@ export const useSettingsStore = create<SettingsState>((set) => ({
           },
         })
       }
-    } catch {
-      // electron-store unavailable — keep renderer defaults
+    } catch (err) {
+      // electron-store unavailable — surface the error so the UI can show a warning.
+      // Users who have completed onboarding will see the warning on restart instead of
+      // silently losing their onboarding-complete state.
+      console.error('[SettingsStore] Failed to load settings from electron-store:', err)
+      set({ loadError: '无法从 electron-store 加载设置，应用将使用默认配置。请重启 SynClaw。' })
     }
 
     // Listen for cross-window electron-store changes (broadcast from main process)
@@ -175,6 +185,8 @@ export const useSettingsStore = create<SettingsState>((set) => ({
           enabled: s.stt?.enabled ?? true,
           autoStart: s.stt?.autoStart ?? false,
         },
+        // Clear load error when settings are successfully updated from main process
+        loadError: null,
       })
     })
     return () => { unsubscribe?.() }
@@ -342,10 +354,11 @@ export const useSettingsStore = create<SettingsState>((set) => ({
             enabled: res.data.stt?.enabled ?? true,
             autoStart: res.data.stt?.autoStart ?? false,
           },
+          loadError: null,
         })
       }
     } catch {
-      set({ ...defaultSettings })
+      set({ ...defaultSettings, loadError: null })
     }
   },
 }))

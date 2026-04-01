@@ -100,6 +100,11 @@ interface ChatState {
 
 const generateId = () => `msg-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
 
+// P1 fix: cap the in-memory message array to prevent unbounded growth.
+// Long conversations with streaming responses can accumulate thousands of entries
+// and freeze the renderer process.
+const MAX_MESSAGES = 200
+
 export const useChatStore = create<ChatState>((set, get) => ({
   // Initial state
   messages: [],
@@ -124,13 +129,17 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
   addMessage: (message) => {
     const id = generateId()
-    set((state) => ({
-      messages: [...state.messages, {
-        ...message,
-        id,
-        timestamp: Date.now(),
-      }],
-    }))
+    set((state) => {
+      const newMessages = [
+        ...state.messages,
+        { ...message, id, timestamp: Date.now() },
+      ]
+      // Keep the newest MAX_MESSAGES entries to prevent renderer memory exhaustion
+      const trimmed = newMessages.length > MAX_MESSAGES
+        ? newMessages.slice(newMessages.length - MAX_MESSAGES)
+        : newMessages
+      return { messages: trimmed }
+    })
     return id
   },
 
@@ -188,6 +197,28 @@ export const useChatStore = create<ChatState>((set, get) => ({
     const { addMessage, updateMessage, setSending, sessionKey } = get()
 
     if (!content.trim()) return
+
+    // ── P0 pre-flight: verify API key is configured before showing user message ──
+    try {
+      const modelsResult = await window.openclaw.models.list()
+      if (!modelsResult.success || !modelsResult.data || (Array.isArray(modelsResult.data) && modelsResult.data.length === 0)) {
+        // Show clear error inline — do NOT add user message since nothing can respond
+        addMessage({
+          role: 'assistant',
+          content: '[API Key 未配置或已失效]\n\n请先在「设置 → 模型」中配置有效的 Anthropic API Key。\n\n配置完成后重新发送消息即可。',
+          thinking: false,
+        })
+        return
+      }
+    } catch {
+      // models.list() failed — Gateway is unreachable
+      addMessage({
+        role: 'assistant',
+        content: '[无法连接 OpenClaw Gateway]\n\n请检查 SynClaw 是否正在运行，或尝试重启应用。',
+        thinking: false,
+      })
+      return
+    }
 
     // Optimistic user message (with attachments if any)
     addMessage({ role: 'user', content: content.trim(), attachments })

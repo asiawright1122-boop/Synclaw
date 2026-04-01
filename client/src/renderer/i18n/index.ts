@@ -86,10 +86,46 @@ const zh: Record<string, string> = {
   'avatar.busy': '忙碌',
   'avatar.offline': '离线',
 
+  // ── AvatarListPanel ─────────────────────────────────────────────────────────
+  'avatar.list.search': '搜索分身...',
+  'avatar.list.empty': '暂无分身，点击 + 创建',
+  'avatar.list.delete': '删除分身',
+  'avatar.list.deleteConfirm': '确定删除该分身？',
+  'avatar.list.activate': '激活',
+  'avatar.list.edit': '编辑',
+  'avatar.list.demo': '演示模式 - 分身数据存储在本地',
+  'avatar.list.noMatch': '未找到匹配的分身',
+  'avatar.list.create': '创建第一个分身',
+
+  // ── Onboarding ──────────────────────────────────────────────────────────────
+  'onboarding.step1.title': '配置 AI 模型密钥',
+  'onboarding.step1.subtitle': '输入你的 Anthropic API Key 以启用 AI 功能',
+  'onboarding.step1.placeholder': 'sk-ant-...',
+  'onboarding.step1.help': '如何获取 API Key？',
+  'onboarding.step1.skip': '稍后配置',
+  'onboarding.step2.title': '授权工作目录',
+  'onboarding.step2.subtitle': '选择一个本地文件夹作为 SynClaw 的工作空间',
+  'onboarding.step2.addDir': '添加目录',
+  'onboarding.step2.dirError': '该目录已被添加',
+  'onboarding.step2.gatewayError': '无法连接 OpenClaw Gateway',
+  'onboarding.step3.title': '准备就绪！',
+  'onboarding.step3.subtitle': 'SynClaw 已配置完成，开始使用吧',
+  'onboarding.step3.complete': '开始使用',
+
+  // ── ExecApprovalModal ───────────────────────────────────────────────────────
+  'exec.title': '命令执行审批',
+  'exec.deny': '拒绝',
+  'exec.allowOnce': '仅允许一次',
+  'exec.allowAlways': '始终允许',
+  'exec.risky': '存在风险',
+  'exec.sensitive': '含敏感信息',
+
   // ── Generic ───────────────────────────────────────────────────────────────
   'generic.loading': '加载中...',
   'generic.retry': '重试',
   'generic.delete': '删除',
+  'generic.cancel': '取消',
+  'generic.confirm': '确认',
 
   // ── FileExplorer ─────────────────────────────────────────────────────────
   'fileexplorer.preview.error': '无法预览此文件',
@@ -188,6 +224,40 @@ const en: Record<string, string> = {
   'avatar.online': 'Online',
   'avatar.busy': 'Busy',
   'avatar.offline': 'Offline',
+
+  // ── AvatarListPanel ─────────────────────────────────────────────────────────
+  'avatar.list.search': 'Search avatars...',
+  'avatar.list.empty': 'No avatars yet, click + to create',
+  'avatar.list.delete': 'Delete avatar',
+  'avatar.list.deleteConfirm': 'Are you sure you want to delete this avatar?',
+  'avatar.list.activate': 'Activate',
+  'avatar.list.edit': 'Edit',
+  'avatar.list.demo': 'Demo mode — avatar data stored locally',
+  'avatar.list.noMatch': 'No matching avatars found',
+  'avatar.list.create': 'Create your first avatar',
+
+  // ── Onboarding ──────────────────────────────────────────────────────────────
+  'onboarding.step1.title': 'Configure AI Model Key',
+  'onboarding.step1.subtitle': 'Enter your Anthropic API Key to enable AI features',
+  'onboarding.step1.placeholder': 'sk-ant-...',
+  'onboarding.step1.help': 'How to get an API Key?',
+  'onboarding.step1.skip': 'Configure later',
+  'onboarding.step2.title': 'Authorize Workspace Directory',
+  'onboarding.step2.subtitle': 'Select a local folder as SynClaw workspace',
+  'onboarding.step2.addDir': 'Add Directory',
+  'onboarding.step2.dirError': 'This directory has already been added',
+  'onboarding.step2.gatewayError': 'Cannot connect to OpenClaw Gateway',
+  'onboarding.step3.title': "You're all set!",
+  'onboarding.step3.subtitle': 'SynClaw is configured. Start using it now.',
+  'onboarding.step3.complete': 'Start Using',
+
+  // ── ExecApprovalModal ───────────────────────────────────────────────────────
+  'exec.title': 'Command Execution Approval',
+  'exec.deny': 'Deny',
+  'exec.allowOnce': 'Allow once',
+  'exec.allowAlways': 'Always allow',
+  'exec.risky': 'Potentially risky',
+  'exec.sensitive': 'Contains sensitive data',
 
   // ── Generic ───────────────────────────────────────────────────────────────
   'generic.loading': 'Loading...',

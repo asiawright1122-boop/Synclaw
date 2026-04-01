@@ -549,14 +549,45 @@ app.whenReady().then(async () => {
   await initWorkspace()
 
   // Start OpenClaw Gateway (both dev and prod)
+  let reconnectTimer: NodeJS.Timeout | null = null
+  const MAX_RECONNECT_DELAY = 30_000  // cap exponential backoff at 30s
+
+  const scheduleReconnect = (attempt: number) => {
+    const delay = Math.min(1000 * Math.pow(2, attempt), MAX_RECONNECT_DELAY)
+    if (reconnectTimer) clearTimeout(reconnectTimer)
+    reconnectTimer = setTimeout(async () => {
+      log.info(`[gateway-reconnect] 尝试第 ${attempt + 1} 次重连...`)
+      try {
+        const bridge = getGatewayBridge()
+        await bridge.reconnect()
+        log.info('[gateway-reconnect] 重连成功')
+      } catch (err) {
+        log.error(`[gateway-reconnect] 重连失败:`, err)
+        scheduleReconnect(attempt + 1)
+      }
+    }, delay)
+  }
+
   try {
     log.info('正在连接 OpenClaw Gateway...')
     const bridge = getGatewayBridge()
     bridge.registerWindow(mainWindow!)
+
+    // Subscribe to status changes for auto-reconnect
+    const unsubscribe = bridge.onStatusChange((status) => {
+      if (status === 'disconnected' || status === 'error') {
+        log.warn(`[gateway-status] Gateway 断开 (${status})，准备重连...`)
+        scheduleReconnect(0)
+      }
+    })
+    // Keep the unsubscribe fn alive — it will be called on window close via the window-on-closed listener below
+
     await bridge.connect()
     log.info('OpenClaw Gateway 连接成功')
   } catch (error) {
     log.error('OpenClaw Gateway 连接失败:', error)
+    // Still schedule reconnect attempts so the app doesn't stay dead
+    scheduleReconnect(0)
   }
 })
 
