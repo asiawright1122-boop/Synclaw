@@ -187,4 +187,37 @@ ipcMain.handle('app:installUpdate', () => {
   return { success: true }
 })
 
+// ── Signing Status ────────────────────────────────────────────────────
+
+type SigningStatus = 'signed' | 'unsigned' | 'not_macos' | 'unknown'
+
+ipcMain.handle('app:getSigningStatus', async (): Promise<{ success: boolean; data?: { status: SigningStatus; teamId?: string } }> => {
+  if (process.platform !== 'darwin') {
+    return { success: true, data: { status: 'not_macos' } }
+  }
+  try {
+    const { execSync } = await import('node:child_process')
+    // Check the running app's own signature
+    const execPath = app.isPackaged ? process.execPath : ''
+    if (!execPath) {
+      return { success: true, data: { status: 'unknown' } }
+    }
+    try {
+      const out = execSync(`codesign -d "${execPath}" 2>&1 || true`, { timeout: 5000, encoding: 'utf-8' })
+      const isSigned = !out.includes('no such') && !out.includes('invalid')
+      if (isSigned) {
+        // Try to extract team ID from output
+        const teamMatch = out.match(/Team=(\S+)/)
+        return { success: true, data: { status: 'signed', teamId: teamMatch?.[1] } }
+      }
+      return { success: true, data: { status: 'unsigned' } }
+    } catch {
+      return { success: true, data: { status: 'unsigned' } }
+    }
+  } catch (err) {
+    log.warn('[app:getSigningStatus] failed:', err)
+    return { success: true, data: { status: 'unknown' } }
+  }
+})
+
 log.info('Shell/App handlers registered')
