@@ -1,67 +1,58 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.2
-milestone_name: milestone
-status: Milestone Near-Complete
-last_updated: "2026-04-01T01:45:00.000Z"
-progress:
-  total_phases: 9
-  completed_phases: 8
-  total_plans: 8
-  completed_plans: 8
+milestone: v1.3
+milestone_name: launch-ready
+status: Defining Requirements
+last_updated: "2026-04-01T02:10:00.000Z"
 ---
 
 # STATE.md — SynClaw
 
-**v1.2 Milestone Near-Complete**（8/9 phases, 27/32 requirements, 84%）
-**Next:** Phase 9 SIGN-COMPLETE（需 Apple ID）或新 milestone 规划
+**v1.3 首发就绪冲刺**（Defining Requirements）
+**Next:** Phase 1 planning
 
 ## Project Reference
 
 See: `.planning/PROJECT.md` — current project state
-See: `.planning/milestones/v1.2-MILESTONE-ARCHIVE.md` — v1.2 complete milestone details
-See: `.planning/milestones/v1.2-REQUIREMENTS.md` — archived v1.2 requirements
-See: `.planning/ROADMAP.md` — current roadmap
+See: `.planning/milestones/v1.2-MILESTONE-ARCHIVE.md` — v1.2 complete milestone
+See: `.planning/ROADMAP.md` — current roadmap (pending v1.3 phases)
+See: `.planning/PRODUCT_REVIEW.md` — PM audit findings
 
-**Core value:** 用户可以通过自然语言对话，安全地操作用户本地文件系统，且数据永不离开用户设备。
+## Current Position
 
-## Phase 概览
+| Field | Value |
+|-------|-------|
+| Phase | Not started (defining requirements) |
+| Plan | — |
+| Status | Defining requirements |
+| Last activity | 2026-04-01 — Milestone v1.3 started |
 
-| # | Phase | 功能 | 依赖 | 状态 | 验证日期 |
-|---|-------|------|------|------|---------|
-| 1 | EXEC | Exec 审批弹窗 | OpenClaw >= 2026.3.28 | ✅ 完成 | 2026-03-31 |
-| 2 | SIGN | macOS 公证签名 | Apple Developer ID | ⏳ 等待用户提供证书 | — |
-| 3 | WEB | web/ landing page 集成 | web/ 子仓库 | ✅ 完成 | 2026-03-31 |
-| 4 | TTS | TTS / Talk Mode UI | OpenClaw talk API | ✅ 完成 | 2026-03-31 |
-| 5 | AVA | Avatar 多分身体系落地 | OpenClaw avatars API | ✅ 完成 | 2026-03-31 |
-| 6 | EXEC-ENH | Exec 审批增强 | — | ✅ 完成 | 2026-04-01 |
-| 7 | TTS-ENH | TTS 流式同步增强 | — | ✅ 完成 | 2026-04-01 |
-| 8 | WEB-VERIFY | web/ 子仓库集成验证 | — | ✅ 完成 | 2026-04-01 |
+## v1.2 Summary
+
+- 8/9 phases complete, 27/32 requirements (84%)
+- Phase 9 SIGN blocked by Apple ID (user action required)
+- v1.2 archived to `.planning/milestones/v1.2-MILESTONE-ARCHIVE.md`
+
+## PM Audit Findings
+
+| Priority | Finding | Recommendation |
+|----------|---------|----------------|
+| P0 | macOS 公证缺失 | 配置化 — 用户自助填写 Apple ID |
+| P1 | Empty states 不完整 | 为每个面板添加引导 CTA |
+| P1 | 无 Chat Flow E2E | 添加核心对话路径测试 |
+| P1 | 无单元测试 | Vitest 覆盖 stores/hooks |
+| P2 | electron-store 未强制加密 | Onboarding 引导启用 |
+| P2 | WEB_API_BASE 必需崩溃 | graceful degradation |
+| P2 | 快捷键仅 2 个 | 扩展至 6 个标准快捷键 |
 
 ## Decisions
 
-- Phase 5 AVA 核心 CRUD 已完整实现（ListPanel、EditModal、avatarStore、E2E）
-- Phase 4 TTS 对齐 settings key（tts.autoPlay 嵌套命名）
-- Phase 3 WEB 集成 Next.js standalone server 到 Electron BrowserView
-- Phase 1 EXEC 完整审批链路：Gateway event → chatStore → execApprovalStore → Modal → Gateway resolve
-- Phase 6 EXEC-ENH 补齐审批增强：approve-once 类型 + 仅本次批准按钮 + 超时 reason 字段
-- Phase 7 TTS-ENH 流式同步高亮：currentWordIndex + ontimeupdate + word-by-word 渲染
-- Phase 8 WEB-VERIFY 研究确认：Gateway 通信 by design，主题语义一致，权限为 IM channel 级别
-- **全部验证通过**：tsc 零错误（2026-03-31/04-01）+ 代码走读确认
-- v1.2 milestone 已归档至 `.planning/milestones/`
+- v1.3 聚焦"首发就绪"：修完所有阻塞 + 质量打磨
+- v1.2 macOS 公证：配置化（用户提供 Apple ID），不需要改代码
+- PM 审计确认为误报：GatewayPanel、ModelsPanel、McpPanel、SkillsMarketPanel 均已完整实现
 
-## Blockers
+## Next Steps
 
-| Blocker | 解决方式 |
-|---------|---------|
-| Apple Developer ID（macOS 公证） | 用户自行提供 |
-| web/ 子仓库依赖 | 独立 git 工作，不阻塞主规划 |
-
-## Notes
-
-- v1.2 **near-complete**：8/9 phases done，27/32 requirements（84%）
-- macOS 公证需要：Apple Developer ID + app-specific password + 签名证书（需用户提供）
-- 子仓库 `web/` 独立管理，`.planning/` 文档不进入 web 提交
-- v1.2 完整归档：`.planning/milestones/v1.2-MILESTONE-ARCHIVE.md`
-- **验证方法**：tsc --noEmit 零错误 + 代码走读 + 文件存在性核查
-- **E2E 测试**：5 个 spec 存在（app/avatar/exec-approval/landing-page/tts），需在完整环境中运行
+- Define v1.3 requirements → `.planning/REQUIREMENTS.md`
+- Create v1.3 roadmap → `.planning/ROADMAP.md`
+- Execute Phase 1 → `/gsd-plan-phase 1`
