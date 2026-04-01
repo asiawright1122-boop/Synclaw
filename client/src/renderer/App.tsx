@@ -24,6 +24,8 @@ function App() {
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false)
   const [globalSearchOpen, setGlobalSearchOpen] = useState(false)
   const [settingsLoaded, setSettingsLoaded] = useState(false)
+  const [gatewayDisconnectedDismissed, setGatewayDisconnectedDismissed] = useState(false)
+  const [gatewayStatus, setGatewayStatus] = useState<'connected' | 'disconnected'>('connected')
 
   // Load persisted settings from electron-store on mount; subscribe to cross-window changes
   useEffect(() => {
@@ -78,6 +80,19 @@ function App() {
   const handleOnboardingComplete = useCallback(() => {
     setHasCompletedOnboarding(true)
   }, [setHasCompletedOnboarding])
+
+  // Gateway connection status listener — shows disconnect banner in main UI
+  useEffect(() => {
+    const unsub = window.openclaw?.onStatusChange?.((s: string) => {
+      setGatewayStatus(
+        s === 'connected' || s === 'ready' || s === 'ready_for_inference'
+          ? 'connected'
+          : 'disconnected'
+      )
+      setGatewayDisconnectedDismissed(false)
+    })
+    return () => { unsub?.() }
+  }, [])
 
   // Apply theme on mount and when theme changes
   useEffect(() => {
@@ -162,6 +177,23 @@ function App() {
             aria-label="Dismiss error"
           >
             知道了
+          </button>
+        </div>
+      )}
+      {gatewayStatus === 'disconnected' && !gatewayDisconnectedDismissed && hasCompletedOnboarding && (
+        <div
+          role="alert"
+          className="flex items-center gap-3 px-4 py-2 text-sm"
+          style={{ background: 'rgba(239,68,68,0.15)', color: '#ef4444' }}
+        >
+          <span>⚠️ Gateway 连接已断开，AI 对话暂时不可用。</span>
+          <button
+            onClick={() => setGatewayDisconnectedDismissed(true)}
+            className="ml-auto text-xs px-2 py-0.5 rounded transition-colors"
+            style={{ background: 'rgba(239,68,68,0.2)', color: '#ef4444' }}
+            aria-label="Dismiss banner"
+          >
+            关闭
           </button>
         </div>
       )}
