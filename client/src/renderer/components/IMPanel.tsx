@@ -295,11 +295,11 @@ export function ImPanel() {
         <div className="rounded-[12px] border py-16 px-6 text-center" style={{ borderColor: 'var(--border)' }}>
           <button type="button" className={pillBtn(true)} style={{ background: 'var(--accent1)' }}
             onClick={() => setShowAddForm(true)}>
-            添加第一个频道
+            开始新对话
           </button>
-          <p className="text-sm font-medium mt-4" style={{ color: 'var(--text)' }}>尚未添加 IM 频道</p>
+          <p className="text-sm font-medium mt-4" style={{ color: 'var(--text)' }}>连接 IM 渠道</p>
           <p className="text-xs mt-2 max-w-sm mx-auto" style={{ color: 'var(--text-ter)' }}>
-            添加飞书、企业微信、Slack、Discord 或 Telegram 频道，通过 IM 与 SynClaw 对话。
+            连接飞书、企业微信、Slack 或 Discord，随时随地与 SynClaw 对话
           </p>
         </div>
       )}
