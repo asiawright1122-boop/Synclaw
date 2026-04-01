@@ -2,7 +2,9 @@
 
 **v1.2 Archive:** [v1.2 Milestone Archive](./milestones/v1.2-MILESTONE-ARCHIVE.md) — 27/32 requirements satisfied
 
-**Current milestone:** v1.3 首发就绪冲刺 (Launch-Ready Sprint)
+**v1.3 Archive:** [v1.3 Milestone Archive](./milestones/v1.3-MILESTONE-ARCHIVE.md) — 23/23 requirements satisfied ✅
+
+**Current milestone:** v1.3 首发就绪冲刺 (Launch-Ready Sprint) — ✅ COMPLETE
 **Previous milestone:** v1.2 — [Archive](./milestones/v1.2-MILESTONE-ARCHIVE.md)
 
 ---
