@@ -115,8 +115,8 @@ v1.2 macOS 公证缺失导致用户看到「来自不明开发者」警告；Pha
 | TEST-04 | Phase 10 | Pending |
 | TEST-05 | Phase 10 | Pending |
 | TEST-06 | Phase 10 | Pending |
-| TEST-07 | Phase 11 | Pending |
-| TEST-08 | Phase 11 | Pending |
+| TEST-07 | Phase 11 | Done |
+| TEST-08 | Phase 11 | Done |
 | UX-01 | Phase 12 | Pending |
 | UX-02 | Phase 12 | Pending |
 | UX-03 | Phase 12 | Pending |
