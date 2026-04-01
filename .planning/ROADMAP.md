@@ -9,7 +9,7 @@
 
 ## Phases
 
-- [ ] **Phase 10: TEST-UNIT** — Vitest setup + unit tests for 5 core stores/hooks
+- [x] **Phase 10: TEST-UNIT** — Vitest setup + unit tests for 5 core stores/hooks ✅
 - [ ] **Phase 11: TEST-E2E** — Chat E2E + Playwright CI config
 - [ ] **Phase 12: UX-POLISH** — Empty states + loading skeletons + keyboard shortcuts
 - [ ] **Phase 13: SECURITY** — electron-store encryption guide + WEB_API_BASE graceful degradation
@@ -127,7 +127,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 10. TEST-UNIT | 0/1 | Planning complete | - |
+| 10. TEST-UNIT | 1/1 | COMPLETED | 2026-04-01 |
 | 11. TEST-E2E | 0/1 | Not started | - |
 | 12. UX-POLISH | 0/1 | Not started | - |
 | 13. SECURITY | 0/1 | Not started | - |
