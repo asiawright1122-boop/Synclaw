@@ -1,226 +1,211 @@
 # Codebase Structure
 
-**Analysis Date:** 2026-03-31
+**Analysis Date:** 2026-04-03
 
 ## Directory Layout
 
 ```
 synclaw/
-├── client/
+├── client/                  # Electron desktop app
 │   ├── src/
-│   │   ├── main/                    # Electron main process
-│   │   │   ├── index.ts             # App entry, window creation, lifecycle
-│   │   │   ├── openclaw.ts          # OpenClaw child process manager
-│   │   │   ├── gateway-bridge.ts     # WebSocket bridge to Gateway
-│   │   │   ├── logger.ts             # electron-log wrapper
-│   │   │   ├── app-settings.ts       # Settings type definitions
-│   │   │   ├── ipc-handlers/         # IPC handler modules
-│   │   │   │   ├── gateway.ts        # 100+ Gateway API passthrough handlers
-│   │   │   │   ├── file.ts           # File system operations
-│   │   │   │   ├── shell.ts          # Window/dialog/shell utilities
-│   │   │   │   ├── app.ts            # electron-store settings
-│   │   │   │   ├── clawhub.ts        # ClawHub CLI integration
-│   │   │   │   ├── web.ts            # Web platform bridge (device token, usage reporting)
-│   │   │   │   └── path-validation.ts # Shared path validation
-│   │   │   ├── tray.ts               # System tray
-│   │   │   ├── notifications.ts       # Electron notifications
-│   │   │   └── updater.ts            # Auto-update
-│   │   ├── preload/
-│   │   │   └── index.ts              # contextBridge API (692 lines)
-│   │   └── renderer/
-│   │       ├── App.tsx               # Root component, layout
-│   │       ├── main.tsx              # React entry
-│   │       ├── components/           # React components
-│   │       ├── stores/               # Zustand stores
-│   │       ├── hooks/                # Custom React hooks
-│   │       ├── lib/                  # Utilities
-│   │       ├── styles/               # CSS
-│   │       ├── types/                # TypeScript types
-│   │       └── i18n/                 # Internationalization
-│   ├── scripts/
-│   │   └── download-openclaw.mjs     # OpenClaw source download script
-│   ├── e2e/                           # Playwright E2E tests
-│   └── electron-builder.yml           # Packaging config
-├── openclaw-source/                   # OpenClaw submodule (not present in repo)
-├── web/                              # Landing page (separate git repo)
-└── .planning/                        # GSD planning artifacts
+│   │   ├── main/            # Main process runtime
+│   │   ├── preload/         # Preload bridge
+│   │   ├── renderer/        # React renderer UI
+│   │   ├── shared/          # Shared types
+│   │   └── test/            # Test utilities/mocks
+│   ├── resources/           # Bundled OpenClaw runtime
+│   ├── scripts/             # Build/download scripts
+│   ├── e2e/                 # Playwright E2E tests
+│   └── public/              # Static assets
+├── web/                     # Next.js web platform
+│   ├── src/
+│   │   ├── app/             # App Router pages/layouts/API
+│   │   ├── components/      # Shared UI components
+│   │   ├── lib/             # Server utilities (auth, prisma, stripe, email)
+│   │   └── types/           # Type augmentations
+│   ├── prisma/              # Prisma schema
+│   ├── api/                 # API proxy routes
+│   └── tests/               # E2E tests
+├── docs/                    # Product/design docs
+├── .planning/               # GSD planning artifacts
+├── .github/                 # CI workflows
+├── README.md
+└── SYSTEM_ARCHITECTURE.md
 ```
 
 ## Directory Purposes
 
-**`client/src/main/`:**
-- Purpose: Electron main process
-- Contains: App entry, process management, IPC handlers, system integration
-- Key files: `index.ts`, `openclaw.ts`, `gateway-bridge.ts`
+**client/**:
+- Purpose: Electron desktop application root.
+- Contains: Main process, preload bridge, renderer UI, resources, scripts, tests.
+- Key files: `client/src/main/index.ts`, `client/src/preload/index.ts`, `client/src/renderer/main.tsx`, `client/scripts/download-openclaw.mjs`, `client/e2e`.
 
-**`client/src/preload/`:**
-- Purpose: Secure bridge between main and renderer
-- Contains: Single `index.ts` exposing `window.electronAPI` and `window.openclaw`
+**client/src/main/**:
+- Purpose: Electron main process runtime and system integrations.
+- Contains: IPC handlers, gateway bridge, tray, notifications, updater, settings.
+- Key files: `client/src/main/index.ts`, `client/src/main/ipc-handlers.ts`, `client/src/main/gateway-bridge.ts`, `client/src/main/openclaw.ts`.
 
-**`client/src/renderer/components/`:**
-- Purpose: React UI components
-- Contains: 30+ components including ChatView, Sidebar, Settings panels
+**client/src/main/ipc-handlers/**:
+- Purpose: Domain-specific IPC handlers for renderer calls.
+- Contains: Gateway, file, app settings, security, web API, clawhub CLI bridges.
+- Key files: `client/src/main/ipc-handlers/gateway.ts`, `client/src/main/ipc-handlers/file.ts`, `client/src/main/ipc-handlers/web.ts`, `client/src/main/ipc-handlers/path-validation.ts`.
 
-**`client/src/renderer/stores/`:**
-- Purpose: Zustand state management (UI state only)
-- Contains: 7 stores for different domains
+**client/src/preload/**:
+- Purpose: IPC surface exposed to the renderer.
+- Contains: `window.electronAPI` and `window.openclaw` wrappers.
+- Key files: `client/src/preload/index.ts`.
 
-**`client/src/renderer/hooks/`:**
-- Purpose: Custom React hooks
-- Contains: `useSpeechRecognition.ts`, `useTTS.ts`, `useUsageReporter.ts`, `useContextMenu.ts`
+**client/src/renderer/**:
+- Purpose: React renderer application.
+- Contains: Components, Zustand stores, hooks, services, styles.
+- Key files: `client/src/renderer/main.tsx`, `client/src/renderer/App.tsx`, `client/src/renderer/stores/openclawStore.ts`, `client/src/renderer/services/subscription.ts`.
 
-**`client/src/renderer/lib/`:**
-- Purpose: Utility functions
-- Contains: API client, auth, credits, subscription, avatar templates
+**client/src/renderer/components/**:
+- Purpose: Desktop UI components and feature panels.
+- Contains: Layout, chat, settings, navigation, modal components.
+- Key files: `client/src/renderer/components/ChatView.tsx`, `client/src/renderer/components/SettingsView.tsx`, `client/src/renderer/components/Sidebar.tsx`.
+
+**client/src/renderer/stores/**:
+- Purpose: Zustand state containers for UI and gateway state.
+- Contains: App, chat, settings, and openclaw stores.
+- Key files: `client/src/renderer/stores/appStore.ts`, `client/src/renderer/stores/openclawStore.ts`, `client/src/renderer/stores/chatStore.ts`.
+
+**client/resources/**:
+- Purpose: Bundled OpenClaw runtime used by the desktop app.
+- Contains: OpenClaw distribution and gateway runtime.
+- Key files: `client/resources/openclaw-source`.
+
+**web/**:
+- Purpose: Next.js web platform for marketing, portal, and admin UI.
+- Contains: App Router UI, API routes, Prisma schema, tests.
+- Key files: `web/src/app/layout.tsx`, `web/src/app/page.tsx`, `web/src/app/api/auth/[...nextauth]/route.ts`, `web/prisma/schema.prisma`.
+
+**web/src/app/**:
+- Purpose: Next.js App Router pages, layouts, and API endpoints.
+- Contains: Segment folders, `layout.tsx`, `page.tsx`, and `api/*/route.ts`.
+- Key files: `web/src/app/(portal)/layout.tsx`, `web/src/app/(admin)/layout.tsx`, `web/src/app/api/credits/deduct/route.ts`.
+
+**web/src/components/**:
+- Purpose: Shared web UI shells and providers.
+- Contains: Portal shell and session provider.
+- Key files: `web/src/components/PortalShell.tsx`, `web/src/components/SessionProvider.tsx`.
+
+**web/src/lib/**:
+- Purpose: Server utilities and integrations for the web platform.
+- Contains: Auth, Prisma, Stripe, email, validation helpers.
+- Key files: `web/src/lib/auth.ts`, `web/src/lib/prisma.ts`, `web/src/lib/stripe.ts`, `web/src/lib/email.ts`, `web/src/lib/validations.ts`.
+
+**web/prisma/**:
+- Purpose: Prisma schema for Postgres data models.
+- Contains: `schema.prisma`.
+- Key files: `web/prisma/schema.prisma`.
+
+**web/api/**:
+- Purpose: API proxy routes to OpenClaw gateway.
+- Contains: `route.ts` handlers for credits and notifications.
+- Key files: `web/api/credits/history/route.ts`, `web/api/notifications/route.ts`.
+
+**docs/**:
+- Purpose: Product, platform, and design documentation.
+- Contains: Design specs and roadmaps.
+- Key files: `docs/PRODUCT_DESIGN_OVERVIEW.md`, `docs/LANDING_PAGE_DESIGN.md`, `docs/IM_CHANNELS_DESIGN.md`.
+
+**.planning/**:
+- Purpose: GSD planning artifacts and codebase maps.
+- Contains: Roadmaps, phases, and codebase docs.
+- Key files: `.planning/PROJECT.md`, `.planning/ROADMAP.md`, `.planning/codebase/ARCHITECTURE.md`.
 
 ## Key File Locations
 
 **Entry Points:**
-- `client/src/main/index.ts`: Electron main process entry (594 lines)
-- `client/src/renderer/main.tsx`: React entry point
-- `client/src/preload/index.ts`: Preload script (692 lines)
+- `client/src/main/index.ts`: Electron main process entry.
+- `client/src/preload/index.ts`: Preload bridge entry.
+- `client/src/renderer/main.tsx`: Renderer entry.
+- `web/src/app/layout.tsx`: Web App Router root layout.
+- `web/src/app/page.tsx`: Web landing page.
+- `web/src/app/api/auth/[...nextauth]/route.ts`: NextAuth handler.
+- `web/src/middleware.ts`: Protected route middleware.
 
 **Configuration:**
-- `client/electron-builder.yml`: Packaging configuration
-- `client/package.json`: Dependencies and scripts
-- `client/tsconfig.json`: TypeScript config
+- `client/package.json`: Desktop app scripts and dependencies.
+- `client/electron-builder.yml`: Desktop build configuration.
+- `client/tsconfig.json`: Desktop TypeScript config.
+- `client/vite.config.ts`: Renderer build config.
+- `web/package.json`: Web app scripts and dependencies.
+- `web/next.config.ts`: Next.js configuration.
+- `web/tsconfig.json`: Web TypeScript config.
+- `web/prisma/schema.prisma`: Database schema source of truth.
 
 **Core Logic:**
-- `client/src/main/gateway-bridge.ts`: Gateway WebSocket bridge (507 lines)
-- `client/src/renderer/stores/chatStore.ts`: Chat state management (473 lines)
-- `client/src/renderer/components/ChatView.tsx`: Chat UI (871 lines)
+- `client/src/main/gateway-bridge.ts`: OpenClaw Gateway bridge.
+- `client/src/main/openclaw.ts`: OpenClaw child-process lifecycle.
+- `client/src/main/ipc-handlers/gateway.ts`: Gateway RPC IPC handlers.
+- `client/src/main/ipc-handlers/file.ts`: File system IPC handlers.
+- `client/src/renderer/services/subscription.ts`: Desktop web API client.
+- `web/src/lib/auth.ts`: NextAuth configuration.
+- `web/src/lib/prisma.ts`: Prisma client.
+- `web/src/app/api/credits/deduct/route.ts`: Credits deduction endpoint.
+- `web/src/app/api/webhooks/stripe/route.ts`: Stripe webhook handler.
 
 **Testing:**
-- `client/e2e/app.spec.ts`: Playwright E2E tests
-
-## TypeScript Files Over 500 Lines
-
-| File | Lines | Purpose |
-|------|-------|---------|
-| `renderer/components/SkillsPanel.tsx` | 963 | Skills panel (settings sub-panel) |
-| `renderer/components/SkillsMarketPanel.tsx` | 941 | Skills marketplace |
-| `renderer/components/ChatView.tsx` | 871 | Chat interface |
-| `renderer/components/FileExplorer.tsx` | 808 | File browser |
-| `renderer/components/Header.tsx` | 714 | App header |
-| `preload/index.ts` | 692 | IPC bridge API |
-| `renderer/components/Sidebar.tsx` | 646 | Sidebar with avatar/task tabs |
-| `renderer/components/OnboardingView.tsx` | 621 | First-run setup wizard |
-| `main/index.ts` | 594 | Main process entry |
-| `renderer/components/settings/McpPanel.tsx` | 563 | MCP configuration |
-| `renderer/components/RightPanel.tsx` | 522 | Memory/notes panel |
-| `renderer/types/electron.d.ts` | 520 | Global type declarations |
-| `main/gateway-bridge.ts` | 507 | Gateway WebSocket bridge |
+- `client/e2e`: Desktop Playwright tests.
+- `client/src/test`: Renderer test utilities.
+- `client/playwright.config.ts`: Desktop E2E config.
+- `web/tests`: Web E2E tests.
+- `web/playwright.config.ts`: Web E2E config.
 
 ## Naming Conventions
 
 **Files:**
-- Components: PascalCase (`ChatView.tsx`, `Sidebar.tsx`)
-- Stores: camelCase with Store suffix (`chatStore.ts`, `taskStore.ts`)
-- Utilities: camelCase (`api.ts`, `auth.ts`)
-- IPC handlers: camelCase (`gateway.ts`, `file.ts`)
+- `route.ts`: Next.js API endpoints in `web/src/app/api/**/route.ts`.
+- `layout.tsx`: App Router layouts in `web/src/app/**/layout.tsx`.
+- `page.tsx`: App Router pages in `web/src/app/**/page.tsx`.
+- `*.tsx`: Renderer UI components in `client/src/renderer/components/*.tsx`.
+- `*.ts`: Electron main/preload modules in `client/src/main/*.ts` and `client/src/preload/*.ts`.
 
 **Directories:**
-- Components: PascalCase (`components/SettingsView.tsx`)
-- Stores: camelCase (`stores/chatStore.ts`)
-- Handlers: camelCase (`ipc-handlers/gateway.ts`)
-
-## Dead Code Detection
-
-### `FALLBACK_AVATARS` in Sidebar.tsx (DUPLICATE DATA)
-
-**Issue:** `Sidebar.tsx` defines its own `FALLBACK_AVATARS` constant:
-```typescript
-const FALLBACK_AVATARS: Avatar[] = [
-  { id: 'ac', name: 'AutoClaw', ... },
-  { id: 'think', name: '沉思小助手', ... },
-  { id: 'watch', name: '监控', ... },
-]
-```
-
-This is **duplicate data** — `avatarStore.ts` already has `DEMO_AVATARS` with similar content. The Sidebar imports `AvatarListPanel` but uses `FALLBACK_AVATARS` directly for its own state instead of `avatarStore`.
-
-**Impact:** Avatar state is split between `avatarStore` and local Sidebar state, causing potential sync issues.
-
-### Duplicate SkillsPanel Files
-
-**Issue:** Two SkillsPanel files exist:
-- `renderer/components/SkillsPanel.tsx` (963 lines) — standalone panel
-- `renderer/components/settings/SkillsPanel.tsx` — settings sub-panel
-
-**Analysis:** `SettingsView.tsx` imports both. The standalone `SkillsPanel.tsx` is used in `App.tsx` (indirectly via routing?), while the settings version is used within Settings modal.
-
-**Files importing:**
-- `renderer/components/SettingsView.tsx` imports `settings/SkillsPanel.tsx`
-
-### Unused/Orphaned Lib Files
-
-**`renderer/lib/auth.ts`:** Full auth service with localStorage persistence
-- Contains: Login, register, logout, token refresh
-- **Status:** NOT imported anywhere in codebase
-- **Impact:** Dead code — user authentication is handled by Gateway, not this lib
-
-**`renderer/lib/api.ts`:** HTTP API client for web SaaS platform
-- **Status:** Connected to web bridge (used by `useUsageReporter` hook)
-- **Impact:** Active — used to call web API from SynClaw renderer
-- **Usage:** `window.openclaw.web.reportUsage()` → IPC → `web:report-usage` → HTTP POST
-
-**`renderer/lib/apiKeys.ts`:** API key management
-- **Status:** Used by `settings/SkillsPanel.tsx`
-- **Impact:** In use
-
-**`renderer/lib/credits.ts`:** Credits management
-- **Status:** Check usage
-
-### Dynamic Import Pattern
-
-**`avatarStore.ts`** uses dynamic import:
-```typescript
-const { setSelectedAvatar } = await import('./appStore').then(m => m.useAppStore.getState())
-```
-This pattern indicates potential circular dependency or architectural smell.
-
-## Circular Dependencies
-
-**Known circular dependency:**
-```
-avatarStore.ts → appStore.ts (dynamic import)
-```
-
-`avatarStore.activateAvatar()` dynamically imports `appStore` to sync `selectedAvatar`. This should be refactored to use a shared approach or remove the coupling.
+- Route groups use parentheses under App Router, e.g. `web/src/app/(portal)` and `web/src/app/(admin)`.
 
 ## Where to Add New Code
 
-**New Feature Component:**
-- UI: `client/src/renderer/components/NewFeature.tsx`
-- State: `client/src/renderer/stores/newFeatureStore.ts` (if needed)
-- Tests: `client/e2e/app.spec.ts`
+**New Feature:**
+- Desktop UI: Add UI in `client/src/renderer/components` and state in `client/src/renderer/stores`.
+- Desktop main process: Add capability modules in `client/src/main` and IPC handlers in `client/src/main/ipc-handlers`.
+- Web UI page: Add a route folder with `page.tsx` under `web/src/app`.
+- Web API endpoint: Add `web/src/app/api/<endpoint>/route.ts`.
+- Tests: Add Playwright tests in `client/e2e` or `web/tests`.
 
-**New IPC Handler:**
-- Add method to appropriate file in `client/src/main/ipc-handlers/`:
-  - Gateway API → `gateway.ts`
-  - File operations → `file.ts`
-  - Window/Dialog → `shell.ts`
-  - Settings → `app.ts`
-  - Web platform bridge → `web.ts`
+**New Component/Module:**
+- Desktop components: `client/src/renderer/components`.
+- Web components: `web/src/components`.
 
-**New Zustand Store:**
-- Create `client/src/renderer/stores/newStore.ts`
-- Import in components as needed
+**Utilities:**
+- Desktop renderer helpers: `client/src/renderer/lib`.
+- Desktop main utilities: `client/src/main`.
+- Web server utilities: `web/src/lib`.
 
-**New Hook:**
-- Create `client/src/renderer/hooks/useNewHook.ts`
+**New IPC Channel:**
+- Implement handler in `client/src/main/ipc-handlers/<domain>.ts`.
+- Register handler module in `client/src/main/ipc-handlers.ts`.
+- Expose IPC method in `client/src/preload/index.ts`.
 
 ## Special Directories
 
-**`client/resources/` or `resources/`:**
-- Purpose: Bundled resources (OpenClaw source, assets)
-- Generated: No (downloaded separately via `download-openclaw.mjs`)
-- Committed: No (.gitignored)
+**client/resources/openclaw-source/**:
+- Purpose: OpenClaw runtime consumed by the desktop app.
+- Generated: Yes (downloaded via `client/scripts/download-openclaw.mjs`).
+- Committed: Yes.
 
-**`client/e2e/`:**
-- Purpose: Playwright end-to-end tests
-- Contains: `app.spec.ts`
+**web/prisma/**:
+- Purpose: Prisma schema and DB models.
+- Generated: No.
+- Committed: Yes.
+
+**.planning/**:
+- Purpose: Planning artifacts and codebase maps.
+- Generated: Yes.
+- Committed: Yes.
 
 ---
 
-*Structure analysis: 2026-03-31*
+*Structure analysis: 2026-04-03*
