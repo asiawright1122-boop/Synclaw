@@ -1,4 +1,4 @@
-import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { vi, describe, it, expect, beforeEach } from 'vitest'
 
 // Mock appStore before importing avatarStore
 // We need useAppStore to have a getState method for the dynamic import in activateAvatar

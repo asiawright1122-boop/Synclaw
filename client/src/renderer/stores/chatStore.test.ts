@@ -38,7 +38,8 @@ const openClawFns = {
     disable: vi.fn(),
     convert: vi.fn(),
   },
-  on: vi.fn(() => () => {}),
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  on: vi.fn<(...args: any[]) => () => void>(() => () => {}),
 }
 
 vi.stubGlobal('window', {
@@ -172,8 +173,8 @@ describe('chatStore', () => {
 
   describe('Gateway events', () => {
     it("'content' event appends to last assistant message", async () => {
-      const listeners = []
-      openClawFns.on.mockImplementation((cb) => {
+      const listeners: Array<(arg: unknown) => void> = []
+      openClawFns.on.mockImplementation((cb: (arg: unknown) => void) => {
         listeners.push(cb)
         return () => {}
       })
@@ -186,8 +187,8 @@ describe('chatStore', () => {
     })
 
     it("'done' event clears thinking state", async () => {
-      const listeners = []
-      openClawFns.on.mockImplementation((cb) => {
+      const listeners: Array<(arg: unknown) => void> = []
+      openClawFns.on.mockImplementation((cb: (arg: unknown) => void) => {
         listeners.push(cb)
         return () => {}
       })
@@ -200,8 +201,8 @@ describe('chatStore', () => {
     })
 
     it("'error' event updates message with error content", async () => {
-      const listeners = []
-      openClawFns.on.mockImplementation((cb) => {
+      const listeners: Array<(arg: unknown) => void> = []
+      openClawFns.on.mockImplementation((cb: (arg: unknown) => void) => {
         listeners.push(cb)
         return () => {}
       })
