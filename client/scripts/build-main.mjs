@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 /**
  * SynClaw 主进程构建脚本
- * 构建主进程和预加载脚本到 dist/
+ * 用 TypeScript 编译器替代 esbuild，解决 electron 模块的 require 问题。
+ * TypeScript 编译器能正确处理 CJS 输出中的 electron 静态 import。
  */
 
-import * as esbuild from 'esbuild'
+import * as ts from 'typescript'
 import path from 'path'
 import fs from 'fs'
 import { fileURLToPath } from 'url'
@@ -13,12 +14,14 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(__dirname, '..')
 const DIST_MAIN = path.join(ROOT, 'dist', 'main')
 const DIST_PRELOAD = path.join(ROOT, 'dist', 'preload')
+const SRC_MAIN = path.resolve(ROOT, 'src/main')
+const SRC_PRELOAD = path.resolve(ROOT, 'src/preload')
 
 function checkNodeVersion() {
   const version = process.version.slice(1)
-  const [major, minor = 0] = version.split('.').map(Number)
-  if (major < 22 || (major === 22 && minor < 12)) {
-    console.error(`Node.js 22.12.0+ required, got ${version}`)
+  const [major] = version.split('.').map(Number)
+  if (major < 20) {
+    console.error(`Node.js 20+ required, got ${version}`)
     process.exit(1)
   }
   console.log(`Node.js ${version}`)
@@ -29,47 +32,55 @@ function ensureDistDirs() {
   fs.mkdirSync(DIST_PRELOAD, { recursive: true })
 }
 
-function buildMainProcess() {
-  console.log('Building main process...')
-
-  // openclaw-source 路径在运行时通过 app.isPackaged 判断，构建脚本无需处理。
-  // src/main/ 的绝对路径
-  const mainSrcRoot = path.resolve(ROOT, 'src/main')
-
-  const esmBanner = `
-import { createRequire } from 'module';
-const require = createRequire(import.meta.url);
-`.trim()
-
-  // ── 构建主进程（使用原始源文件，无需路径注入）──────────────
-  // openclaw-source 路径在运行时通过 app.isPackaged 判断，不再需要构建时注入。
-  esbuild.buildSync({
-    entryPoints: [path.join(mainSrcRoot, 'index.ts')],
-    bundle: true,
-    platform: 'node',
-    target: 'node18',
-    outfile: path.join(DIST_MAIN, 'index.js'),
-    external: ['electron'],
-    format: 'esm',
-    banner: { js: esmBanner },
-  })
-  console.log('Main process built')
+function cleanDist(dir: string) {
+  if (fs.existsSync(dir)) {
+    for (const file of fs.readdirSync(dir)) {
+      fs.unlinkSync(path.join(dir, file))
+    }
+  }
 }
 
-function buildPreload() {
-  console.log('Building preload script...')
+function buildWithTsc(srcDir: string, outDir: string, name: string) {
+  console.log(`Building ${name}...`)
+  cleanDist(outDir)
 
-  // Preload 构建 — 输出为 .cjs 强制走 CommonJS，绕过 package.json 的 "type": "module"
-  esbuild.buildSync({
-    entryPoints: [path.join(ROOT, 'src/preload/index.ts')],
-    bundle: true,
-    platform: 'node',
-    target: 'node18',
-    outfile: path.join(DIST_PRELOAD, 'index.cjs'),
-    external: ['electron'],
-    format: 'cjs',
+  const configPath = path.join(ROOT, 'tsconfig.main.json')
+  const configFile = ts.readConfigFile(configPath, ts.sys.readFile)
+  const parsedConfig = ts.parseJsonConfigFileContent(
+    configFile.config,
+    ts.sys,
+    path.dirname(configPath!)
+  )
+
+  // Build main/preload with the main tsconfig
+  const program = ts.createProgram({
+    rootNames: [path.join(srcDir, 'index.ts')],
+    options: {
+      ...parsedConfig.options,
+      outDir,
+      rootDir: 'src',
+      sourceMap: false,
+      declaration: false,
+    },
   })
-  console.log('Preload script built')
+
+  const emitResult = program.emit()
+  const allDiagnostics = ts.getPreEmitDiagnostics(program).concat(emitResult.diagnostics)
+
+  for (const diagnostic of allDiagnostics) {
+    if (diagnostic.file) {
+      const { line, character } = ts.getLineAndCharacterOfPosition(diagnostic.file, diagnostic.start!)
+      const msg = ts.flattenDiagnosticMessageText(diagnostic.messageText, '\n')
+      console.error(`${diagnostic.file.fileName}:${line + 1}:${character + 1} - ${msg}`)
+    } else {
+      console.error(ts.flattenDiagnosticMessageText(diagnostic.messageText, '\n'))
+    }
+  }
+
+  if (emitResult.emitSkipped) {
+    process.exit(1)
+  }
+  console.log(`${name} built`)
 }
 
 function checkOpenClawSource() {
@@ -84,7 +95,7 @@ function checkOpenClawSource() {
 console.log('SynClaw Build Script')
 checkNodeVersion()
 ensureDistDirs()
-buildMainProcess()
-buildPreload()
+buildWithTsc(SRC_MAIN, DIST_MAIN, 'main process')
+buildWithTsc(SRC_PRELOAD, DIST_PRELOAD, 'preload script')
 checkOpenClawSource()
 console.log('Build complete!')

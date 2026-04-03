@@ -62,7 +62,7 @@ async function apiRequest(
       ...fetchOpts,
       headers: { ...headers, ...fetchOpts.headers },
     })
-    const data = await res.json().catch(() => ({}))
+    const data = await (res.json() as Promise<{ error?: string }>).catch(() => ({ error: undefined }))
     return {
       ok: res.ok,
       status: res.status,
