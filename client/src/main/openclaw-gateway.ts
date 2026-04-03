@@ -9,27 +9,41 @@
  * openclaw.mjs (dist/index.js) 是 CLI 入口，不是给 Node.js 模块导入用的。
  */
 
-import { join } from 'path'
+import { app } from 'electron'
+import { join, dirname } from 'path'
+import { pathToFileURL } from 'node:url'
 import * as fs from 'fs'
 
-// NOTE: We use the global `app` variable (available in Electron main process),
-// NOT `import { app } from 'electron'`. When bundled by esbuild with 'electron'
-// in the external list, esbuild still converts `import { app }` to require('electron')
-// at module initialization time. But at that point Electron hasn't patched the
-// module system yet, so require('electron') returns the npm stub (path string or {}).
-// The global `app` is set up by Electron's bootstrap code BEFORE user code runs,
-// making it the only reliable way to access the Electron API in a bundled context.
+function findOpenClawPath(startDir: string): string | null {
+  let current = startDir
+  for (let i = 0; i < 4; i++) {
+    const candidate = join(current, 'resources', 'openclaw-source')
+    if (fs.existsSync(candidate)) {
+      return candidate
+    }
+    const parent = dirname(current)
+    if (parent === current) {
+      break
+    }
+    current = parent
+  }
+  return null
+}
+
 function getOpenClawPath(): string {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const globalApp = (global as any).app
-  if (globalApp && globalApp.isPackaged) {
+  const resolvedApp = app ?? (global as any).app
+  if (resolvedApp && resolvedApp.isPackaged) {
     return join(process.resourcesPath!, 'openclaw-source')
   }
-  if (globalApp && globalApp.getAppPath) {
-    return join(globalApp.getAppPath(), 'resources', 'openclaw-source')
+  if (resolvedApp && resolvedApp.getAppPath) {
+    const appPath = resolvedApp.getAppPath()
+    return (
+      findOpenClawPath(appPath) ??
+      findOpenClawPath(process.cwd()) ??
+      join(appPath, 'resources', 'openclaw-source')
+    )
   }
-  // Fallback: relative to the built file location
-  // When bundled by esbuild, __dirname = dist/main/ in dev
   return join(__dirname, '..', '..', 'resources', 'openclaw-source')
 }
 
