@@ -400,7 +400,7 @@ function createWindow() {
     show: false,
     ...(process.platform === 'darwin' ? { titleBarStyle: 'hiddenInset' } : {}),
     webPreferences: {
-      preload: path.join(currentDirPath, '../preload/index.cjs'),
+      preload: path.join(currentDirPath, '../../preload/preload/index.js'),
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: false
@@ -425,7 +425,7 @@ function createWindow() {
   if (isDev) {
     mainWindow.loadURL('http://localhost:5173')
   } else {
-    mainWindow.loadFile(path.join(currentDirPath, '../renderer/index.html'))
+    mainWindow.loadFile(path.join(currentDirPath, '../../renderer/index.html'))
   }
 
   // Hide instead of close when tray is active

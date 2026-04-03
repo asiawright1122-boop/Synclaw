@@ -32,15 +32,14 @@ function ensureDistDirs() {
   fs.mkdirSync(DIST_PRELOAD, { recursive: true })
 }
 
-function cleanDist(dir: string) {
+function cleanDist(dir) {
   if (fs.existsSync(dir)) {
-    for (const file of fs.readdirSync(dir)) {
-      fs.unlinkSync(path.join(dir, file))
-    }
+    fs.rmSync(dir, { recursive: true, force: true })
+    fs.mkdirSync(dir, { recursive: true })
   }
 }
 
-function buildWithTsc(srcDir: string, outDir: string, name: string) {
+function buildWithTsc(srcDir, outDir, name) {
   console.log(`Building ${name}...`)
   cleanDist(outDir)
 
@@ -49,10 +48,9 @@ function buildWithTsc(srcDir: string, outDir: string, name: string) {
   const parsedConfig = ts.parseJsonConfigFileContent(
     configFile.config,
     ts.sys,
-    path.dirname(configPath!)
+    path.dirname(configPath)
   )
 
-  // Build main/preload with the main tsconfig
   const program = ts.createProgram({
     rootNames: [path.join(srcDir, 'index.ts')],
     options: {
@@ -69,7 +67,7 @@ function buildWithTsc(srcDir: string, outDir: string, name: string) {
 
   for (const diagnostic of allDiagnostics) {
     if (diagnostic.file) {
-      const { line, character } = ts.getLineAndCharacterOfPosition(diagnostic.file, diagnostic.start!)
+      const { line, character } = ts.getLineAndCharacterOfPosition(diagnostic.file, diagnostic.start)
       const msg = ts.flattenDiagnosticMessageText(diagnostic.messageText, '\n')
       console.error(`${diagnostic.file.fileName}:${line + 1}:${character + 1} - ${msg}`)
     } else {
@@ -81,6 +79,12 @@ function buildWithTsc(srcDir: string, outDir: string, name: string) {
     process.exit(1)
   }
   console.log(`${name} built`)
+}
+
+function ensureCommonJsPackage(outDir) {
+  const pkgPath = path.join(outDir, 'package.json')
+  const pkg = { type: 'commonjs' }
+  fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2))
 }
 
 function checkOpenClawSource() {
@@ -97,5 +101,7 @@ checkNodeVersion()
 ensureDistDirs()
 buildWithTsc(SRC_MAIN, DIST_MAIN, 'main process')
 buildWithTsc(SRC_PRELOAD, DIST_PRELOAD, 'preload script')
+ensureCommonJsPackage(DIST_MAIN)
+ensureCommonJsPackage(DIST_PRELOAD)
 checkOpenClawSource()
 console.log('Build complete!')
