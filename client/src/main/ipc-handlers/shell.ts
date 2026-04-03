@@ -116,7 +116,8 @@ ipcMain.handle('dialog:selectDirectory', async () => {
 
 function getAuthSettings() {
   const settings = getAppSettings()
-  return { authorizedDirs: settings.workspace.authorizedDirs ?? [], limitAccess: settings.workspace.limitAccess ?? true }
+  const { authorizedDirs, workspace: { limitAccess } } = getAppSettings()
+  return { authorizedDirs: authorizedDirs ?? [], limitAccess }
 }
 
 ipcMain.handle('shell:openPath', async (_event, filePath: string) => {
@@ -150,7 +151,7 @@ ipcMain.handle('shell:openExternal', async (_event, url: string) => {
 
 ipcMain.handle('shell:showItemInFolder', async (_event, filePath: string) => {
   const { authorizedDirs, limitAccess } = getAuthSettings()
-  const validation = validatePath(filePath, authorizedDirs, limitAccess)
+  const validation = await validatePath(filePath, authorizedDirs, limitAccess)
   if (!validation.valid) return { success: false, error: validation.error }
   shell.showItemInFolder(filePath)
   return { success: true }

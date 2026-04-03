@@ -36,26 +36,19 @@ export class OpenClawProcess {
     return new Promise((resolve, reject) => {
       log.info('正在启动 OpenClaw 进程...')
 
-      // 使用 tsx 运行 TypeScript 源码（无需预编译 dist/）
-      // tsx 支持直接加载 .ts 文件并处理相对路径导入
+      // 优先使用 tsx（开发/调试时），fallback 到 node（生产 npm 安装）
       const tsxBin = path.join(this.openclawPath, 'node_modules', 'tsx', 'dist', 'cli.mjs')
+      const useTsx = fs.existsSync(tsxBin)
+      const runnerArgs = useTsx
+        ? [tsxBin, 'openclaw.mjs']
+        : [path.join(this.openclawPath, 'openclaw.mjs')]
+      const runnerLabel = useTsx ? 'tsx' : 'node'
 
-      // 快速失败检查：确保 tsx 二进制文件存在
-      if (!fs.existsSync(tsxBin)) {
-        const msg = (
-          `tsx binary not found at: ${tsxBin}\n` +
-          `This usually means OpenClaw source has not been downloaded.\n` +
-          `To fix this, run one of the following:\n` +
-          `  - node scripts/download-openclaw.mjs\n` +
-          `  - npm run openclaw:download\n` +
-          `Or check if openclaw-source directory exists at: ${this.openclawPath}`
-        )
-        log.error(msg)
-        reject(new Error(msg))
-        return
+      if (!useTsx) {
+        log.info('tsx not found in node_modules, using node directly')
       }
 
-      this.process = spawn('node', [tsxBin, 'openclaw.mjs'], {
+      this.process = spawn('node', runnerArgs, {
         cwd: this.openclawPath,
         stdio: ['ignore', 'pipe', 'pipe'],
         env: {
@@ -64,6 +57,7 @@ export class OpenClawProcess {
           ...(process.env.NODE_ENV === 'development' ? { SKIP_UPDATE_CHECK: 'true' } : {})
         }
       })
+      log.info(`OpenClaw 进程已启动 (runner=${runnerLabel})，等待 Gateway 就绪...`)
 
       // 收集输出
       this.process.stdout?.on('data', (data) => {
@@ -87,7 +81,6 @@ export class OpenClawProcess {
 
       // 进程已启动，resolve 即可
       // 整体超时由 gateway-bridge.waitForHttpReady() 的 30 秒超时处理
-      log.info('OpenClaw 进程已启动，等待 Gateway 就绪...')
       resolve()
     })
   }

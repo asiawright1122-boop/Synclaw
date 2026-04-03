@@ -8,11 +8,10 @@
 import { Tray, Menu, nativeImage, app, dialog, BrowserWindow } from 'electron'
 import * as path from 'path'
 import * as fs from 'fs'
-import { fileURLToPath } from 'url'
 import { getGatewayBridge, type GatewayStatus } from './gateway-bridge.js'
 import logger from './logger.js'
 
-const currentDirPath = path.dirname(fileURLToPath(import.meta.url))
+// In CJS context, __dirname is available globally.
 const log = logger.scope('tray')
 
 let tray: Tray | null = null
@@ -35,7 +34,7 @@ function statusLabel(status: GatewayStatus): string {
 function getIconPath(): string {
   const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged
   if (isDev) {
-    return path.join(currentDirPath, '../../public/icon.png')
+    return path.join(__dirname, '../../public/icon.png')
   }
   return path.join(process.resourcesPath, 'icon.png')
 }

@@ -62,6 +62,16 @@ node scripts/download-openclaw.mjs
 pnpm run electron:dev
 ```
 
+### Electron 自检
+
+```bash
+pnpm run electron:smoke
+```
+
+如果你只是想验证主进程里的 `require('electron')` 是否正常，不要直接运行
+`electron console.log(...)` 这类命令。Electron 会把第一个非参数值当成应用路径，
+于是会出现“Unable to find Electron app at ...console.log(...)”这类报错。
+
 ### 构建
 
 ```bash

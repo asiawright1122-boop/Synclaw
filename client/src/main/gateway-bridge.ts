@@ -20,24 +20,7 @@ import * as path from 'path'
 import * as os from 'node:os'
 import logger from './logger.js'
 import { getAppSettings } from './index.js'
-
-// ── 运行时路径判断（与 openclaw.ts 一致）───────────────────────────────
-// 构建时不做任何注入，完全在运行时决定路径。
-// 打包后：process.resourcesPath + '/openclaw-source'
-// 开发时：app.getAppPath() + '/resources/openclaw-source'
-function getOpenClawPath(): string {
-  if (app.isPackaged) {
-    return path.join(process.resourcesPath, 'openclaw-source')
-  }
-  return path.join(app.getAppPath(), 'resources', 'openclaw-source')
-}
-
-const _openclawPath = getOpenClawPath()
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const _m: any = await import(_openclawPath + '/src/gateway/client.ts')
-const GatewayClient = _m.GatewayClient
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const GatewayClientOptions: any = _m.GatewayClientOptions
+import { getGatewayClientClass, getGatewayClientOptionsClass } from './openclaw-gateway.js'
 
 const log = logger.scope('gateway-bridge')
 
@@ -377,6 +360,7 @@ export class GatewayBridge {
       },
     }
 
+    const GatewayClient = await getGatewayClientClass()
     this.client = new GatewayClient(clientOpts)
     this.client.start()
 
