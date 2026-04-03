@@ -281,27 +281,39 @@ export class GatewayBridge {
         throw new Error(`health check failed: ${res.status}`)
       }
       // Gateway 已就绪后，尝试读取配置文件获取 token
-      // OpenClaw config 存储在 ~/.openclaw/config.json（开发时）或 resources/openclaw-source/.openclaw/config.json
-      const openclawConfigPath = app.isPackaged
-        ? path.join(process.resourcesPath, 'openclaw-source', '.openclaw', 'config.json')
-        : path.join(os.homedir(), '.openclaw', 'config.json')
+      // 优先使用 OPENCLAW_HOME（与 openclawProcess 启动参数一致）
+      const openclawHome =
+        (process.env.OPENCLAW_HOME && process.env.OPENCLAW_HOME.trim()) ||
+        path.join(app.getPath('userData'), 'openclaw')
+      const candidates = [
+        path.join(openclawHome, '.openclaw', 'openclaw.json'),
+        path.join(openclawHome, '.openclaw', 'config.json'),
+        path.join(openclawHome, 'openclaw.json'),
+        path.join(os.homedir(), '.openclaw', 'openclaw.json'),
+        path.join(os.homedir(), '.openclaw', 'config.json'),
+      ]
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      let config: any = null
-      try {
-        const fs = await import('node:fs/promises')
-        const content = await fs.readFile(openclawConfigPath, 'utf-8')
-        config = JSON.parse(content)
-      } catch {
-        config = null
+      const readTokenFrom = async (filePath: string): Promise<string | null> => {
+        try {
+          const fs = await import('node:fs/promises')
+          const content = await fs.readFile(filePath, 'utf-8')
+          const config = JSON.parse(content)
+          const token = config?.gateway?.auth?.token
+          return typeof token === 'string' ? token : null
+        } catch {
+          return null
+        }
       }
-      const token = config?.gateway?.auth?.token
-      if (token && typeof token === 'string') {
-        log.info('从配置文件读取 gateway token 成功')
-        return token
+
+      for (const filePath of candidates) {
+        const token = await readTokenFrom(filePath)
+        if (token) {
+          log.info(`从配置文件读取 gateway token 成功: ${filePath}`)
+          return token
+        }
       }
-      // 未找到 token，尝试用 bootstrap token
-      log.warn('配置文件中未找到 gateway.auth.token，尝试无认证连接')
+      log.warn('所有候选配置文件中均未找到 gateway.auth.token，尝试无认证连接')
       return ''
     } catch (err) {
       log.warn('获取 auth token 失败，将使用无认证连接:', err)

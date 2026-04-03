@@ -14,15 +14,31 @@ export class OpenClawProcess {
     this.initPath()
   }
 
+  private findOpenClawPath(startDir: string): string | null {
+    let current = startDir
+    for (let i = 0; i < 4; i++) {
+      const candidate = path.join(current, 'resources', 'openclaw-source')
+      if (fs.existsSync(candidate)) {
+        return candidate
+      }
+      const parent = path.dirname(current)
+      if (parent === current) {
+        break
+      }
+      current = parent
+    }
+    return null
+  }
+
   private initPath() {
-    // 开发环境: 使用项目目录下的 openclaw
-    // 生产环境: 使用 resources 目录
     if (app.isPackaged) {
-      // 生产环境: extraResources 直接在 Contents/Resources/openclaw-source/
       this.openclawPath = path.join(process.resourcesPath, 'openclaw-source')
     } else {
-      // 开发环境: resources/ 在 client/ 目录下
-      this.openclawPath = path.join(app.getAppPath(), 'resources', 'openclaw-source')
+      const appPath = app.getAppPath()
+      this.openclawPath =
+        this.findOpenClawPath(appPath) ??
+        this.findOpenClawPath(process.cwd()) ??
+        path.join(appPath, 'resources', 'openclaw-source')
     }
     log.info('OpenClaw 路径:', this.openclawPath)
   }
