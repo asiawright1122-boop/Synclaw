@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useTaskStore, Task, TaskStatus } from '../stores/taskStore'
+import { useTaskEvents } from '../hooks/useTaskEvents'
 import { Plus, MoreVertical, Clock, CheckCircle2, Circle, AlertCircle, Play } from 'lucide-react'
 import { ClipboardList } from 'lucide-react'
 
@@ -37,7 +38,10 @@ export function TaskBoard({ fullView = false }: TaskBoardProps) {
     deleteTask,
     setSelectedTaskId
   } = useTaskStore()
-  
+
+  // Subscribe to Gateway task events (React lifecycle managed, prevents listener leaks)
+  useTaskEvents()
+
   const [newTaskTitle, setNewTaskTitle] = useState('')
   const [showNewTaskInput, setShowNewTaskInput] = useState(false)
   const [draggedTask, setDraggedTask] = useState<string | null>(null)

@@ -5,9 +5,11 @@
  */
 
 import * as path from 'node:path'
+import * as os from 'node:os'
 import { realpath } from 'node:fs/promises'
 
 export const BLOCKED_PATHS = new Set([
+  // System directories
   '/etc',
   '/private/etc',
   '/proc',
@@ -21,16 +23,34 @@ export const BLOCKED_PATHS = new Set([
   '/usr/bin',
   '/usr/lib',
   '/usr/sbin',
+  // Windows system dirs
   'C:\\Windows',
   'C:\\Program Files',
   'C:\\Program Files (x86)',
   'C:\\ProgramData',
+  // User credential directories — prevent reading SSH keys, API tokens, config
+  'HOME/.ssh',
+  'HOME/.gnupg',
+  'HOME/.aws',
+  'HOME/.kube',
+  'HOME/.config/gh',
+  'HOME/.npmrc',
+  'HOME/.yarnrc',
+  'HOME/.netrc',
+  'HOME/.git-credentials',
+  'HOME/.config/SynClaw',
 ])
 
 export function isPathBlocked(filePath: string): boolean {
   const normalized = path.normalize(filePath)
+  // Expand HOME/ prefix to actual home directory for user credential paths
+  const home = os.homedir()
   for (const blocked of Array.from(BLOCKED_PATHS)) {
-    if (normalized.startsWith(blocked + path.sep) || normalized === blocked) return true
+    let checkPath = blocked
+    if (blocked.startsWith('HOME/')) {
+      checkPath = path.join(home, blocked.slice(5))
+    }
+    if (normalized.startsWith(checkPath + path.sep) || normalized === checkPath) return true
   }
   return false
 }

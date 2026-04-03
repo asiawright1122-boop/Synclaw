@@ -53,6 +53,27 @@ const VALUE_VALIDATORS: Record<string, (v: unknown) => v is SettingsValue> = {
 
 // ── Settings ────────────────────────────────────────────────────────────
 
+/**
+ * 安全组合验证：防止通过 settings:set 绕过沙箱。
+ * 攻击场景：将 authorizedDirs 设为 ['/'] 同时关闭 limitAccess → 完全绕过沙箱。
+ */
+function validateSecurityCombination(key: string, value: unknown): string | null {
+  // 扩展 authorizedDirs 时检查 limitAccess 是否启用
+  if (key === 'authorizedDirs' && Array.isArray(value)) {
+    const dirs = value as string[]
+    // 检测"授权所有路径"：包含根目录或所有常见顶级路径
+    const allPaths = ['/', '/home', '/Users', '/var', '/tmp']
+    const includesAll = allPaths.some(p => dirs.includes(p))
+    if (includesAll) {
+      const current = getAppSettings()
+      if (!current.workspace.limitAccess) {
+        return '安全策略冲突：关闭沙箱时不允许授权全部路径。请先开启「限制访问」或移除全部路径授权。'
+      }
+    }
+  }
+  return null
+}
+
 ipcMain.handle('settings:get', () => {
   return { success: true, data: getAppSettings() }
 })
@@ -64,6 +85,10 @@ ipcMain.handle('settings:set', (_event, key: string, value: unknown) => {
   const validator = VALUE_VALIDATORS[key]
   if (validator && !validator(value)) {
     return { success: false, error: `Invalid value type for key: ${key}` }
+  }
+  const comboError = validateSecurityCombination(key, value)
+  if (comboError) {
+    return { success: false, error: comboError }
   }
   try {
     setAppSetting(key as keyof ReturnType<typeof getAppSettings>, value as never)

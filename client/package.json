@@ -59,7 +59,6 @@
     "concurrently": "^8.2.2",
     "electron": "28.3.3",
     "electron-builder": "^24.9.1",
-    "esbuild": "^0.27.4",
     "eslint": "^8.56.0",
     "eslint-plugin-react-hooks": "^4.6.0",
     "jsdom": "^25.0.0",

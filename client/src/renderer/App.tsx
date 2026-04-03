@@ -16,6 +16,7 @@ import { ToastContainer } from './components/Toast'
 import { OnboardingView } from './components/OnboardingView'
 import { ExecApprovalModal } from './components/ExecApprovalModal'
 import { X, Keyboard } from 'lucide-react'
+import { ErrorBoundary } from './components/ErrorBoundary'
 
 function ShortcutsModal({ onClose }: { onClose: () => void }) {
   const shortcuts = [
@@ -298,6 +299,8 @@ function App() {
         <OnboardingView onComplete={handleOnboardingComplete} />
       )}
 
+      {/* Error boundary: catches rendering errors in main UI */}
+      <ErrorBoundary name="主界面">
       <div
         className="h-screen w-screen flex flex-col overflow-hidden"
         style={{ background: 'var(--bg-layout)', color: 'var(--text)' }}
@@ -401,6 +404,7 @@ function App() {
         {/* Exec Approval Modal */}
         <ExecApprovalModal />
       </div>
+      </ErrorBoundary>
     </>
   )
 }

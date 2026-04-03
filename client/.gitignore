@@ -1,0 +1,37 @@
+# Build artifacts
+dist/
+*.tsbuildinfo
+
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# OS artifacts
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Test
+test-results/
+playwright-report/
+*.test.js
+*.test.ts
+
+# Diagnostics
+diag-*.cjs
+
+# Electron dist (generated during build)
+electron-shim.js
+electron-smoke.cjs
+
+# Resources (regenerate with scripts)
+resources/
+*.icns
+*.ico
+iconset/
+
+# Standalone build
+standalone/
