@@ -1,9 +1,24 @@
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
+import type { ThemeMode } from './settingsStore'
 
 const mockElectronAPI = vi.hoisted(() => {
   // Define data INSIDE hoisted to avoid initialization order issues
-  const data = {
-    theme: 'dark' as const,
+  const data: {
+    theme: ThemeMode
+    fontSize: number
+    animationsEnabled: boolean
+    notificationsEnabled: boolean
+    compactMode: boolean
+    favorites: string[]
+    hasCompletedOnboarding: boolean
+    authorizedDirs: string[]
+    workspace: { limitAccess: boolean; autoSave: boolean; watch: boolean; heartbeat: '30m' | '1h' | '2h' | '4h' }
+    tts: { enabled: boolean; speed: number; volume: number; autoPlay: boolean; provider: string | null }
+    stt: { enabled: boolean; autoStart: boolean }
+    privacy: { optimizationPlan: boolean }
+    web: { deviceToken: string; deviceId: string; deviceName: string; lastReportedAt: string | null }
+  } = {
+    theme: 'dark',
     fontSize: 16,
     animationsEnabled: false,
     notificationsEnabled: true,
@@ -11,7 +26,7 @@ const mockElectronAPI = vi.hoisted(() => {
     favorites: ['/home/user'],
     hasCompletedOnboarding: true,
     authorizedDirs: ['/home/user/projects'],
-    workspace: { limitAccess: false, autoSave: false, watch: false, heartbeat: '1h' as const },
+    workspace: { limitAccess: false, autoSave: false, watch: false, heartbeat: '1h' },
     tts: { enabled: true, speed: 1.5, volume: 0.8, autoPlay: true, provider: 'test' },
     stt: { enabled: false, autoStart: true },
     privacy: { optimizationPlan: true },
@@ -36,8 +51,20 @@ const mockElectronAPI = vi.hoisted(() => {
 
   return {
     settings: {
-      get: vi.fn().mockResolvedValue({ success: true, data }),
-      set: vi.fn().mockResolvedValue({ success: true }),
+      get: vi.fn().mockImplementation(() => Promise.resolve({ success: true, data })),
+      set: vi.fn().mockImplementation((key: string, value: unknown) => {
+        const parts = key.split('.')
+        if (parts.length === 1) {
+          ;(data as Record<string, unknown>)[key] = value
+        } else {
+          let obj: Record<string, unknown> = data as Record<string, unknown>
+          for (let i = 0; i < parts.length - 1; i++) {
+            obj = obj[parts[i]] as Record<string, unknown>
+          }
+          obj[parts[parts.length - 1]] = value
+        }
+        return Promise.resolve({ success: true })
+      }),
       reset: vi.fn().mockResolvedValue({ success: true, data: defaults }),
       onChanged: vi.fn((cb: (d: { key: string; value: unknown; settings: typeof data }) => void) => {
         changeListeners.push(cb)
