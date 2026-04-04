@@ -116,6 +116,7 @@ jobs:
 
       - name: Download Playwright browsers
         run: pnpm exec playwright install --with-deps chromium
+        working-directory: client
 
       - name: Run E2E tests
         run: pnpm exec playwright test
