@@ -46,6 +46,7 @@ function UsagePanel() {
 
   useEffect(() => {
     loadUsage()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const totalTokens = (usageData?.inputTokens ?? 0) + (usageData?.outputTokens ?? 0)

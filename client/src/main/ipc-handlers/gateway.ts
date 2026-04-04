@@ -12,8 +12,6 @@ function g() { return getGatewayBridge() }
 
 // ── Unified handler factory ───────────────────────────────────────────────
 
-type HandlerFn<T = unknown> = (...args: unknown[]) => Promise<{ success: boolean; data?: T; error?: string }>
-
 function gw<T = unknown>(
   channel: string,
   method: string,

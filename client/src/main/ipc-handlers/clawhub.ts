@@ -40,7 +40,8 @@ function runCliCommand(
 }
 
 function stripAnsi(text: string): string {
-  return text.replace(/\u001b\[[0-9;]*m/g, '').replace(/\n\nTip:[\s\S]*$/, '').trim()
+  // eslint-disable-next-line no-control-regex
+  return text.replace(/\x1b\[[0-9;]*m/g, '').replace(/\n\nTip:[\s\S]*$/, '').trim()
 }
 
 // ── Status ────────────────────────────────────────────────────────────────

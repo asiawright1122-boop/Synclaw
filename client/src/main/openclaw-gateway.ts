@@ -11,7 +11,6 @@
 
 import { app } from 'electron'
 import { join, dirname } from 'path'
-import { pathToFileURL } from 'node:url'
 import * as fs from 'fs'
 
 function findOpenClawPath(startDir: string): string | null {

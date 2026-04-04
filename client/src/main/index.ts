@@ -17,7 +17,7 @@ let Store: any = null
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let settingsStore: any = null
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
+// eslint-disable-next-line @typescript-eslint/no-var-requires
 const _StoreModule: any = require('electron-store')
 Store = _StoreModule
 
@@ -125,19 +125,6 @@ let tray: Tray | null = null
 let notificationManager: NotificationManager | null = null
 // ── Logging (electron-log backed) ────────────────────────────────────────
 const log = logger.scope('main')
-// Legacy compat: logCompat('LEVEL', msg) → electron-log
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function logCompat(level: string, message: string, ...args: any[]): void {
-  const fn = (log as Record<string, (...a: unknown[]) => void>)[level.toLowerCase()] ?? log.info
-  fn(message, ...args)
-}
-
-function getAssetPath(...paths: string[]): string {
-  const resourcesPath = isDev
-    ? path.join(currentDirPath, '../../')
-    : process.resourcesPath
-  return path.join(resourcesPath, ...paths)
-}
 
 // ── Window state store ──────────────────────────────────────────────────
 
@@ -559,13 +546,13 @@ app.whenReady().then(async () => {
     bridge.registerWindow(mainWindow!)
 
     // Subscribe to status changes for auto-reconnect
-    const unsubscribe = bridge.onStatusChange((status) => {
+    bridge.onStatusChange((status) => {
       if (status === 'disconnected' || status === 'error') {
         log.warn(`[gateway-status] Gateway 断开 (${status})，准备重连...`)
         scheduleReconnect(0)
       }
     })
-    // Keep the unsubscribe fn alive — it will be called on window close via the window-on-closed listener below
+    // NOTE: unsubscribe will be called on window close via the window-on-closed listener below
 
     await bridge.connect()
     log.info('OpenClaw Gateway 连接成功')

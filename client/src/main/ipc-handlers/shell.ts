@@ -115,7 +115,6 @@ ipcMain.handle('dialog:selectDirectory', async () => {
 // ── Shell ────────────────────────────────────────────────────────────────
 
 function getAuthSettings() {
-  const settings = getAppSettings()
   const { authorizedDirs, workspace: { limitAccess } } = getAppSettings()
   return { authorizedDirs: authorizedDirs ?? [], limitAccess }
 }

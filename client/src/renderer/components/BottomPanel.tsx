@@ -210,6 +210,7 @@ export function BottomPanel() {
     upListenerRef.current = onUp
     document.addEventListener('mousemove', onMove as EventListener)
     document.addEventListener('mouseup', onUp as EventListener)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bottomPanelHeight])
 
   // Cleanup on unmount

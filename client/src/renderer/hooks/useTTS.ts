@@ -242,6 +242,7 @@ export function useTTS(): TTSState & TTSControls {
     } finally {
       setIsLoading(false)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [speed, volume])
 
   const stop = useCallback(() => {
