@@ -29,6 +29,14 @@ export interface AppSettings {
     deviceName: string
     lastReportedAt: string | null
   }
+  security: {
+    /** 是否已设置 STORE_ENCRYPTION_KEY 环境变量 */
+    encryptionEnabled: boolean
+    /** 用户启用加密的时间戳（ISO） */
+    encryptionKeySetAt: string | null
+    /** 用户配置的 WEB_API_BASE（存储在 electron-store，不依赖环境变量） */
+    webApiBase: string
+  }
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -54,5 +62,11 @@ export const DEFAULT_SETTINGS: AppSettings = {
     deviceId: '',
     deviceName: '',
     lastReportedAt: null,
+  },
+  security: {
+    // Derived from env var at startup (read-only in settings, can't be changed at runtime)
+    encryptionEnabled: !!process.env.STORE_ENCRYPTION_KEY,
+    encryptionKeySetAt: null,
+    webApiBase: '',
   },
 }

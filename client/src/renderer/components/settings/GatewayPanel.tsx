@@ -42,6 +42,7 @@ function GatewayPanel() {
     loadGateway()
     const unsub = window.openclaw?.onStatusChange(s => setStatus(s))
     return () => { unsub?.() }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const handleConnect = async () => {

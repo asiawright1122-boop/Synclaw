@@ -22,7 +22,7 @@ jobs:
         include:
           - os: macos-latest
             platform: darwin
-            arch: arm64
+            arch: x64  # universal = x64 + arm64; building x64 is sufficient
           - os: windows-latest
             platform: win32
             arch: x64
@@ -65,12 +65,7 @@ jobs:
 
       - name: Notarize macOS build
         if: matrix.platform == 'darwin'
-        run: |
-          APP_PATH=$(find client/release -name "*.app" -type d | head -1)
-          ZIP_PATH=$(find client/release -name "*.zip" -type f | head -1)
-          echo "App: $APP_PATH"
-          echo "Zip: $ZIP_PATH"
-          node client/scripts/notarize.mjs --app "$APP_PATH" --zip "$ZIP_PATH"
+        run: node client/scripts/notarize.mjs
         env:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}

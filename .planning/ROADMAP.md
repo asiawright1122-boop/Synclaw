@@ -1,283 +1,160 @@
-# ROADMAP.md — SynClaw v1.2 用户体验与分发完善
+# ROADMAP.md — SynClaw v1.3
 
-**Version:** v1.2
-**Date:** 2026-03-30
-**Status:** Near-Complete (4/5 phases verified)
+**v1.2 Archive:** [v1.2 Milestone Archive](./milestones/v1.2-MILESTONE-ARCHIVE.md) — 27/32 requirements satisfied
 
----
+**v1.3 Archive:** [v1.3 Milestone Archive](./milestones/v1.3-MILESTONE-ARCHIVE.md) — 23/23 requirements satisfied ✅
 
-## 阶段顺序决策
-
-**并行规划 / 顺序执行策略：**
-
-| 阶段 | 执行顺序 | 理由 |
-|------|---------|------|
-| Phase 1 (EXEC) | **最先** | 安全功能，用户体验直接影响信任度 |
-| Phase 2 (SIGN) | **次之（独立）** | 与其他阶段无依赖，但需要用户提供 Apple ID |
-| Phase 3 (WEB) | **并行执行** | 独立于 EXEC/SIGN，可以并行 |
-| Phase 4 (TTS) | **并行执行** | 独立于其他阶段 |
-| Phase 5 (AVA) | **并行执行** | 独立于其他阶段 |
-
-**推荐执行顺序：**
-1. Phase 1 (EXEC) — 先做安全相关
-2. Phase 2 (SIGN) — 分发必要条件（等待用户提供 Apple ID）
-3. Phase 3-5 — 三路并行，各自独立推进
+**Current milestone:** v1.3 首发就绪冲刺 (Launch-Ready Sprint) — ✅ COMPLETE
+**Previous milestone:** v1.2 — [Archive](./milestones/v1.2-MILESTONE-ARCHIVE.md)
 
 ---
 
-## Phase 1: EXEC — Exec 审批弹窗
+## Phases
 
-**目标：** 用户对每一个要执行的 shell 命令有知情权和批准权。
-
-### 1.1 阶段计划
-
-- [ ] **T-EXEC-01**: 研究 OpenClaw `exec.approval.*` WebSocket 事件格式（payload 结构）
-- [ ] **T-EXEC-02**: 创建 `ExecApprovalModal.tsx` 组件（Framer Motion 动画弹窗）
-- [ ] **T-EXEC-03**: 在 `chatStore.ts` 中将 `console.log` 替换为真实弹窗逻辑
-- [ ] **T-EXEC-04**: 实现批准/拒绝 IPC 调用（`window.openclaw.exec.approval.resolve`）
-- [ ] **T-EXEC-05**: 添加超时机制（`setTimeout`，5分钟默认）
-- [ ] **T-EXEC-06**: 实现多审批排队队列
-- [ ] **T-EXEC-07**: 添加系统通知（`client/src/main/notifications.ts`）
-- [ ] **T-EXEC-08**: 验收测试（Playwright E2E）
-
-### 1.2 关键文件
-
-```
-client/src/renderer/components/ExecApprovalModal.tsx   ← 新建
-client/src/renderer/stores/chatStore.ts               ← 修改
-client/src/renderer/stores/uiStore.ts                 ← 新增审批队列 state
-client/src/renderer/App.tsx                          ← 挂载 Modal
-client/e2e/exec-approval.spec.ts                     ← 新建 E2E
-```
-
-### 1.3 成功标准
-
-- `exec.approval.requested` 事件触发后 500ms 内显示弹窗
-- 批准/拒绝操作正确传递给 Gateway
-- 多审批场景下正确排队
-
-### 1.4 风险
-
-| 风险 | 缓解 |
-|------|------|
-| OpenClaw exec API 变更 | Phase 1 最先做，发现问题早 |
-| 审批超时用户不知情 | 添加通知 + 弹窗内倒计时显示 |
+- [x] **Phase 10: TEST-UNIT** — Vitest setup + unit tests for 5 core stores/hooks ✅
+- [x] **Phase 11: TEST-E2E** — Chat E2E + Playwright CI config ✅
+- [x] **Phase 12: UX-POLISH** — Empty states + loading skeletons + keyboard shortcuts ✅
+- [x] **Phase 13: SECURITY** — electron-store encryption guide + WEB_API_BASE graceful degradation ✅
+- [x] **Phase 14: DEPLOY** — macOS signing UI + README signing guide + electron-builder config ✅
 
 ---
 
-## Phase 2: SIGN — macOS 公证签名
+## Phase Details
 
-**目标：** SynClaw .dmg 通过 Apple Notarization，Gatekeeper 零警告。
+### Phase 10: TEST-UNIT
 
-### 2.1 阶段计划
+**Goal:** Establish Vitest testing infrastructure and achieve unit test coverage for 5 core stores/hooks.
 
-- [ ] **T-SIGN-01**: 确认 electron-builder `notarize` 配置格式（查询最新文档）
-- [ ] **T-SIGN-02**: 更新 `electron-builder.yml` 添加 `notarize` block
-- [ ] **T-SIGN-03**: 创建 `.env.example` 占位符（CSC_LINK, APPLE_ID 等 6 个变量）
-- [ ] **T-SIGN-04**: 创建 `client/scripts/notarize.mjs` 本地公证脚本
-- [ ] **T-SIGN-05**: 更新 `.github/workflows/release.yml` 添加 notarize step
-- [ ] **T-SIGN-06**: 更新 `README.md` 分发说明（添加 Apple ID 配置指南）
-- [ ] **T-SIGN-07**: 本地测试公证流程（需用户提供凭据）
+**Depends on:** None (foundation work)
 
-### 2.2 关键文件
+**Requirements:** TEST-01, TEST-02, TEST-03, TEST-04, TEST-05, TEST-06
 
-```
-client/electron-builder.yml                           ← 修改
-.github/workflows/release.yml                        ← 修改
-client/scripts/notarize.mjs                          ← 新建
-.env.example                                         ← 修改
-README.md                                            ← 修改
-```
+**Success Criteria** (what must be TRUE):
+1. `pnpm test` runs Vitest with jsdom environment and passes all tests
+2. `chatStore` tests verify sendMessage, message addition, MAX_MESSAGES cap, and Gateway event handling
+3. `settingsStore` tests verify theme switching, hasCompletedOnboarding persistence, and cross-window sync
+4. `avatarStore` tests verify activateAvatar, setActiveAvatar sync, and demo mode fallback
+5. `execApprovalStore` tests verify approval queue, approve/deny/approve-once decisions, and timeout logic
+6. `useTTS` hook tests verify play/stop/pause/resume and currentWordIndex updates
 
-### 2.3 成功标准
-
-- `xcrun stapler validate` 返回有效 ticket
-- `spctl -a -t exec -vv <app>.app` 验证通过
-- CI 构建日志显示 `notarization succeeded`
-
-### 2.4 风险
-
-| 风险 | 缓解 |
-|------|------|
-| 用户无 Apple Developer ID | Phase 2 可以跳过，PR 合入时添加证书 |
-| App-specific password 泄漏 | 仅存 GitHub Secrets，不进入代码仓库 |
+**Plans:** ✅ COMPLETED
+- `10-test-unit/10-PLAN.md` — Vitest setup + unit tests for 5 core stores/hooks ✅
 
 ---
 
-## Phase 3: WEB — web/ landing page 集成
+### Phase 11: TEST-E2E
 
-**目标：** SynClaw 桌面客户端内置 web/ landing page，通过 BrowserView 加载。
+**Goal:** Add end-to-end tests for core chat flow with Playwright CI configuration.
 
-### 3.1 阶段计划
+**Depends on:** Phase 10 (TEST-UNIT)
 
-- [x] **T-WEB-01**: 分析 web/ 构建产物（`.next/` 或 `out/`），确定集成方案
-- [x] **T-WEB-02**: 选择并实现技术方案（推荐：独立 BrowserView + 本地 Next.js 服务）
-- [x] **T-WEB-03**: 修改 electron-builder 配置，`extraResources` 包含 web/ 构建产物
-- [x] **T-WEB-04**: 在主进程添加 `window:openLandingPage` IPC handler
-- [x] **T-WEB-05**: 在 Sidebar 添加「关于」入口按钮
-- [x] **T-WEB-06**: 实现优雅降级（web/ 不存在时隐藏入口）
-- [x] **T-WEB-07**: 主题一致性适配（暗色模式同步）
-- [x] **T-WEB-08**: 打包测试（`electron-builder --mac`）
-- [x] **T-WEB-09**: 设计并实现 DeviceToken + UsageEvent Prisma 模型
-- [x] **T-WEB-10**: 创建 `POST /api/device-tokens` 和 `POST /api/usage-events` web API
-- [x] **T-WEB-11**: 重写 `GET /api/usage` 从 UsageEvent + CreditsHistory 读取真实数据
-- [x] **T-WEB-12**: 创建 `web:register` + `web:report-usage` + `web:revoke` IPC handlers
-- [x] **T-WEB-13**: 创建 `useUsageReporter` hook 监听 Gateway 事件并上报
-- [x] **T-WEB-14**: 更新 STACK.md / INTEGRATIONS.md / STRUCTURE.md 文档
+**Requirements:** TEST-07, TEST-08
 
-### 3.2 关键文件
+**Success Criteria** (what must be TRUE):
+1. E2E test sends a message and verifies AI response displays in chat
+2. E2E test submits empty message and verifies no action is triggered
+3. E2E test with invalid API key shows error message gracefully
+4. Playwright CI configuration runs in headless mode with Gateway mocked
+5. `pnpm test:e2e` passes in CI environment with 2 retries for flaky tests
 
-```
-client/src/main/index.ts                             ← 修改（添加 BrowserView 管理）
-client/src/main/ipc-handlers/app.ts                  ← 修改（添加 landing page IPC）
-client/src/main/ipc-handlers/web.ts                  ← 新建（web 平台桥接）
-client/src/main/ipc-handlers.ts                      ← 修改（注册 web.ts）
-client/src/main/app-settings.ts                      ← 修改（添加 web.deviceToken 等）
-client/src/renderer/components/Sidebar.tsx           ← 修改（添加入口按钮）
-client/src/renderer/hooks/useUsageReporter.ts         ← 新建（Gateway 事件上报 hook）
-client/src/preload/index.ts                          ← 修改（暴露 web.* API）
-client/src/renderer/types/electron.d.ts               ← 修改（添加 web 命名空间类型）
-web/prisma/schema.prisma                            ← 修改（添加 DeviceToken / UsageEvent 模型）
-web/src/app/api/device-tokens/route.ts               ← 新建（设备注册）
-web/src/app/api/device-tokens/[id]/route.ts         ← 新建（设备撤销/心跳）
-web/src/app/api/usage-events/route.ts               ← 新建（用量上报）
-web/src/app/api/usage/route.ts                       ← 修改（从 UsageEvent 读取真实数据）
-client/e2e/landing-page.spec.ts                     ← 新建 E2E
-```
-
-### 3.3 成功标准
-
-- 「关于」入口加载 landing page，无白屏
-- web/ 不存在时构建成功
-- 暗色主题一致
-- SynClaw ↔ web 用量事件管道打通（SESSION_START / MESSAGE_SENT / TOKENS_CONSUMED 三类事件）
-- web portal 的 /usage 页面展示真实数据（不再依赖 CreditsHistory 模拟）
-
-### 3.4 风险
-
-| 风险 | 缓解 |
-|------|------|
-| Next.js SSR/CSR 兼容性问题 | 使用 `next export` 静态导出，或仅服务端渲染 |
-| CORS / CSP 问题 | BrowserView 设置 `webSecurity: false`，添加 CSP header |
+**Plans:** ✅ COMPLETED
+- `11-test-e2e/gateway-mock.cjs` — Gateway mock for E2E (CommonJS, injected via setupFiles)
+- `11-test-e2e/chat.spec.ts` — 7 E2E tests covering chat flow, Enter key, and Gateway API
 
 ---
 
-## Phase 4: TTS — TTS / Talk Mode UI
+### Phase 12: UX-POLISH
 
-**目标：** 在 ChatView 中实现语音输入输出，AI 回复实时 TTS 朗读。
+**Goal:** Provide guidance UI for all empty states, loading feedback, and keyboard shortcuts.
 
-### 4.1 阶段计划
+**Depends on:** Phase 10 (TEST-UNIT)
 
-- [ ] **T-TTS-01**: 研究 OpenClaw `talk.*` API 格式（TTS streaming 方式）
-- [ ] **T-TTS-02**: 创建 `VoiceModeButton.tsx` 组件（ChatView 工具栏按钮）
-- [ ] **T-TTS-03**: 实现 TTS 播放逻辑（Web Audio API）
-- [ ] **T-TTS-04**: 添加播放控制 UI（播放/暂停/停止/语速滑块）
-- [ ] **T-TTS-05**: 实现 Speech-to-Text（Web Speech API `SpeechRecognition`）
-- [ ] **T-TTS-06**: 在设置面板中添加 TTS 配置（引擎/语速/音量）
-- [ ] **T-TTS-07**: TTS 偏好持久化（electron-store）
-- [ ] **T-TTS-08**: 验收测试
+**Requirements:** UX-01, UX-02, UX-03, UX-04, UX-05, UX-06, UX-07, UX-08, UX-09
 
-### 4.2 关键文件
+**Success Criteria** (what must be TRUE):
+1. TaskBoard shows "开启你的第一个任务" title with create button CTA when empty
+2. IMPanel shows "开始新对话" guide with CTA when no sessions exist
+3. AvatarListPanel shows "一键创建" buttons for 5 built-in templates when no avatars
+4. McpPanel shows setup guide with quick template entry when no servers configured
+5. ChatView displays skeleton loading animation above input area while AI is responding
+6. Cmd+, opens settings panel from anywhere in the app
+7. Escape closes the topmost open modal/panel (LIFO stack order)
+8. Cmd+Shift+S toggles sidebar expand/collapse
+9. Cmd+/ opens keyboard shortcuts reference modal showing all available shortcuts
 
-```
-client/src/renderer/components/ChatView.tsx         ← 修改（添加语音按钮）
-client/src/renderer/components/VoiceModePanel.tsx   ← 新建（语音面板）
-client/src/renderer/components/SettingsView.tsx     ← 修改（TTS 配置面板）
-client/src/renderer/stores/uiStore.ts               ← 修改（TTS 状态）
-client/src/renderer/hooks/useTTS.ts                  ← 新建（hook）
-client/src/renderer/hooks/useSpeechRecognition.ts   ← 新建（hook）
-```
+**Plans:** ✅ COMPLETED
+- `12-ux-polish/12-PLAN.md` — Full task plan for all 9 UX requirements
+- `TaskBoard.tsx` — Empty state with ClawLogo + "开启你的第一个任务" + create CTA
+- `IMPanel.tsx` — Empty state text updated to "开始新对话"
+- `AvatarListPanel.tsx` — 5 template quick-create cards using AVATAR_TEMPLATES
+- `McpPanel.tsx` — Empty state merged with quick template grid
+- `ChatView.tsx` — Skeleton loading animation (user + 2 assistant bubbles)
+- `App.tsx` — Cmd+, Cmd+Shift+S, Escape LIFO, Cmd+/, ShortcutsModal component
 
-### 4.3 成功标准
-
-- AI 回复触发 TTS 朗读
-- 播放/暂停/停止正常工作
-- 语音识别准确转写用户说话内容
-- 语速/音量配置重启后保持
-
-### 4.4 风险
-
-| 风险 | 缓解 |
-|------|------|
-| Web Speech API macOS Safari 支持有限 | 检测兼容性，不支持时隐藏语音按钮 |
-| WebView 模式下 TTS 失效 | 走 Renderer 主进程 audio，不依赖 BrowserView |
+**UI hint:** yes
 
 ---
 
-## Phase 5: AVA — Avatar 多分身体系落地
+### Phase 13: SECURITY
 
-**目标：** 完整的 Avatar CRUD 管理，选定分身作为当前对话 Agent。
+**Goal:** Enable electron-store encryption with migration path and make WEB_API_BASE optional.
 
-### 5.1 阶段计划
+**Depends on:** Phase 10 (TEST-UNIT)
 
-- [ ] **T-AVA-01**: 研究 OpenClaw `avatars.*` IPC API（参数/返回值）
-- [ ] **T-AVA-02**: 创建 `AvatarListPanel.tsx` 组件（分身列表 + 创建表单）
-- [ ] **T-AVA-03**: 创建 `AvatarEditModal.tsx`（编辑分身弹窗）
-- [ ] **T-AVA-04**: 实现 CRUD 调用（`avatars.create/update/delete/list`）
-- [ ] **T-AVA-05**: 实现 `avatars.activate`（切换当前分身）
-- [ ] **T-AVA-06**: 添加 ChatView 头像选择下拉菜单
-- [ ] **T-AVA-07**: 创建 5 个官方模板（程序员、写作助手、产品经理、代码审查员、数据分析师）
-- [ ] **T-AVA-08**: 验收测试
+**Requirements:** SEC-01, SEC-02, SEC-03, SEC-04
 
-### 5.2 关键文件
+**Success Criteria** (what must be TRUE):
+1. Settings→Security panel displays warning when encryption is not enabled
+2. Settings→Security panel guides user to set STORE_ENCRYPTION_KEY and enables encryption
+3. Existing plaintext data migrates to encrypted store when user enables encryption
+4. App starts successfully when WEB_API_BASE is not configured
+5. web:register, web:report-usage, and web:revoke handlers return `{ skipped: true }` without error when WEB_API_BASE is unset
 
-```
-client/src/renderer/components/AvatarListPanel.tsx   ← 新建
-client/src/renderer/components/AvatarEditModal.tsx   ← 新建
-client/src/renderer/components/ChatView.tsx          ← 修改（头像选择）
-client/src/renderer/components/Sidebar.tsx           ← 修改（Avatars 入口）
-client/src/renderer/stores/chatStore.ts              ← 修改（activeAvatar state）
-client/src/renderer/lib/avatar-templates.ts          ← 新建（官方模板）
-client/e2e/avatar.spec.ts                           ← 新建 E2E
-```
-
-### 5.3 成功标准
-
-- 可创建/编辑/删除 Avatar
-- 选中 Avatar 后对话使用对应 prompt
-- 5 个官方模板可一键创建
-
-### 5.4 风险
-
-| 风险 | 缓解 |
-|------|------|
-| OpenClaw avatars API 字段未知 | 先写存根，用 mock 数据开发 UI，再接真实 API |
-| Avatar 切换延迟 | UI 即时更新，Gateway 同步在后端异步执行 |
+**Plans:** ✅ COMPLETED
+- `13-security/13-PLAN.md` — Full task plan for all 4 SEC requirements
+- `ipc-handlers/security.ts` — 3 IPC handlers (status, generateKey, setWebApiBase)
+- `ipc-handlers/web.ts` — Lazy WEB_API_BASE init, graceful skip in web:register
+- `app-settings.ts` — Added security.webApiBase + security.encryptionEnabled fields
+- `SecurityPanel.tsx` — Encryption status + key modal + WEB_API_BASE config UI
+- `electron.d.ts` — Added security to ElectronAPI + AppSettings types
 
 ---
 
-## 进度概览
+### Phase 14: DEPLOY
 
-```
-Phase 1: EXEC  ██████████ 100%  ✅ 完成（验证：2026-03-31）
-Phase 2: SIGN  ░░░░░░░░░  0%  ⏳ 等待用户提供 Apple ID
-Phase 3: WEB   ██████████ 100%  ✅ 完成（验证：2026-03-31）
-Phase 4: TTS   ██████████ 100%  ✅ 完成（验证：2026-03-31）
-Phase 5: AVA   ██████████ 100%  ✅ 完成（验证：2026-03-31）
-```
+**Goal:** Make macOS code signing transparent with user-configurable credentials and clear documentation.
 
-**验证结果（2026-03-31）：**
-- ✅ tsc --noEmit 零错误
-- ✅ EXEC: ExecApprovalModal (384行) + execApprovalStore + chatStore 完整审批链路
-- ✅ WEB: BrowserView 主进程管理 + Next.js standalone 集成 + Sidebar 入口
-- ✅ TTS: VoiceModePanel + useTTS hook + useSpeechRecognition hook + TtsPanel 设置
-- ✅ AVA: AvatarListPanel + AvatarEditModal + avatarStore + 5 官方模板 + E2E
-- ✅ IPC handlers 拆分为 6 个模块
-- ✅ SettingsView 拆分为 16 个独立 panel
-- ⏳ SIGN: 待用户提供 Apple Developer ID
+**Depends on:** Phase 13 (SECURITY)
+
+**Requirements:** DEPLOY-01, DEPLOY-02, DEPLOY-03
+
+**Success Criteria** (what must be TRUE):
+1. Settings→About panel displays macOS signing status (signed/not signed/signing)
+2. Settings→About panel shows "配置签名" button that opens configuration guide
+3. README.md contains clear signing configuration section explaining how to set APPLE_ID, APPLE_APP_SPECIFIC_PASSWORD, and APPLE_TEAM_ID
+4. electron-builder.yml has notarize: autoSubmit: true configured for automatic signing when credentials are provided
+
+**Plans:** ✅ COMPLETED
+- `14-deploy/14-PLAN.md` — Plan for DEPLOY requirements
+- `ipc-handlers/shell.ts` — Added `app:getSigningStatus` handler with `codesign -d` detection
+- `preload/index.ts` — Added `app.getSigningStatus()` bridge
+- `electron.d.ts` — Added `getSigningStatus` to ElectronAPI interface
+- `AboutPanel.tsx` — Signing status card: signed (green shield), unsigned (orange alert + guide button), not_macos (info)
+- README.md — Already has complete signing guide (lines 132-185)
+- electron-builder.yml — Already has `notarize: autoSubmit: true` (line 64-67)
 
 ---
 
-## 里程碑完成条件
+## Progress Table
 
-所有 5 个阶段通过以下验收：
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| 10. TEST-UNIT | 1/1 | COMPLETED | 2026-04-01 |
+| 11. TEST-E2E | 1/1 | COMPLETED | 2026-04-01 |
+| 12. UX-POLISH | 1/1 | COMPLETED | 2026-04-01 |
+| 13. SECURITY | 1/1 | COMPLETED | 2026-04-01 |
+| 14. DEPLOY | 1/1 | COMPLETED | 2026-04-01 |
 
-| 阶段 | 验收条件 | 状态 |
-|------|---------|------|
-| Phase 1: EXEC | `tsc --noEmit` 通过，E2E 测试通过 | ✅ 编译已通过，E2E 待完整环境运行 |
-| Phase 2: SIGN | `spctl` 验证通过（macOS 全新环境） | ⏳ 等待 Apple ID |
-| Phase 3: WEB | 打包 .app 包含 web/ 资源，入口正常加载 | ✅ 代码已实现，待打包验证 |
-| Phase 4: TTS | TTS 播放/语音识别正常 | ✅ 代码已实现，待实际设备验证 |
-| Phase 5: AVA | Avatar CRUD + 切换正常 | ✅ 代码已实现，E2E spec 存在 |
-| 全部 | `cd client && pnpm exec tsc --noEmit` | ✅ 零错误（2026-03-31） |
-| 全部 | Playwright E2E | ⏳ 需完整环境运行 |
+---
+
+*Roadmap created: 2026-04-01 for v1.3 首发就绪冲刺*

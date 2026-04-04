@@ -7,7 +7,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Shield, Check, Ban, Clock, Terminal,
+  Shield, Check, CheckCircle, Ban, Clock, Terminal,
   ChevronDown, ChevronUp, AlertTriangle,
   X
 } from 'lucide-react'
@@ -85,6 +85,10 @@ export function ExecApprovalModal() {
 
   const handleApprove = useCallback(() => {
     resolveCurrent('approved')
+  }, [resolveCurrent])
+
+  const handleApproveOnce = useCallback(() => {
+    resolveCurrent('approved-once')
   }, [resolveCurrent])
 
   const handleDeny = useCallback(() => {
@@ -355,6 +359,22 @@ export function ExecApprovalModal() {
                   >
                     <Ban className="w-4 h-4" />
                     拒绝
+                  </button>
+                )}
+
+                {!showDenialInput && (
+                  <button
+                    type="button"
+                    onClick={handleApproveOnce}
+                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all"
+                    style={{
+                      background: 'rgba(0, 210, 170, 0.08)',
+                      border: '1px solid rgba(0, 210, 170, 0.25)',
+                      color: 'var(--accent-cyan)',
+                    }}
+                  >
+                    <CheckCircle className="w-4 h-4" />
+                    仅本次批准
                   </button>
                 )}
 

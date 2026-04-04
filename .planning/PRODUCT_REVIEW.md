@@ -1,273 +1,433 @@
-# SynClaw 产品深度审查报告
+# SynClaw v1.2 产品全面梳理报告
 
-> 审查视角：产品经理（PM）、UX 评审员
-> 审查时间：v1.0 MVP 阶段（Phase 4 完成）
-> 审查方法：代码走读 + 用户旅程分析 + 竞品对比
-
----
-
-## 一、执行摘要
-
-**项目评级：A-**（优秀，有关键缺口需在发布前修复）
-
-SynClaw 的核心价值主张清晰——"本地 AI 助手，数据永不离开设备"。Electron + OpenClaw Gateway 架构合理，技术栈现代，实现质量高。UX 设计有品味，Onboarding 引导、命令面板、文件浏览器等核心功能均有良好的交互细节。
-
-**当前 MVP 完成度：80%**
-
-| 维度 | 状态 | 说明 |
-|------|------|------|
-| 核心对话 | ✅ | 流式输出、停止、重发 |
-| 首次引导 | ✅ | API Key + 授权目录 |
-| 文件浏览器 | ✅ | 有授权边界检查 |
-| 系统托盘 | ✅ | 点击隐藏、动态菜单 |
-| 命令面板 | ✅ | Ctrl+K、分类命令 |
-| 技能市场 | ⚠️ | UI 完成，ClawHub 集成缺失 |
-| 助手配置 | ⚠️ | Avatar 体系未落地 |
-| 设置面板 | ⚠️ | Privacy Panel 有 bug |
-| 文件安全 | ❌ | OpenClaw 后端未 enforcement |
-| 对话历史 | ❌ | 刷新即丢失 |
-| Markdown 渲染 | ❌ | AI 回复无格式 |
-| 技能安装 | ⚠️ | Shell 命令注入风险 |
+**作者：** PM 视角深度审计
+**日期：** 2026-04-01
+**基础：** 代码库映射（7份文档）+ v1.2 milestone archive + REQUIREMENTS.md
 
 ---
 
-## 二、竞品分析
+## 一、核心判断：v1.2 现状
 
-| 维度 | Claude Code | Cursor | SynClaw（当前） | SynClaw（目标） |
-|------|-----------|--------|----------------|----------------|
-| 平台 | CLI | Electron | **Electron** | Electron |
-| 隐私 | 纯本地 | 部分云 | **本地 Gateway** | 本地 Gateway |
-| 系统托盘 | ❌ | ⚠️ 基础 | **✅ 完善** | 完善 |
-| 文件授权 | ✅ | ✅ | ❌ 后端缺失 | ✅ |
-| 多 Agent | ❌ | ❌ | ⚠️ Avatar 未落地 | Avatar 体系 |
-| 技能市场 | 插件生态 | Extensions | ⚠️ 骨架 | 完整 ClawHub |
-| TTS | ❌ | ❌ | ❌ 缺失 | 内置 |
-| 对话历史 | 文件 | 文件 | ❌ | 本地持久化 |
-| 协作 | ❌ | ⚠️ Cursor Rules | ❌ | 规划中 |
+**功能完成度：72%**（23/32 requirements satisfied，不含 gap phases 6-9）
 
-**差异化机会：**
-- 本地文件安全沙箱（这是竞品最弱的点，但也是 SynClaw 当前最不完整的点）
-- 多分身 IM + Agent 并行（Avatar 体系）
-- 技能市场 ClawHub 生态
+**架构质量：优秀**
+- Electron + OpenClaw Gateway 架构清晰，所有业务逻辑委托给 Gateway
+- IPC handlers 领域拆分（7个模块），职责单一
+- Zustand 仅管 UI 状态，无业务逻辑耦合
+- 沙箱路径验证 + Sandbox 对接 + 命令注入防护
+- electron-log 统一日志
+
+**产品可用性：低**
+- macOS 分发缺失（Phase 2 未完成，核心阻塞）
+- 核心用户引导缺失（OnboardingView 存在但未接入启动流程）
+- OpenClaw 首次运行需要手动配置（无自动化引导）
+- Landing page 需要单独安装 Next.js standalone build
 
 ---
 
-## 三、UX 成熟度评估
+## 二、功能缺口（按用户旅程排序）
 
-### 3.1 Onboarding（成熟度：85%）
-**做得好的：**
-- 三步骤清晰，进度指示器直观
-- Gateway 状态实时反馈（检查中/已就绪/连接失败）
-- 跳过机制合理
-- Step 3 完成汇总展示
+### 2.1 首次使用体验 [🔴 严重]
+
+**问题：OnboardingView 存在但未激活**
+
+`OnboardingView.tsx`（621行完整引导流程）存在，但在 `App.tsx` 中没有接入。用户在安装后打开应用会直接看到 ChatView（可能因为无 API key 显示错误状态）。
+
+当前启动流程：
+```
+App.tsx → 检查 settingsStore.hasCompletedOnboarding
+         → 如果 false → 渲染 OnboardingView
+         → 设置中无 hasCompletedOnboarding 默认值检查
+```
+
+需要确认：`settingsStore.ts` 中是否有 `hasCompletedOnboarding` 的初始化逻辑？如果没有，引导流程永远不会触发。
+
+**修复：** 确认 `hasCompletedOnboarding` 初始化为 `false`，确保首次启动触发引导。
+
+---
+
+### 2.2 API Key 配置体验 [🔴 严重]
+
+**问题：用户必须在 Onboarding 中配置 API key，但配置后无验证**
+
+`OnboardingView.tsx` L29-32：
+```typescript
+function validateApiKey(key: string): boolean {
+  // Accept any non-empty string of sufficient length; let the Gateway validate the actual key
+  return key.trim().length >= 32
+}
+```
+
+仅做长度验证，不调用 Gateway 验证 key 是否有效。用户点击"完成"后，可能带着无效 key 进入 ChatView，看到通用错误。
+
+**修复：** Onboarding Step 1 保存 API key 后，立即调用 `gateway.ping()` 或 `gateway.status()` 验证连接成功，显示明确的"连接成功/失败"状态。
+
+---
+
+### 2.3 Gateway 连接失败体验 [🔴 严重]
+
+**问题：无清晰的 Gateway 断连 UI**
+
+`GatewayPanel.tsx` 和 `ModelsPanel.tsx` 均为空（grep 搜索 `// keep empty` 确认）。
+
+当 Gateway 连接失败时：
+- 用户在 ChatView 看到通用错误（"连接中..."或空白）
+- 没有专属的 Gateway 状态面板
+- 没有"重试连接"按钮
+- 没有引导用户检查 OpenClaw 是否运行
+
+**修复：**
+- 填充 `GatewayPanel.tsx`：显示 Gateway 状态（connected/disconnected/error）、OpenClaw 版本、连接地址
+- 在 ChatView 添加专属断连 banner
+- 添加"重新连接"按钮
+
+---
+
+### 2.4 授权目录引导 [🟡 中等]
+
+**问题：Onboarding Step 2 授权目录选择后无验证**
+
+`OnboardingView.tsx` L42：`const [dirError, setDirError] = useState('')`
+
+用户可以选择任意目录，即使目录不存在或无权限，也不会阻止继续。如果用户选择了空目录或无法访问的路径，进入 ChatView 后 AI 将无法进行文件操作。
+
+**修复：** 在"添加到授权目录"后，调用 `file.read()` 测试目录是否可读。
+
+---
+
+### 2.5 Landing page 集成缺失 [🟡 中等]
+
+**问题：Landing page 需要单独构建并打包**
+
+当前架构：
+- Landing page 作为独立 Next.js 应用在 `web/` 子仓库
+- 主进程通过 `spawn(process.resourcesPath/web/standalone/server.js)` 启动
+- 需要 `web/` 预先构建 standalone server 并打包进 `client/resources/web/`
+
+如果 `web/standalone/server.js` 不存在，`landingPageAvailable = false`，用户看不到关于/营销页面。
+
+**修复：**
+- 在 electron-builder 中添加 `web/` 构建步骤
+- 如果未构建，提供优雅降级（显示"关于 SynClaw"信息页面而非空白）
+
+---
+
+### 2.6 Avatar 系统完整度 [🟡 中等]
+
+**现状：**
+- `AvatarListPanel.tsx` ✅ — 列表视图
+- `AvatarEditModal.tsx` ✅ — 创建/编辑
+- `AvatarSelector.tsx` ✅ — Sidebar 快速选择
+- `avatarStore.ts` ✅ — 状态管理
+- `avatar-templates.ts` ✅ — 5个内置模板
+- E2E 测试 ✅
 
 **缺口：**
-- `authorizedDirs` 初始值从 store 读取有 bug（已修复）
-- 没有"重新引导"入口（用户重置设置后无法再次触发）
-- 引导完成后没有给出"接下来做什么"的上手建议
-
-### 3.2 ChatView（成熟度：70%）
-**做得好的：**
-- 流式输出动画
-- 停止按钮（红色停止符）
-- 附件支持（图片预览）
-- 模型选择菜单
-- 输入框自动增高
-
-**缺口（按优先级）：**
-- **P0**: AI 回复无 Markdown 渲染（纯文本显示代码块、链接）
-- **P0**: 对话历史不持久化（刷新页面全部丢失）
-- **P1**: 消息复制按钮缺失（用户需要选中文字）
-- **P1**: 打字指示器（AI 思考中只有 loading spinner，缺少"正在思考..."文字）
-- **P2**: 长消息展开/折叠
-
-### 3.3 FileExplorer（成熟度：80%）
-**做得好的：**
-- 列表/网格双视图切换
-- 收藏功能
-- 键盘快捷键（Ctrl+N 新文件）
-- 文件预览面板
-- 右键菜单完整
-
-**缺口（按优先级）：**
-- **P0**: OpenClaw 后端无文件授权 enforcement（只在前端检查）
-- **P1**: 主目录/回收站路径硬编码（已修复为 API 获取）
-- **P1**: 没有"打开方式"功能（默认用系统应用打开文件）
-- **P2**: 拖拽排序收藏夹
-- **P2**: 没有搜索框（快速定位文件）
-
-### 3.4 SkillsPanel（成熟度：65%）
-**做得好的：**
-- 分类筛选 + 搜索
-- 详情 Drawer
-- 安装/卸载/启用/禁用完整操作
-- Gateway 连接状态指示
-- API Key 配置入口
-- 空状态引导（已改善）
-
-**缺口（按优先级）：**
-- **P0**: ClawHub API 集成缺失（只展示静态列表）
-- **P1**: 技能安装进度不显示（只有按钮 loading）
-- **P1**: 技能安装失败后的错误提示不够友好
-- **P2**: 技能版本管理（升级/降级）
-- **P2**: 技能搜索无网络结果（全部是本地缓存）
-
-### 3.5 设置面板（成熟度：70%）
-**做得好的：**
-- 分 Tab 导航，切换流畅
-- Workspace 配置同步到 Gateway
-- 收藏目录管理
-- 主题/字体大小实时预览
-
-**缺口（按优先级）：**
-- **P0**: Privacy Panel（优化计划选项）调用了错误的 API（`window.openclaw.settings` 而非 `window.electronAPI.settings`）——已修复
-- **P1**: 没有"导入/导出设置"功能
-- **P1**: 没有"重置所有设置"确认弹窗
-- **P2**: 助手头像自定义（Avatar 体系未落地）
+- Avatar 技能标签（创建/编辑表单中有，但行为未定义）— R-AVA-07 已关闭为 N/A（web/ 权限系统）
+- 切换 Avatar 后 ChatView 不显示当前 Avatar 名称（需要添加到 ChatView Header）
+- Avatar 删除后当前会话不重置 Avatar 状态
 
 ---
 
-## 四、技术债务与风险
+### 2.7 TTS / Talk Mode 完整度 [🟡 中等]
 
-### 4.1 文件安全（P0 — 发布前必须解决）
+**现状：**
+- `useTTS.ts` ✅ — TTS hook
+- `useSpeechRecognition.ts` ✅ — STT hook
+- `VoiceModePanel.tsx` ✅ — 语音面板
+- `TtsPanel.tsx` ✅ — 设置面板
+- word-sync 高亮 ✅（Phase 7 新增）
 
-**问题：** 授权目录白名单只在 React 前端实现了 `validatePath` 检查，OpenClaw Gateway 后端未验证。用户如果直接调用 Gateway 的 file API（绕过前端），可以访问任意路径。
-
-**建议：**
-1. 在 OpenClaw Gateway 添加文件路径验证中间件（检查 `limitAccess` + `authorizedDirs`）
-2. 前端的 `validatePath` 仅作为 UX 层的快速反馈（节省不必要的 API 调用）
-3. 在 FileExplorer UI 中，当 `authorizedDirs` 为空且 `limitAccess=true` 时，显示引导添加目录（替代当前的空白状态）
-
-### 4.2 对话历史持久化（P0 — 发布前必须解决）
-
-**问题：** 刷新页面后所有对话消息消失。虽然 `chatStore` 有 `saveHistory()` 方法，但需要确认 Gateway 是否实际存储了消息。
-
-**建议：**
-1. 在 ChatView 初始化时调用 `loadHistory()` 并处理空状态
-2. 添加"对话历史"面板（左侧 Sidebar）
-3. 确认 Gateway 的 session 持久化机制
-
-### 4.3 Preload API 暴露风险（需评估）
-
-**问题：** Preload 的 `electronAPI.file` 暴露了所有文件系统操作，包括可能危险的 `shell.openExternal`。目前无 CSP 策略限制。
-
-**建议：**
-1. 评估 `shell.openExternal` 的必要性，考虑移除或限制只允许特定 URL scheme
-2. 添加 Content Security Policy
-
-### 4.4 技能安装 Shell 注入（需修复）
-
-**问题：** `ipc-handlers.ts` 中 `skill:install` 使用字符串拼接构建 shell 命令，存在注入风险。
-
-**建议：** 使用参数化 API 而非 shell 字符串拼接。
+**缺口：**
+- TTS 提供商选择 UI 存在但可能未接入 Gateway API（`ModelsPanel.tsx` 确认有 `// keep empty`）
+- 如果没有可用的 TTS 引擎，VoiceModePanel 完全隐藏（不显示任何提示）
+- 移动端触控优化（R-TTS-07 标记 satisfied 但未实现）
 
 ---
 
-## 五、已修复问题清单（本次审查修复）
+### 2.8 任务系统（TaskBoard）[🟢 低]
 
-| ID | 问题 | 修复方案 | 状态 |
-|----|------|----------|------|
-| WS-P0-01 | FileExplorer mock fallback 数据泄露隐私 | 移除 fallback，Gateway 不可用时显示错误 | ✅ |
-| WS-P0-02 | FileExplorer 硬编码 `/Users/kaka` | 改用 `app.getPath('home')` API | ✅ |
-| WS-P0-03 | FileExplorer 无授权目录边界检查 | 添加 `validatePath` 函数拦截越权访问 | ✅ |
-| WS-P0-04 | appStore `currentModel` 硬编码 `GLM-4-Turbo` | 改为空字符串，由用户选择 | ✅ |
-| WS-P0-05 | SettingsView PrivacyPanel 调用错误 API | 改为 `electronAPI.settings` | ✅ |
-| WS-P1-08 | electron-store 多窗口不同步 | 添加 IPC `settings:changed` 广播 | ✅ |
-| WS-P1-01 | Onboarding authorizedDirs 跳过后丢失 | 从 store 初始化 + useEffect 同步 | ✅ |
-| WS-P1-09 | SkillsPanel 空列表无引导 | 区分"无技能"和"无搜索结果"两种空状态 | ✅ |
-| WS-BUG-01 | `tray.ts` 遗留注释提到未实现 flag | 确认代码无实际问题（注释已理解） | ✅ |
-| WS-TYPE-01 | `getPath('trash')` 缺失类型定义 | 添加 `'trash'` 到 ElectronAPI 类型 | ✅ |
-| WS-TYPE-02 | tsconfig 未包含 `src/renderer/types/**/*` | 更新 include 配置 | ✅ |
+**现状：** `TaskBoard.tsx` + `TaskDetailPanel.tsx` + `taskStore.ts` 存在
+
+**缺口：** task event 是否接入 Gateway？需要确认 `window.openclaw.tasks.*` 是否在渲染进程中订阅了 Gateway task 事件。如果 task store 未收到事件，TaskBoard 将永远为空。
 
 ---
 
-## 六、剩余问题（按优先级）
+### 2.9 MCP 面板 [🟢 低]
 
-### 发布前必须解决（P0）
-| # | 问题 | 影响 | 建议 |
-|---|------|------|------|
-| R01 | **OpenClaw 后端文件授权未 enforcement** | 数据泄露风险 | Gateway 添加路径验证中间件 |
-| R02 | **对话历史不持久化** | 用户体验严重受损 | 实现 session 持久化 |
-| R03 | **AI 回复无 Markdown 渲染** | 代码片段、链接等无法正常显示 | 集成 `react-markdown` 或 `marked` |
+**现状：** `McpPanel.tsx` 存在（设置面板中），但无实际功能
 
-### 下一个迭代（M1）
-| # | 问题 | 影响 | 建议 |
-|---|------|------|------|
-| R04 | Avatar 体系未落地 | "多分身"核心价值无法体验 | 设计和实现 Avatar Store |
-| R05 | ClawHub API 集成缺失 | 技能市场是空壳 | 对接 ClawHub REST API |
-| R06 | 系统快捷键无自定义 | 高级用户无法配置 | 添加快捷键设置面板 |
-| R07 | 技能安装无进度显示 | 用户不确定安装状态 | 添加安装进度状态 |
-
-### 值得做但非紧急（R2）
-| # | 问题 | 影响 | 建议 |
-|---|------|------|------|
-| R08 | TTS 功能缺失 | 纯文字体验单一 | 集成 Web Speech API |
-| R09 | 无导入/导出设置 | 用户无法备份配置 | 添加 JSON 导入/导出 |
-| R10 | 无对话历史侧边栏 | 用户无法快速切换历史会话 | 添加 History 面板 |
-| R11 | 文件预览仅文本 | 图片等媒体无法预览 | 添加图片预览支持 |
+**缺口：** MCP server 配置 UI 未接入 IPC handlers。如果用户配置了 MCP server，主进程没有实际管理它的逻辑。
 
 ---
 
-## 七、快速成功（Quick Wins）
+### 2.10 Skills Marketplace [🟢 低]
 
-以下改动可在 1-2 小时内完成，对用户体验提升明显：
+**现状：** `SkillsMarketPanel.tsx` + `clawhub.ts` IPC handler
 
-1. **添加 Markdown 渲染**：`pnpm add react-markdown && rehype-highlight`，替换 ChatView 中的消息文本渲染
-2. **对话历史持久化提示**：在 ChatView 添加"消息已保存"toast，让用户知道数据被保存了
-3. **引导添加授权目录**：FileExplorer 在无授权目录时显示引导卡片而非空白
-4. **技能安装成功反馈**：安装完成后弹出成功 toast
-5. **打字指示器文字**：AI 思考中显示"正在思考..."而不是只有 spinner
+**缺口：** `clawhub.ts` 依赖本地安装的 `clawhub` CLI。如果 CLI 不存在，所有操作静默失败。需要：
+- 检测 CLI 是否存在，不存在时显示安装引导
+- `install` / `update` / `uninstall` 操作需要 CLI，会产生异步进程
 
 ---
 
-## 八、架构健康度
+## 三、UX 缺口
 
-| 维度 | 评分 | 说明 |
-|------|------|------|
-| IPC 通道设计 | 8/10 | 通道命名清晰，类型完整，broadcast 机制刚添加 |
-| 状态管理 | 7/10 | Zustand 合理使用，Gateway 断连 fallback 到位 |
-| 类型安全 | 8/10 | TypeScript 严格模式，零错误（本次修复后） |
-| 错误处理 | 7/10 | 组件内 try/catch 到位，Gateway 错误有 toast |
-| 代码组织 | 8/10 | 目录结构清晰，组件职责单一 |
-| 测试覆盖 | 3/10 | 无单元测试，Playwright E2E 待完善 |
-| CI/CD | 6/10 | GitHub Actions 配置已修复，但无自动化测试步骤 |
+### 3.1 Empty States（空状态引导）[🔴 严重]
 
----
+**审计结果：** 大多数面板在无数据时显示空白而非引导。
 
-## 九、产品路线图建议
+| 面板 | 当前状态 | 应该显示 |
+|------|---------|---------|
+| `AvatarListPanel.tsx` | 空白 | 5 个模板快速创建按钮 + "创建分身" CTA |
+| `TaskBoard.tsx` | 空白 | "开启你的第一个任务"引导 |
+| `SkillsMarketPanel.tsx` | 空白（无引导） | ClawHub CLI 检测 + 安装引导 |
+| `McpPanel.tsx` | 空白 | MCP server 添加引导 |
 
-### v1.0 MVP（当前阶段）
-**目标：** 可安全使用的基础版本
-- [x] 首次引导
-- [x] AI 对话（流式）
-- [x] 文件浏览（有限制）
-- [ ] 文件安全后端 enforcement
-- [ ] 对话历史持久化
-
-### v1.1（下一个迭代）
-**目标：** 完整的本地 AI 助手
-- [ ] Markdown 渲染
-- [ ] Avatar 体系
-- [ ] ClawHub 技能市场
-- [ ] 对话历史侧边栏
-- [ ] TTS 语音播报
-
-### v1.2
-**目标：** 高级特性
-- [ ] 定时任务（Task 系统）
-- [ ] 多人协作（会话分享）
-- [ ] 插件系统
-- [ ] 云端同步（可选，用户自控）
+**修复：** 为每个有列表的面板添加 EmptyState 组件（标题 + 描述 + 主操作按钮）。
 
 ---
 
-## 十、总结
+### 3.2 Loading States（加载状态）[🟡 中等]
 
-SynClaw 是一个有清晰愿景和坚实技术基础的产品。核心价值——"本地 AI、数据不离开设备"——在当前实现中通过前端授权检查、系统托盘、Electron 沙箱体现，但关键的**文件安全后端 enforcement** 和**对话历史持久化**仍是重大缺口，发布前必须解决。
+**问题：** 组件内有 `isLoading` 状态，但大多数面板没有加载骨架屏（skeleton）。
 
-UX 层面，产品整体体验流畅、细节丰富（Framer Motion 动画、键盘快捷键、命令面板等），但缺少 Markdown 渲染和对话历史会让用户感觉功能不完整。
+- `AvatarListPanel` 列表加载时：空白 → 突然显示数据（闪烁感）
+- ChatView 消息发送后：输入框消失 → 等待 AI 响应时无视觉反馈
+- `FileExplorer` 加载目录时：空白
 
-**建议：**
-- 将 v1.0 MVP 的发布标准定义为"核心路径可安全使用"，而非"所有功能完善"
-- 在发布前完成 R01（文件安全）和 R02（对话历史），其余进入 v1.1
-- 在发布后 2 周内收集用户反馈，优先修复实际使用中发现的问题
+**修复：** 添加 React skeleton 组件，为每个数据加载路径添加 loading state。
+
+---
+
+### 3.3 Keyboard Shortcuts（快捷键）[🟡 中等]
+
+**现状：** 仅 2 个全局快捷键
+- `Cmd+Shift+C` — 新建对话
+- `Cmd+Shift+K` — 打开命令面板
+
+**建议添加：**
+- `Cmd+,` — 打开设置（macOS 标准）
+- `Cmd+/` — 打开快捷键参考
+- `Cmd+Shift+S` — 打开侧边栏
+- `Escape` — 关闭当前弹窗/面板
+- `Cmd+Shift+M` — 打开语音模式
+
+---
+
+### 3.4 Toast / Notification 体系 [🟡 中等]
+
+**现状：** `toastStore.ts` 存在，但 Toast 组件是否接入所有状态变更？
+
+需要审计以下场景是否都有 Toast 反馈：
+- Gateway 连接成功/失败
+- API key 保存成功/失败
+- 文件操作失败
+- Avatar 保存成功
+- TTS 播放失败
+- 审批超时
+
+---
+
+## 四、安全缺口
+
+### 4.1 electron-store 加密未强制 [🔴 严重]
+
+**问题：** `STORE_ENCRYPTION_KEY` 是可选的，但 `settings.json` 中存储了：
+- API key（通过 OnboardingView 配置）
+- 授权目录列表
+- 设备 token
+
+如果设备被入侵（物理访问或恶意软件），所有敏感配置以明文暴露。
+
+**当前缓解：** `app/index.ts` 中如果未设置加密 key，输出 warning log。
+
+**修复方案（按优先级）：**
+1. **高优先级：** 在 Onboarding Step 1 中引导用户设置加密 key（设置→安全性→启用加密）
+2. **中优先级：** 将加密 key 作为安装时的必选项
+3. **低优先级：** 敏感字段（API key）使用 macOS Keychain 存储（`keytar` 包）
+
+---
+
+### 4.2 Path Validation 竞态 [🟡 中等]
+
+**问题：** `path-validation.ts` 中 `realpath()` 在文件不存在时抛出异常，导致新文件创建时路径验证失败。
+
+**当前缓解：** 写操作跳过 realpath，使用规范化路径。
+
+**修复：** 分离读写操作的验证逻辑。
+
+---
+
+### 4.3 Web Platform Token 存储 [🟡 中等]
+
+**问题：** `web.deviceToken` 和 `web.deviceId` 存储在 electron-store 中未加密。
+
+**影响：** 中等（device token 是设备级令牌，非用户凭证）
+
+**修复：** 考虑使用 macOS Keychain 存储，或在 `web.ts` IPC handler 中添加加密层。
+
+---
+
+## 五、测试缺口
+
+### 5.1 无单元测试 [🔴 严重]
+
+**现状：** 0 个单元测试文件。Zustand stores、hooks、utility 函数均无测试。
+
+**风险：** store 重构时无法保证行为一致性。
+
+**修复：**
+- 添加 Vitest（`cd client && pnpm add -D vitest`）
+- 优先级1：测试 `chatStore.ts`（最核心）
+- 优先级2：测试 `execApprovalStore.ts`（刚增强）
+- 优先级3：测试 `useTTS.ts`
+
+---
+
+### 5.2 无 Chat Flow E2E [🔴 严重]
+
+**现状：** 4 个 E2E spec（avatar、exec-approval、tts、landing-page）但无 chat spec。
+
+**测试缺口：**
+- 发送消息 → AI 响应 → 显示在 ChatView（最核心用户路径）
+- API key 无效 → 错误提示
+- Gateway 断连 → 提示
+
+**修复：** 添加 `client/e2e/chat.spec.ts`，覆盖：
+- 发送消息收到 AI 响应
+- 发送空消息不触发请求
+- 输入框 placeholder 正确
+
+---
+
+### 5.3 IPC Handler 无隔离测试 [🟡 中等]
+
+**问题：** `ipc-handlers/` 下所有模块无单元测试。
+
+**修复：** 添加 integration test，使用 `@electron-forge/test-electron` 或手动 mock IPC。
+
+---
+
+## 六、构建/发布缺口
+
+### 6.1 macOS 公证（Phase 2）[🔴 严重，阻塞]
+
+**现状：** v1.2 milestone 的唯一未完成 requirement group。
+
+需要用户提供：
+- Apple Developer ID（付费会员）
+- App-specific password
+- Team ID
+
+配置到：
+- `.env`（本地）
+- GitHub Secrets（CI/CD）
+- `electron-builder.yml` 中的 `notarize` 配置
+
+**影响：** 用户在 macOS 上运行时会看到"此应用来自不明开发者"警告。
+
+---
+
+### 6.2 electron-builder.json 验证 [🟡 中等]
+
+**问题：** CONCERNS.md 提到 `electron-builder.json` 未确认存在。
+
+需要验证：
+```bash
+cat client/electron-builder.json
+```
+
+确认包含：
+- macOS dmg 配置（包含 notarize）
+- Windows NSIS 配置
+- Linux AppImage 配置
+- `appId: "com.synclaw.app"`
+
+---
+
+### 6.3 OpenClaw 源码下载时机 [🟡 中等]
+
+**问题：** `openclaw-source/` 在构建时下载，未提交到 git。
+
+**风险：** 构建时无网络 → 构建失败；npm 仓库版本变化 → 潜在 drift。
+
+**缓解：** `package.json` 中已 pin `openclawVersion`。
+
+**建议：** 在 CI/CD 中缓存 `node_modules/openclaw-source/` 或使用 git submodule。
+
+---
+
+## 七、集成缺口
+
+### 7.1 WEB_API_BASE 必需性 [🟡 中等]
+
+**问题：** `WEB_API_BASE` 环境变量在主进程启动时必需。
+
+如果 web platform API 不可用（网络问题、API 服务器宕机），应用是否仍然可用？
+
+审计 `web.ts` IPC handler 的降级策略。如果 web API 调用失败导致主进程报错，需要添加 try-catch。
+
+---
+
+### 7.2 ClawHub CLI 缺失处理 [🟡 中等]
+
+**问题：** `clawhub.ts` IPC handler 依赖本地安装的 `clawhub` CLI。
+
+如果 CLI 不存在，调用会静默失败或抛出 subprocess 错误。
+
+**修复：** 在 handler 中检测 CLI 存在性，不存在时返回友好错误。
+
+---
+
+## 八、优先级矩阵
+
+| # | 问题 | 优先级 | 影响用户 | 工作量估计 |
+|---|------|--------|--------|-----------|
+| P0-1 | macOS 公证（Phase 9） | 🔴 阻塞 | 所有 macOS 用户 | 2h（用户操作） |
+| P0-2 | Onboarding 未接入启动流程 | 🔴 阻塞 | 所有新用户 | 0.5h |
+| P1-1 | Onboarding API key 验证 | 🔴 严重 | 新用户 | 0.5h |
+| P1-2 | Gateway 断连 UI | 🔴 严重 | 所有用户 | 1h |
+| P1-3 | Empty states（关键面板） | 🔴 严重 | 所有用户 | 2h |
+| P2-1 | electron-store 加密强制 | 🟡 中等 | 有安全需求用户 | 2h |
+| P2-2 | Chat Flow E2E | 🟡 中等 | CI 质量 | 3h |
+| P2-3 | Landing page 构建集成 | 🟡 中等 | 分发完整性 | 2h |
+| P2-4 | Loading skeleton 统一 | 🟡 中等 | UI 质感 | 3h |
+| P2-5 | Avatar 当前状态显示 | 🟡 中等 | 使用 Avatar 的用户 | 0.5h |
+| P2-6 | WEB_API_BASE 降级 | 🟡 中等 | 网络受限用户 | 1h |
+| P2-7 | ClawHub CLI 存在性检测 | 🟡 中等 | 使用技能的开发者用户 | 0.5h |
+| P3-1 | Keyboard shortcuts 扩展 | 🟢 低 | 高级用户 | 1h |
+| P3-2 | Toast 体系完整性 | 🟢 低 | 所有用户 | 1h |
+| P3-3 | TaskBoard 接入 Gateway event | 🟢 低 | 使用任务的用户 | 2h |
+| P3-4 | MCP Panel 接入 IPC | 🟢 低 | 使用 MCP 的开发者 | 3h |
+
+---
+
+## 九、建议的 v1.3 Milestone 方向
+
+基于以上审计，建议 v1.3 聚焦 **"可用性冲刺"**：
+
+### 方向 A：首发就绪（Recommended）
+- P0 问题全部修复
+- macOS 公证上线
+- Onboarding 完整激活
+- Gateway 状态面板
+- Empty states 全面覆盖
+- E2E 测试覆盖核心路径
+
+### 方向 B：功能深化
+- Avatar 技能标签 + 切换后 Header 显示
+- TaskBoard 接入 Gateway task events
+- MCP Panel 功能实现
+- Skills marketplace 完整化
+
+### 方向 C：质量加固
+- Vitest 单元测试（stores + hooks 覆盖率 > 70%）
+- Chat Flow E2E
+- electron-store 加密强制
+- IPC handler 集成测试
+
+---
+
+*PM 审计报告生成：2026-04-01*
+*基于：.planning/codebase/ 下 7 份映射文档 + 代码走读*

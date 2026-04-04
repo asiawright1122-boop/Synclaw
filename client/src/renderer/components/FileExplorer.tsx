@@ -353,6 +353,7 @@ export function FileExplorer() {
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPath, previewContent, pathHistory, creating])
 
   // ── Render helpers ──────────────────────────────────────────────────────

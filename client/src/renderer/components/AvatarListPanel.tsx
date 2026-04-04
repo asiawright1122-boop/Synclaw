@@ -8,6 +8,7 @@ import { Plus, Bot, Loader2, RefreshCw, Search, Trash2, Edit3, Star, X } from 'l
 import { useAvatarStore, type Avatar } from '../stores/avatarStore'
 import { AvatarEditModal } from './AvatarEditModal'
 import { t } from '../i18n'
+import { AVATAR_TEMPLATES } from '../lib/avatar-templates'
 
 function ClawGlyph({ className }: { className?: string }) {
   return (
@@ -218,6 +219,12 @@ export function AvatarListPanel() {
       )
     : avatars
 
+  const handleCreateFromTemplate = useCallback((templateId: string) => {
+    setCreateTemplateId(templateId)
+    setEditingAvatar(null)
+    setEditModalOpen(true)
+  }, [])
+
   // Handlers
   const handleCreate = useCallback(() => {
     setEditingAvatar(null)
@@ -342,23 +349,60 @@ export function AvatarListPanel() {
             </button>
           </div>
         ) : filteredAvatars.length === 0 ? (
-          <div className="flex flex-col items-center gap-3 py-12">
-            <Bot className="w-10 h-10" style={{ color: 'var(--text-ter)' }} />
-            <p className="text-sm" style={{ color: 'var(--text-sec)' }}>
-              {search ? t('avatar.list.noMatch') : t('avatar.list.empty')}
-            </p>
-            {!search && (
-              <button
-                type="button"
-                onClick={handleCreate}
-                className="flex items-center gap-1 text-sm font-medium"
-                style={{ color: 'var(--accent1)' }}
-              >
-                <Plus className="w-4 h-4" />
-                {t('avatar.list.create')}
-              </button>
-            )}
-          </div>
+          !search ? (
+            <div className="flex flex-col gap-4 py-6">
+              <div className="text-center">
+                <p className="text-sm font-medium mb-1" style={{ color: 'var(--text)' }}>
+                  {t('avatar.list.empty')}
+                </p>
+                <p className="text-xs" style={{ color: 'var(--text-sec)' }}>
+                  选择一个模板快速创建分身
+                </p>
+              </div>
+              <div className="grid grid-cols-1 gap-2">
+                {AVATAR_TEMPLATES.map((template) => (
+                  <button
+                    key={template.id}
+                    type="button"
+                    onClick={() => handleCreateFromTemplate(template.id)}
+                    className="flex items-center gap-3 p-3 rounded-xl border transition-all hover:shadow-md text-left cursor-pointer"
+                    style={{
+                      background: 'var(--bg-subtle)',
+                      borderColor: 'var(--border)',
+                    }}
+                  >
+                    <div
+                      className="w-10 h-10 rounded-full flex items-center justify-center text-lg flex-shrink-0"
+                      style={{ background: template.color }}
+                    >
+                      {template.emoji}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold truncate" style={{ color: 'var(--text)' }}>
+                        {template.name}
+                      </p>
+                      <p className="text-xs truncate" style={{ color: 'var(--text-sec)' }}>
+                        {template.description}
+                      </p>
+                    </div>
+                    <span
+                      className="text-xs px-2 py-1 rounded-lg font-medium flex-shrink-0"
+                      style={{ background: `${template.color}20`, color: template.color }}
+                    >
+                      使用模板
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center gap-3 py-12">
+              <Bot className="w-10 h-10" style={{ color: 'var(--text-ter)' }} />
+              <p className="text-sm" style={{ color: 'var(--text-sec)' }}>
+                {t('avatar.list.noMatch')}
+              </p>
+            </div>
+          )
         ) : (
           <AnimatePresence mode="popLayout">
             <div className="space-y-2">

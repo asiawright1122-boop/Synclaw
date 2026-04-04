@@ -1,161 +1,187 @@
 # Architecture
 
-**Analysis Date:** 2026-03-31
+**Analysis Date:** 2026-04-03
 
 ## Pattern Overview
 
-**Overall:** Electron + OpenClaw Gateway (Desktop Shell Architecture)
+**Overall:** Dual-application architecture: Electron desktop shell + Next.js web platform, with a local OpenClaw Gateway process bridged by IPC and WebSocket.
 
 **Key Characteristics:**
-- Electron main process spawns OpenClaw as a child process (Node.js)
-- Renderer process communicates with Gateway via IPC → Main Process → WebSocket
-- OpenClaw Gateway handles all AI capabilities (inference, file sandbox, memory, skills)
-- Zustand manages only UI state; business logic is delegated to Gateway
+- Separate Electron main/renderer with a preload IPC boundary (`client/src/main/index.ts`, `client/src/preload/index.ts`, `client/src/renderer/main.tsx`).
+- Gateway RPC pass-through via IPC handlers to a WebSocket bridge (`client/src/main/ipc-handlers/gateway.ts`, `client/src/main/gateway-bridge.ts`).
+- Web platform built on Next.js App Router with server route handlers, NextAuth, and Prisma (`web/src/app`, `web/src/app/api`, `web/src/lib/auth.ts`, `web/src/lib/prisma.ts`).
 
 ## Layers
 
-**Main Process (`client/src/main/`):**
-- Purpose: Electron lifecycle, IPC handlers, process management
-- Location: `client/src/main/`
-- Contains: `index.ts` (app entry), `openclaw.ts` (child process), `gateway-bridge.ts` (WebSocket bridge), `ipc-handlers/` (API handlers), `tray.ts`, `notifications.ts`, `updater.ts`
-- Depends on: Electron APIs, OpenClaw child process
-- Used by: Renderer via IPC
+**Electron Renderer (UI):**
+- Purpose: Render the desktop UI and dispatch user actions.
+- Location: `client/src/renderer`
+- Contains: React views, Zustand stores, hooks, UI components, renderer services.
+- Depends on: Preload APIs in `client/src/preload/index.ts` and service layer `client/src/renderer/services/subscription.ts`.
+- Used by: BrowserWindow created in `client/src/main/index.ts`.
 
-**Preload (`client/src/preload/`):**
-- Purpose: Secure context bridge between main and renderer
+**Preload Bridge:**
+- Purpose: Expose a controlled IPC API to the renderer.
 - Location: `client/src/preload/index.ts`
-- Contains: `contextBridge.exposeInMainWorld('electronAPI', ...)`, `contextBridge.exposeInMainWorld('openclaw', ...)`
-- Pattern: All main process functionality accessed via `window.electronAPI` or `window.openclaw`
+- Contains: `electronAPI` and `openclaw` wrappers around `ipcRenderer.invoke`.
+- Depends on: Electron `ipcRenderer`.
+- Used by: Renderer stores and components (e.g. `client/src/renderer/stores/openclawStore.ts`).
 
-**Renderer (`client/src/renderer/`):**
-- Purpose: React UI
-- Location: `client/src/renderer/`
-- Contains: Components, Zustand stores, hooks, lib utilities
-- Depends on: React, Zustand, `window.openclaw` API
+**Electron Main Process:**
+- Purpose: Manage windows, tray, notifications, updates, and settings persistence.
+- Location: `client/src/main`
+- Contains: `index.ts`, `tray.ts`, `notifications.ts`, `updater.ts`, `logger.ts`, `app-settings.ts`.
+- Depends on: IPC handlers and Gateway bridge.
+- Used by: Electron runtime entry `client/src/main/index.ts`.
+
+**IPC Handler Layer:**
+- Purpose: Route renderer IPC calls to main-process capabilities.
+- Location: `client/src/main/ipc-handlers`
+- Contains: `gateway.ts`, `file.ts`, `app.ts`, `security.ts`, `web.ts`, `clawhub.ts`, `shell.ts`, `path-validation.ts`.
+- Depends on: `client/src/main/gateway-bridge.ts`, `client/src/main/index.ts`.
+- Used by: Preload bridge `client/src/preload/index.ts`.
+
+**Gateway Bridge + OpenClaw Process:**
+- Purpose: Start OpenClaw, connect GatewayClient, and proxy RPC calls/events.
+- Location: `client/src/main/gateway-bridge.ts`, `client/src/main/openclaw.ts`, `client/src/main/openclaw-gateway.ts`.
+- Contains: Child-process lifecycle, HTTP readiness checks, WebSocket connection, event fan-out to BrowserWindow.
+- Depends on: OpenClaw runtime under `client/resources/openclaw-source`.
+- Used by: IPC handler `client/src/main/ipc-handlers/gateway.ts`.
+
+**Web App UI (Next.js App Router):**
+- Purpose: Serve marketing pages, customer portal, and admin console UI.
+- Location: `web/src/app`
+- Contains: `layout.tsx`, `page.tsx`, route segment folders, and portal/admin layouts.
+- Depends on: UI components and session provider in `web/src/components/SessionProvider.tsx`.
+- Used by: Next.js runtime.
+
+**Web API Routes:**
+- Purpose: Provide server-side endpoints for auth, billing, credits, devices, channels, and admin operations.
+- Location: `web/src/app/api`, `web/api`
+- Contains: `route.ts` files per endpoint, including `web/src/app/api/webhooks/stripe/route.ts`.
+- Depends on: Prisma, Stripe, email, and validation helpers in `web/src/lib/*`.
+- Used by: Web UI and desktop client API calls.
+
+**Data Access Layer:**
+- Purpose: Centralize database and external-service access.
+- Location: `web/src/lib/prisma.ts`, `web/prisma/schema.prisma`, `web/src/lib/stripe.ts`, `web/src/lib/email.ts`.
+- Contains: Prisma client, schema models, Stripe client factory, email sending utilities.
+- Depends on: Environment configuration (not read here).
+- Used by: API route handlers.
+
+**Authentication + Middleware:**
+- Purpose: Session auth, JWT enrichment, and route protection.
+- Location: `web/src/lib/auth.ts`, `web/src/app/api/auth/[...nextauth]/route.ts`, `web/src/middleware.ts`.
+- Contains: Credential provider auth flow, session callbacks, middleware matcher for protected routes.
+- Depends on: Prisma user lookup in `web/src/lib/prisma.ts`.
+- Used by: Protected UI routes and API routes.
 
 ## Data Flow
 
-**Typical user interaction (send message):**
+**Desktop AI Request (Renderer -> Gateway):**
+1. UI triggers `window.openclaw.*` from `client/src/preload/index.ts` (used in `client/src/renderer/stores/openclawStore.ts`).
+2. IPC handler in `client/src/main/ipc-handlers/gateway.ts` forwards to `GatewayBridge.request`.
+3. Gateway bridge in `client/src/main/gateway-bridge.ts` ensures OpenClaw is running via `client/src/main/openclaw.ts` and forwards over WebSocket.
 
-1. User types in `ChatView.tsx` → calls `useChatStore.getState().sendMessage()`
-2. `chatStore.sendMessage()` calls `window.openclaw.agent({ message, sessionKey, ... })`
-3. IPC `openclaw:agent` → `main/ipc-handlers/gateway.ts`
-4. `gateway-bridge.request('agent', params)` → WebSocket → OpenClaw Gateway
-5. Gateway streams back events via WebSocket
-6. Events broadcast through `gateway-bridge.broadcastEvent()` → IPC channel
-7. Renderer receives via `window.openclaw.on()` → `chatStore.init()` event handler
-8. `chatStore` updates messages array → React re-renders
+**Desktop File Operation:**
+1. UI calls `window.electronAPI.file.*` from `client/src/preload/index.ts`.
+2. `client/src/main/ipc-handlers/file.ts` validates paths with `client/src/main/ipc-handlers/path-validation.ts`.
+3. Main process performs FS operation and returns `{ success, data, error }`.
 
-**Startup sequence:**
+**Desktop Web Platform API:**
+1. Renderer service `client/src/renderer/services/subscription.ts` calls `/api/*`.
+2. Main process and web bridge in `client/src/main/ipc-handlers/web.ts` manage device registration and usage reporting.
+3. Web platform routes in `web/src/app/api/**/route.ts` persist data with Prisma.
 
-1. `main/index.ts` app.whenReady() → creates BrowserWindow
-2. Registers IPC handlers (gateway, file, shell, app, clawhub)
-3. Starts OpenClaw child process via `openclawProcess.start()`
-4. `gateway-bridge.connect()` → waits for HTTP readiness → fetches auth token → connects WebSocket
-5. Renderer loads → calls `loadSettings()` → subscribes to Gateway events
-6. `chatStore.init()` loads history and subscribes to events
+**Web Auth + Protected Routes:**
+1. Credentials POST to `web/src/app/api/auth/login/route.ts`.
+2. NextAuth handler in `web/src/app/api/auth/[...nextauth]/route.ts` validates with `web/src/lib/auth.ts`.
+3. Middleware in `web/src/middleware.ts` enforces authenticated access and admin role checks.
 
-## State Management Architecture
+**Stripe Webhook:**
+1. Stripe POSTs to `web/src/app/api/webhooks/stripe/route.ts`.
+2. Handler writes idempotent updates via `web/src/lib/prisma.ts`.
+3. Billing/credits tables update in `web/prisma/schema.prisma`.
 
-### Zustand Stores
+**State Management:**
+- Desktop UI state: Zustand stores in `client/src/renderer/stores/*`.
+- Desktop settings: electron-store initialized in `client/src/main/index.ts`, mutated via `client/src/main/ipc-handlers/app.ts`.
+- Web session state: NextAuth JWT sessions configured in `web/src/lib/auth.ts`.
+- Web persistence: Prisma models in `web/prisma/schema.prisma`.
 
-**`appStore` (`client/src/renderer/stores/appStore.ts`)**
-- Responsibilities: UI layout state, sidebar, panels, active tab
-- Holds: `sidebarCollapsed`, `activeTab` ('avatar'|'chat'|'task'), `activeView`, `settingsModalOpen`, `bottomPanelOpen`, `rightPanelOpen`, `currentModel`, `currentPath`, `files`
-- NOT persisted; ephemeral UI state
+## Key Abstractions
 
-**`settingsStore` (`client/src/renderer/stores/settingsStore.ts`)**
-- Responsibilities: All user preferences, theme, authorized dirs, workspace config
-- Holds: `theme`, `fontSize`, `animationsEnabled`, `notificationsEnabled`, `compactMode`, `favorites`, `authorizedDirs`, `workspace`, `tts`, `stt`
-- Pattern: Each setter writes to electron-store via IPC AND updates Zustand state
-- Syncs: Subscribes to `settings:changed` IPC for cross-window sync
+**GatewayBridge:**
+- Purpose: Single RPC entrypoint to OpenClaw Gateway.
+- Examples: `client/src/main/gateway-bridge.ts`, `client/src/main/ipc-handlers/gateway.ts`.
+- Pattern: Bridge + request/response wrapper returning `{ success, data, error }`.
 
-**`chatStore` (`client/src/renderer/stores/chatStore.ts`)**
-- Responsibilities: Chat messages, streaming, session management
-- Holds: `messages[]`, `sessionKey`, `sending`, `currentRunId`
-- Events handled: `agent` (thinking/content/tool/done/error), `chat`, `exec.approval.requested`, `device.pair.*`, `node.pair.*`
+**IPC Handler Modules:**
+- Purpose: Domain-specific IPC routing with explicit channel names.
+- Examples: `client/src/main/ipc-handlers/file.ts`, `client/src/main/ipc-handlers/web.ts`, `client/src/main/ipc-handlers/clawhub.ts`.
+- Pattern: `ipcMain.handle` per channel with shared helpers.
 
-**`taskStore` (`client/src/renderer/stores/taskStore.ts`)**
-- Responsibilities: Task/CRON session management
-- Holds: `tasks[]`, `selectedTaskId`, `taskLogs Map`, `loading`, `error`
-- Maps: OpenClaw sessions with label='task' to local Task objects
+**Portal/Admin Shells:**
+- Purpose: Shared layout and navigation for authenticated web UI.
+- Examples: `web/src/components/PortalShell.tsx`, `web/src/app/(admin)/layout.tsx`.
+- Pattern: Layout components with nav config arrays and consistent styling.
 
-**`avatarStore` (`client/src/renderer/stores/avatarStore.ts`)**
-- Responsibilities: Avatar CRUD, active avatar
-- Holds: `avatars[]`, `activeAvatarId`, `loading`, `error`, `demoMode`
-- Demo mode: Falls back to `DEMO_AVATARS` when Gateway unavailable
+**API Route Modules:**
+- Purpose: Single endpoint per `route.ts`.
+- Examples: `web/src/app/api/credits/deduct/route.ts`, `web/src/app/api/subscription/checkout/route.ts`.
+- Pattern: `export async function GET/POST` returning `NextResponse.json`.
 
-**`openclawStore` (`client/src/renderer/stores/openclawStore.ts`)**
-- Responsibilities: Gateway connection status, skills list
-- Holds: `connected`, `running`, `connecting`, `skills[]`
+## Entry Points
 
-**`execApprovalStore` (`client/src/renderer/stores/execApprovalStore.ts`)**
-- Responsibilities: Exec approval queue, modal visibility
-- Holds: `pending[]`, `current`, `isVisible`, `resolved Map`
-- Pattern: Timeout-based auto-dismiss after 5 minutes
+**Electron Main:**
+- Location: `client/src/main/index.ts`
+- Triggers: Electron app startup.
+- Responsibilities: Create windows, register IPC, manage tray, settings, updates, gateway lifecycle.
 
-**`toastStore` (`client/src/renderer/stores/toastStore.ts`)**
-- Re-export from `client/src/renderer/components/Toast.tsx`
-- Holds: Toast notification queue
+**Electron Preload:**
+- Location: `client/src/preload/index.ts`
+- Triggers: BrowserWindow preload script.
+- Responsibilities: Expose `window.electronAPI` and `window.openclaw`.
 
-## OpenClaw Gateway Integration
+**Electron Renderer:**
+- Location: `client/src/renderer/main.tsx`
+- Triggers: BrowserWindow renderer load.
+- Responsibilities: Render `<App />` from `client/src/renderer/App.tsx`.
 
-**Process lifecycle (`openclaw.ts`):**
-```typescript
-// Development: app.getAppPath() + '/resources/openclaw-source'
-// Production: process.resourcesPath + '/openclaw-source'
-openclawPath = app.isPackaged
-  ? path.join(process.resourcesPath, 'openclaw-source')
-  : path.join(app.getAppPath(), 'resources', 'openclaw-source')
+**Web App:**
+- Location: `web/src/app/layout.tsx`
+- Triggers: Next.js App Router root layout.
+- Responsibilities: Wrap pages with session provider.
 
-// Starts via tsx: node node_modules/tsx/dist/cli.mjs openclaw.mjs
-// Environment: OPENCLAW_HOME = app.getPath('userData') + '/openclaw'
-```
+**Web API Auth:**
+- Location: `web/src/app/api/auth/[...nextauth]/route.ts`
+- Triggers: NextAuth GET/POST handler.
+- Responsibilities: Authentication session lifecycle.
 
-**WebSocket bridge (`gateway-bridge.ts`):**
-- Connects to `ws://127.0.0.1:18789`
-- Token auth: fetched from `~/.openclaw/config.json` or `openclaw-source/.openclaw/config.json`
-- Security config: applied via `config.patch` RPC on connect (tools deny, sandbox mode, exec restrictions)
-- `limitAccess` change: re-applied via `refreshSecurityConfig()` when electron-store changes
+**Web Middleware:**
+- Location: `web/src/middleware.ts`
+- Triggers: Requests matching `config.matcher`.
+- Responsibilities: Gate protected routes and admin role checks.
 
-**IPC Handler pattern:**
-- 6 handler files under `ipc-handlers/`:
-  - `gateway.ts`: 100+ handlers for Gateway API passthrough (scoped, skills, memory, cron, etc.)
-  - `file.ts`: File system ops with path validation
-  - `shell.ts`: Window/dialog/shell/app utility handlers
-  - `app.ts`: electron-store backed settings
-  - `clawhub.ts`: ClawHub CLI integration
-  - `path-validation.ts`: Shared path validation (no side effects)
-
-## Key Architectural Decisions
-
-| Decision | Rationale | Implementation |
-|----------|-----------|----------------|
-| Electron shell + OpenClaw child | All AI via Gateway; no custom backend | `openclawProcess.spawn()` |
-| Zustand only for UI state | Business logic delegated to Gateway | Stores hold only ephemeral UI |
-| electron-store single source of truth | Settings survive renderer restarts | `settingsStore.ts` writes to electron-store |
-| Path validation on every file op | Security boundary enforcement | `ipc-handlers/path-validation.ts` |
-| Event bridge via IPC | Gateway events → Renderer | `gateway-bridge.broadcastEvent()` → IPC |
-| Landing page as BrowserView | Separate Next.js process | `client/src/main/index.ts:225-398` |
+**Stripe Webhook:**
+- Location: `web/src/app/api/webhooks/stripe/route.ts`
+- Triggers: Stripe webhook events.
+- Responsibilities: Idempotent subscription and credits updates.
 
 ## Error Handling
 
-**Strategy:** Guard checks + try/catch + fallback data
+**Strategy:** Return structured `{ success, data, error }` from IPC handlers and `NextResponse.json` with HTTP status codes from web API routes.
 
 **Patterns:**
-- IPC handlers: Always return `{ success: boolean; data?: T; error?: string }`
-- Renderer: Component-level try/catch + Zustand error state
-- Gateway offline: Stores use `DEMO_*` fallback data (avatarStore, openclawStore)
-- Safety timeout: 5-minute timeout on chat messages to clear `sending` state
+- Try/catch in `client/src/main/ipc-handlers/*.ts` with `success`/`error` responses.
+- Zod validation and explicit status codes in `web/src/app/api/**/route.ts`.
 
 ## Cross-Cutting Concerns
 
-**Logging:** `electron-log` via `logger.scope()` in main process; `console.error` in renderer
-
-**Validation:** `path-validation.ts` validates all file paths against `authorizedDirs` and `limitAccess`
-
-**Authentication:** Token from `~/.openclaw/config.json`; Bootstrap token optional
+**Logging:** electron-log in `client/src/main/logger.ts`; console logging in API routes such as `web/src/app/api/webhooks/stripe/route.ts`.
+**Validation:** Path validation in `client/src/main/ipc-handlers/path-validation.ts`; Zod schemas in `web/src/lib/validations.ts`.
+**Authentication:** NextAuth config in `web/src/lib/auth.ts` and route protection in `web/src/middleware.ts`.
 
 ---
 
-*Architecture analysis: 2026-03-31*
+*Architecture analysis: 2026-04-03*

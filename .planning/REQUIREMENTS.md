@@ -1,177 +1,144 @@
-# REQUIREMENTS.md — SynClaw v1.2 用户体验与分发完善
+# Requirements: SynClaw v1.3 首发就绪冲刺
 
-**Version:** v1.2
-**Date:** 2026-03-30
-**Status:** Planning
+**Defined:** 2026-04-01
+**Core Value:** 用户可以通过自然语言对话，安全地操作用户本地文件系统，且数据永不离开用户设备。
 
 ---
 
-## Phase 1: EXEC — Exec 审批弹窗
+## v1 Requirements
+
+### TEST — 测试覆盖
 
 ### 背景
 
-OpenClaw Gateway 在执行 `exec` 操作（如运行 shell 命令）时会通过 WebSocket 发送 `exec.approval.requested` 事件，客户端需展示审批弹窗，用户确认或拒绝后调用 `exec.approval.resolve` IPC。
-
-当前状态：`client/src/renderer/stores/chatStore.ts` 中已有 `exec.approval.requested` 事件处理，但仅有 `console.log`，无 UI。
+SynClaw 目前零单元测试、零 Chat E2E 测试。核心路径（对话交互）完全无测试覆盖，regression 风险高。
 
 ### 功能需求
 
-- [ ] **R-EXEC-01**: 监听 `exec.approval.requested` WebSocket 事件，显示审批弹窗
-- [ ] **R-EXEC-02**: 弹窗内容：命令详情（可执行文件路径、参数、环境变量）、来源 Agent、风险提示
-- [ ] **R-EXEC-03**: 支持「批准」「拒绝」「仅本次批准」三种操作
-- [ ] **R-EXEC-04**: 批准后调用 `exec.approval.resolve(approvalId, { approved: true })`；拒绝后调用 `{ approved: false, reason }`
-- [ ] **R-EXEC-05**: 弹窗自动超时机制（默认 5 分钟，可配置）
-- [ ] **R-EXEC-06**: 多个待审批请求排队显示
-- [ ] **R-EXEC-07**: 系统通知提醒有新审批请求（当 SynClaw 窗口不在前台时）
-
-### 技术约束
-
-- 审批弹窗使用 Framer Motion + React Portal，置于 App 根组件外层
-- 审批结果通过 `window.openclaw.exec.approval.resolve()` IPC 发送
-- 已批准的命令历史在设置中可查看（`exec.approvals.get` / `exec.approvals.node.get` API）
-- 不在未经用户明确批准的情况下静默执行任何 shell 命令
-
-### 验收标准
-
-- [ ] `exec.approval.requested` 事件触发后 500ms 内显示弹窗
-- [ ] 拒绝命令后 Gateway 正确终止执行（无副作用）
-- [ ] 批准后命令正常执行并返回结果
-- [ ] 多窗口环境下弹窗始终置顶
+- [ ] **TEST-01**: Vitest 配置完成：`vitest ^2.2` + `@testing-library/react` + `jsdom` 安装到 `client/`，配置 `vitest.config.ts`
+- [ ] **TEST-02**: chatStore 单元测试覆盖：sendMessage、message 添加、MAX_MESSAGES cap、Gateway event 处理
+- [ ] **TEST-03**: settingsStore 单元测试覆盖：theme 切换、hasCompletedOnboarding 持久化、跨窗口同步
+- [ ] **TEST-04**: avatarStore 单元测试覆盖：activateAvatar、setActiveAvatar 同步、demo mode fallback
+- [ ] **TEST-05**: execApprovalStore 单元测试覆盖：审批队列、approve/deny/approve-once 决策、timeout 逻辑
+- [ ] **TEST-06**: useTTS hook 单元测试覆盖：play/stop/pause/resume、currentWordIndex 更新
+- [ ] **TEST-07**: Chat E2E 测试覆盖：发送消息→AI响应→显示、空消息→不触发、无效API key→错误提示
+- [ ] **TEST-08**: Playwright 配置 CI 环境适配：共享 headless 模式、Gateway mock、test timeout 调整
 
 ---
 
-## Phase 2: SIGN — macOS 公证签名
+### UX — 用户体验打磨
 
 ### 背景
 
-macOS Gatekeeper 要求应用经过 Apple 公证（notarization）才能在非开发者模式下顺利运行。当前 `electron-builder.yml` 已配置 `hardenedRuntime: true` 和 entitlements，但缺少 notarization 步骤，导致分发时用户会遇到安全警告。
+大部分 UI 组件已实现，但存在空状态无引导、loading 体验不统一、快捷键缺失等问题，影响用户第一印象。
 
 ### 功能需求
 
-- [ ] **R-SIGN-01**: `electron-builder.yml` 配置 ` notarize` 参数（Apple ID、app-specific password、team ID）
-- [ ] **R-SIGN-02**: `.github/workflows/release.yml` 添加 notarization step（使用 `electron-builder notarize` 或 `xcrun stapler`）
-- [ ] **R-SIGN-03**: dmg 安装包签名后自动 notarize，生成含 ticket 的 .app bundle
-- [ ] **R-SIGN-04**: 创建 `client/scripts/notarize.mjs` 本地公证脚本（非 CI 环境使用）
-- [ ] **R-SIGN-05**: README 更新分发说明（用户需提供的 Apple Developer 凭据）
-- [ ] **R-SIGN-06**: Windows / Linux 签名配置预留接口（无阻塞，仅 macOS 实现）
-
-### 技术约束
-
-- Apple Developer ID（付费会员）、app-specific password、Team ID 由用户提供，存入 GitHub Secrets
-- `.env` 示例文件添加对应占位符注释
-- `CSC_LINK` / `CSC_KEY_PASSWORD` / `APPLE_ID` / `APPLE_APP_SPECIFIC_PASSWORD` / `APPLE_TEAM_ID` 六个环境变量
-- Notarization 失败时 CI 构建不中断，但生成警告 artifact
-
-### 验收标准
-
-- [ ] 构建后的 .dmg 在 macOS 13+ 全新系统上无 Gatekeeper 警告直接运行
-- [ ] `xcrun stapler validate <app>.app` 返回 `The ticket is valid`
-- [ ] `spctl -a -t exec -vv <app>.app` 验证通过（允许执行）
-- [ ] CI 日志包含 `Transporter notarisierung succeeded`
+- [x] **UX-01**: TaskBoard 空状态引导：无任务时显示「开启你的第一个任务」标题 + 创建按钮 CTA ✅
+- [x] **UX-02**: IMPanel（会话列表）空状态引导：无会话时显示「开始新对话」引导 CTA ✅
+- [x] **UX-03**: AvatarListPanel 模板快速创建：无 avatar 时「一键创建」5 个内置模板按钮 ✅
+- [x] **UX-04**: McpPanel 空状态引导：无 server 时显示添加引导 + 快速模板入口 ✅
+- [x] **UX-05**: ChatView 加载骨架屏：AI 响应时输入区域上方显示消息骨架屏 ✅
+- [x] **UX-06**: 快捷键 Cmd+,（macOS 标准）打开设置面板，替换当前的点击入口 ✅
+- [x] **UX-07**: Escape 键关闭当前打开的 Modal/面板（LIFO 栈顺序）✅
+- [x] **UX-08**: Cmd+Shift+S 收起/展开侧边栏 ✅
+- [x] **UX-09**: Cmd+/ 打开快捷键参考页（显示所有可用快捷键）✅
 
 ---
 
-## Phase 3: WEB — web/ landing page 集成
+### SECURITY — 安全加固
 
 ### 背景
 
-`web/` 是独立的 Next.js 16 子仓库，已包含完整的 landing page（login、register、pricing、download 等页面）。目标是将其打包进 Electron 应用，用户可以在 SynClaw 桌面客户端内直接访问这些页面，而无需打开浏览器。
+electron-store 未强制加密，敏感数据（API key、授权目录）以明文存储；`WEB_API_BASE` 为必需变量，缺失时应用直接崩溃。
 
 ### 功能需求
 
-- [ ] **R-WEB-01**: 实现 WebView 路由——在 SynClaw 中添加「关于/营销」入口，加载 `web/` 构建产物
-- [ ] **R-WEB-02**: 技术方案选择：方案 A（本地 Next.js 服务 + BrowserView）或方案 B（独立 WebContents + 预构建静态导出）。推荐方案 A
-- [ ] **R-WEB-03**: 自动检测 `web/` 子仓库是否存在，若不存在则优雅降级（隐藏入口按钮，不崩溃）
-- [ ] **R-WEB-04**: web/ 与主应用之间的通信（如果需要）：通过 OpenClaw API 或 postMessage
-- [ ] **R-WEB-05**: 统一样式主题——web/ 的 Tailwind 暗色主题与 Electron 客户端保持一致
-- [ ] **R-WEB-06**: 在 SynClaw 主窗口中添加「关于」菜单项或 Sidebar 入口
-
-### 技术约束
-
-- `web/` 作为独立 git submodule 或 npm workspace 引用
-- 构建时优先使用 `web/` 的 `pnpm build` 产物（`.next/` 或 `out/`）
-- 不修改 `web/` 源码（独立子仓库原则）
-- 若 web/ 不存在，electron-builder 构建仍然成功（graceful degradation）
-
-### 验收标准
-
-- [ ] SynClaw 客户端「关于」入口加载 landing page 内容，无白屏
-- [ ] web/ 不存在时构建成功，入口按钮不显示
-- [ ] web/ 页面与 Electron 客户端主题一致（暗色模式）
-- [ ] 登录/注册页面可正常交互（表单提交、API 调用）
+- [x] **SEC-01**: 设置→安全性面板：引导用户设置 `STORE_ENCRYPTION_KEY`，启用 electron-store 加密（显示警告提示当前数据未加密）✅
+- [x] **SEC-02**: 加密迁移：已有未加密数据的用户在启用加密后，提示并引导迁移（electron-store 自动在首次写入时加密迁移）✅
+- [x] **SEC-03**: `web.ts` 移除模块级 throw：`WEB_API_BASE` 缺失时 `apiRequest` 返回 `{ skipped: true }`，不阻止应用启动 ✅
+- [x] **SEC-04**: `web:register` / `web:report-usage` / `web:revoke` 三个 handler 在 `WEB_API_BASE` 未配置时返回 skipped，不报错 ✅
 
 ---
 
-## Phase 4: TTS — TTS / Talk Mode UI
+### DEPLOY — 分发就绪
 
 ### 背景
 
-OpenClaw Gateway 内置 TTS（文字转语音）能力，通过 `talk.*` IPC API 暴露。当前 SynClaw 客户端仅有设置面板中的 TTS 开关，缺少实际播放 UI 和对话交互界面。
+v1.2 macOS 公证缺失导致用户看到「来自不明开发者」警告；Phase 9 SIGN 阻塞原因是用户需要自己配置 Apple ID，现需要提供清晰引导。
 
 ### 功能需求
 
-- [ ] **R-TTS-01**: 在 ChatView 中添加「语音模式」切换按钮（麦克风/Waveform 图标）
-- [ ] **R-TTS-02**: 激活语音模式后，AI 回复实时 TTS 播放（使用 Web Audio API 或 `<audio>` 标签）
-- [ ] **R-TTS-03**: TTS 播放控制：播放/暂停/停止按钮，语速调节滑块
-- [ ] **R-TTS-04**: 显示当前播放文本的高亮位置（streaming TTS 同步）
-- [ ] **R-TTS-05**: 语音识别输入（Speech-to-Text）——用户长按麦克风按钮说话，转文字发送给 Agent
-- [ ] **R-TTS-06**: TTS 状态持久化——用户偏好在 electron-store 中保存（引擎、语速、音量）
-- [ ] **R-TTS-07**: 移动端/触控优化（如果适用）
-
-### 技术约束
-
-- TTS 数据流：Gateway WebSocket → IPC → Renderer → Web Audio API
-- 优先使用 Web Speech API（浏览器内置），无外部依赖
-- WebView 模式（Phase 3）下 TTS 可能受限，需 Fallback 方案
-- 不依赖任何第三方 TTS 服务（数据完全在本地处理）
-
-### 验收标准
-
-- [ ] 开启语音模式后，AI 回复以语音朗读
-- [ ] 播放/暂停/停止功能正常
-- [ ] 语音识别可将用户语音转为文字发送给 Agent
-- [ ] TTS 偏好（语速、音量）重启后保持
+- [x] **DEPLOY-01**: 设置→关于面板：显示 macOS 签名状态（已签名/未签名/签名中）+ 未签名时显示「配置签名」按钮 ✅
+- [x] **DEPLOY-02**: README.md 更新签名配置说明：用户提供 Apple ID 后，在 `.env` 中填入 `APPLE_ID`/`APPLE_APP_SPECIFIC_PASSWORD`/`APPLE_TEAM_ID`，运行 `pnpm build` 即可完成公证 ✅
+- [x] **DEPLOY-03**: `electron-builder.yml` 配置 `notarize: autoSubmit: true`，用户填入凭据后自动触发公证流程 ✅
 
 ---
 
-## Phase 5: AVA — Avatar 多分身体系落地
+## v2 Requirements
 
-### 背景
+暂缓的功能。已识别但本 milestone 不实现。
 
-OpenClaw 支持多 Agent 分身（avatars），用户可以为不同任务创建不同性格/专业方向的 AI 分身。SynClaw 已有 Sidebar 中的 Avatars 入口 UI，但尚未对接实际的 avatars CRUD API。
+### 本地 LLM
 
-### 功能需求
+- **LLM-01**: 支持 Ollama 本地模型作为 OpenClaw AI Provider
+- **LLM-02**: 模型选择 UI 支持区分云端/本地模型
 
-- [ ] **R-AVA-01**: Avatar 列表页面——展示所有分身（头像、名称、描述、默认 prompt）
-- [ ] **R-AVA-02**: 创建/编辑 Avatar——名称、头像（emoji 或图片）、系统提示词、技能标签
-- [ ] **R-AVA-03**: 删除 Avatar（确认对话框）
-- [ ] **R-AVA-04**: 选择 Avatar 作为当前对话的 Agent（切换 active avatar）
-- [ ] **R-AVA-05**: Avatar 市场/模板——预设 3-5 个官方模板（程序员、写作助手、产品经理等）
-- [ ] **R-AVA-06**: Avatar 快捷切换——ChatView 输入框旁下拉选择当前分身
-- [ ] **R-AVA-07**: Avatar 技能权限——不同分身可使用不同技能
+### 企业功能
 
-### 技术约束
-
-- 调用 OpenClaw `avatars.*` IPC API（`avatars.list`, `avatars.create`, `avatars.update`, `avatars.delete`, `avatars.activate`）
-- Preload 已暴露 `window.openclaw.avatars.*` API，无需新增 IPC
-- Avatar 数据存储在 OpenClaw Gateway 端（无需本地 electron-store）
-- UI 组件复用现有 `client/src/renderer/components/Sidebar.tsx` 中的 Avatars 区块
-
-### 验收标准
-
-- [ ] 可创建、编辑、删除 Avatar
-- [ ] 选择 Avatar 后，新对话使用该分身的 prompt
-- [ ] 官方模板一键创建分身
-- [ ] ChatView 可见当前激活的 Avatar
+- **ENT-01**: 多设备同步
+- **ENT-02**: 团队技能库
 
 ---
 
-## 跨阶段约束
+## Out of Scope
 
-| 约束 | 说明 |
-|------|------|
-| TypeScript 零错误 | 所有新增代码通过 `tsc --noEmit` |
-| 不引入新后端 | 全部逻辑委托 OpenClaw Gateway |
-| 数据不离开设备 | web/ 无外部 API 调用敏感数据 |
-| 构建成功 | `cd client && node scripts/build-main.mjs` 无错误 |
-| 子仓库隔离 | web/ 改动不触发主仓库 CI |
+明确排除，防止范围蔓延。
+
+| Feature | Reason |
+|---------|--------|
+| Keytar / macOS Keychain 集成 | v1.4+ 再做；需要 macOS entitlement 和跨平台方案 |
+| 单元测试覆盖 > 80% | v1.3 只覆盖核心 5 个 store/hook；完整覆盖是质量目标 |
+| 移动端触控优化 | Electron 桌面应用，触控不是主要场景 |
+
+---
+
+## Traceability
+
+*(Populated during roadmap creation)*
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| TEST-01 | Phase 10 | Pending |
+| TEST-02 | Phase 10 | Pending |
+| TEST-03 | Phase 10 | Pending |
+| TEST-04 | Phase 10 | Pending |
+| TEST-05 | Phase 10 | Pending |
+| TEST-06 | Phase 10 | Pending |
+| TEST-07 | Phase 11 | Done |
+| TEST-08 | Phase 11 | Done |
+| UX-01 | Phase 12 | Done |
+| UX-02 | Phase 12 | Done |
+| UX-03 | Phase 12 | Done |
+| UX-04 | Phase 12 | Done |
+| UX-05 | Phase 12 | Done |
+| UX-06 | Phase 12 | Done |
+| UX-07 | Phase 12 | Done |
+| UX-08 | Phase 12 | Done |
+| UX-09 | Phase 12 | Done |
+| SEC-01 | Phase 13 | Done |
+| SEC-02 | Phase 13 | Done |
+| SEC-03 | Phase 13 | Done |
+| SEC-04 | Phase 13 | Done |
+| DEPLOY-01 | Phase 14 | Done |
+| DEPLOY-02 | Phase 14 | Done |
+| DEPLOY-03 | Phase 14 | Done |
+
+**Coverage:**
+- v1 requirements: 23 total
+- Mapped to phases: 23
+- Unmapped: 0 ✓
+
+---
+*Requirements defined: 2026-04-01*
+*Last updated: 2026-04-01 after initial definition*

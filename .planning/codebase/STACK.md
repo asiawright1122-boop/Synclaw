@@ -1,131 +1,91 @@
 # Technology Stack
 
-**Analysis Date:** 2026-03-31
+**Analysis Date:** 2026-04-03
 
 ## Languages
 
 **Primary:**
-- TypeScript 5.3.3 — All source code (main process, renderer, preload)
-- JavaScript/ESNext — Build tooling (vite.config.ts, postcss.config.js)
+- TypeScript (Electron client, Next.js web, OpenClaw gateway) - `client/package.json`, `web/package.json`, `client/resources/openclaw-source/package.json`
 
 **Secondary:**
-- Shell — Build scripts (MJS)
-- CSS/Tailwind — Styling
+- JavaScript/Node ESM (build scripts and tooling configs) - `client/scripts/build-main.mjs`, `client/scripts/download-openclaw.mjs`, `web/postcss.config.mjs`
+- Prisma schema (PostgreSQL data model) - `web/prisma/schema.prisma`
+- CSS (Tailwind/PostCSS styling) - `client/tailwind.config.js`, `web/postcss.config.mjs`
 
 ## Runtime
 
 **Environment:**
-- Electron 28.0.0 — Desktop application framework
-- Node.js 18+ — OpenClaw Gateway subprocess
+- Node.js baseline >= 20 and OpenClaw gateway requires >= 22.12/22.14 - `README.md`, `DEVELOPMENT_GUIDELINES.md`, `client/resources/openclaw-source/package.json`
+- Electron runtime (desktop app) - `client/package.json`
+- Next.js server runtime (standalone output) - `web/package.json`, `web/next.config.ts`
 
 **Package Manager:**
-- pnpm 9.x — Primary package manager
-- Lockfile: `client/pnpm-lock.yaml` (present, 209KB)
-
-**NOTE:** Both `package-lock.json` and `pnpm-lock.yaml` exist in `client/`. This is a potential conflict — pnpm is the primary manager per convention, but npm's lockfile was also generated. The lockfiles should be kept in sync or one removed.
+- pnpm (primary) - `client/pnpm-lock.yaml`, `web/pnpm-lock.yaml`
+- npm lockfile present (secondary/legacy) - `client/package-lock.json`
+- OpenClaw package manager pinned to pnpm@10.32.1 - `client/resources/openclaw-source/package.json`
 
 ## Frameworks
 
 **Core:**
-- React 18.2.0 — UI framework (renderer process)
-- Next.js 16.2.0 — SaaS 平台（landing page + user portal + admin portal, web/ subrepo）
-
-**State Management:**
-- Zustand 4.4.7 — UI state only (renderer)
-- electron-store 8.1.0 — Persistent settings (main process)
-
-**Animation:**
-- Framer Motion 10.16.16 — React animations
-
-**Styling:**
-- Tailwind CSS 3.3.6 — Utility-first CSS
-- PostCSS 8.4.32 — CSS processing
-- Autoprefixer 10.4.16 — Vendor prefixes
-
-**Build/Dev:**
-- Vite 5.0.10 — Build tool and dev server
-- esbuild 0.27.4 — Main process bundling (scripts/build-main.mjs)
-- TypeScript 5.3.3 — Type checking
-- ESLint 8.56.0 — Linting
-- @typescript-eslint 6.15.0 — TypeScript ESLint support
-- concurrently 8.2.2 — Dev parallel process runner
-- wait-on 7.2.0 — Dev server wait
-
-**Packaging:**
-- electron-builder 24.9.1 — Cross-platform packaging
+- Electron + React renderer (desktop shell) - `client/package.json`, `client/src/renderer/App.tsx`
+- Vite (renderer build/dev) - `client/package.json`, `client/vite.config.ts`
+- OpenClaw Gateway (bundled Node service) - `client/resources/openclaw-source/package.json`, `client/src/main/openclaw.ts`
+- Next.js App Router (web/portal/API) - `web/package.json`, `web/src/app`, `web/next.config.ts`
+- Tailwind CSS (desktop and web) - `client/package.json`, `web/package.json`, `client/tailwind.config.js`, `web/postcss.config.mjs`
+- Prisma ORM (web DB) - `web/package.json`, `web/prisma/schema.prisma`
+- NextAuth (web auth) - `web/package.json`, `web/src/lib/auth.ts`
 
 **Testing:**
-- Playwright 1.58.2 — E2E testing
-- sharp 0.34.5 — Image processing (icons)
-- png-to-ico 3.0.1 — Icon conversion
+- Playwright (E2E) - `client/package.json`, `client/playwright.config.ts`, `web/package.json`, `web/playwright.config.ts`
+- Vitest (unit) - `client/package.json`, `client/vitest.config.ts`
+- Testing Library (React) - `client/package.json`
+
+**Build/Dev:**
+- electron-builder (packaging) - `client/package.json`, `client/electron-builder.yml`
+- TypeScript compiler (main + web) - `client/package.json`, `client/tsconfig.main.json`, `web/tsconfig.json`
+- PostCSS + Autoprefixer - `client/package.json`, `client/postcss.config.js`, `web/postcss.config.mjs`
+- esbuild (bundling/transforms) - `client/package.json`
+- tsx (OpenClaw dev runner) - `client/resources/openclaw-source/package.json`, `client/src/main/openclaw.ts`
+- concurrently + wait-on (Electron dev orchestration) - `client/package.json`
 
 ## Key Dependencies
 
 **Critical:**
-- `electron-log` 5.4.3 — Logging (replaces console)
-- `electron-updater` 6.8.3 — Auto-update
-- `ws` 8.19.0 — WebSocket client (Gateway bridge)
-- `@types/ws` 8.18.1 — WebSocket types
+- OpenClaw gateway + SDKs (AI runtime, MCP) - `client/resources/openclaw-source/package.json`, `DEVELOPMENT_GUIDELINES.md`
+- Stripe SDK (payments) - `web/package.json`, `web/src/lib/stripe.ts`
+- Prisma client (DB access) - `web/package.json`, `web/src/lib/prisma.ts`
+- NextAuth (session/auth) - `web/package.json`, `web/src/lib/auth.ts`
+- electron-store (settings persistence) - `client/package.json`, `client/src/main/index.ts`
+- electron-updater (auto-update) - `client/package.json`, `client/src/main/updater.ts`
 
-**Rendering/UI:**
-- `lucide-react` 0.294.0 — Icons
-- `react-markdown` 10.1.0 — Markdown rendering
-- `rehype-highlight` 7.0.2 — Code highlighting
-- `remark-gfm` 4.0.1 — GitHub Flavored Markdown
-- `highlight.js` 11.11.1 — Syntax highlighting
-
-**Fonts:**
-- `@fontsource/inter` 5.2.8 — Inter font
-- `@fontsource/jetbrains-mono` 5.2.8 — JetBrains Mono font
-
-**Web Subrepo (web/package.json):**
-- `next` 16.2.0 — Landing page + SaaS portal
-- `react` 19.2.4 / `react-dom` 19.2.4 — Web UI
-- `zustand` 5.0.12 — Web state management
-- `framer-motion` 12.38.0 — Web animations
-- `lucide-react` 0.577.0 — Icons
-- `next-auth` 4.24.13 — Authentication (JWT, bcrypt)
-- `prisma` 5.22.0 / `@prisma/client` 5.22.0 — Database ORM
-- `@tanstack/react-query` 5.91.2 — Data fetching
-- `stripe` 20.4.1 — Payment integration
-- `zod` 4.3.6 — Schema validation
-- `bcryptjs` 3.0.3 — Password hashing
-- `recharts` 3.8.0 — Charts
-- `msw` 2.12.14 — API mocking (dev)
-
-**Web Subrepo API Routes:**
-- `POST /api/device-tokens` — Register SynClaw desktop device
-- `GET/DELETE /api/device-tokens` — List/revoke device tokens
-- `POST /api/usage-events` — Report AI usage (device token auth)
-- `GET /api/usage` — Query usage stats (JWT auth, reads UsageEvent + CreditsHistory)
+**Infrastructure:**
+- WebSocket stack (`ws`) - `client/package.json`, `client/resources/openclaw-source/package.json`
+- HTTP servers (Express/Hono in OpenClaw) - `client/resources/openclaw-source/package.json`
+- Local vector storage (`sqlite-vec` in OpenClaw) - `client/resources/openclaw-source/package.json`
 
 ## Configuration
 
 **Environment:**
-- `.env.example` — Environment variable template
-- `.env` — Not committed (secrets)
+- Env files present (examples + local) - `client/.env.example`, `web/.env.example`, `web/.env.local`
+- Runtime env usage (desktop + web) - `client/src/main/index.ts`, `client/src/main/updater.ts`, `web/src/lib/stripe.ts`, `web/src/lib/email.ts`
 
 **Build:**
-- `vite.config.ts` / `vite.config.js` — Vite configuration
-- `tsconfig.json` — TypeScript (renderer)
-- `tsconfig.main.json` — TypeScript (main process)
-- `tsconfig.node.json` — TypeScript (node scripts)
-- `tailwind.config.js` — Tailwind configuration
-- `postcss.config.js` — PostCSS configuration
-- `playwright.config.ts` — Playwright configuration
-- `electron-builder.yml` — electron-builder configuration
+- Desktop build config - `client/vite.config.ts`, `client/tsconfig.main.json`, `client/electron-builder.yml`
+- Web build config - `web/next.config.ts`, `web/postcss.config.mjs`, `web/tsconfig.json`
 
 ## Platform Requirements
 
 **Development:**
-- Node.js 18+
-- pnpm 9+
-- macOS (primary), Windows, Linux
+- Node.js >= 20 (repo baseline) - `README.md`
+- OpenClaw requires Node.js >= 22.12/22.14 - `DEVELOPMENT_GUIDELINES.md`, `client/resources/openclaw-source/package.json`
+- pnpm >= 8 - `README.md`
+- macOS/Windows/Linux dev support - `README.md`
+- CI uses Node 22 - `.github/workflows/ci.yml`
 
 **Production:**
-- Electron 28 compatible
-- OpenClaw Gateway 2026.3.28 (bundled in resources)
+- Electron packaged apps for macOS/Windows/Linux - `client/electron-builder.yml`
+- Web app builds as Next.js standalone output (Docker-friendly) - `web/next.config.ts`
 
 ---
 
-*Stack analysis: 2026-03-31*
+*Stack analysis: 2026-04-03*

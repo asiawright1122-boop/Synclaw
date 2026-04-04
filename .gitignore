@@ -1,0 +1,35 @@
+# SynClaw
+# ─────────────────────────────────────────────────────────────
+# Build artifacts
+dist/
+release/
+build/
+*.tsbuildinfo
+
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# OS artifacts
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Cursor/GSD
+.cursor/
+.planning/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+npm-debug.log*
+
+# Release assets (keep this directory but ignore contents)
+# release/   (see .gitignore in client/)

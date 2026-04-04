@@ -1,263 +1,90 @@
 # Coding Conventions
 
-**Analysis Date:** 2026-03-31
+**Analysis Date:** 2026-04-03
 
-## TypeScript Configuration
-
-**Strictness Level:** `strict: true` enforced across all tsconfig files.
-
-**Renderer (`client/tsconfig.json`):**
-```json
-{
-  "compilerOptions": {
-    "strict": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "noFallthroughCasesInSwitch": true,
-    "jsx": "react-jsx"
-  }
-}
-```
-
-**Main Process (`client/tsconfig.main.json`):**
-```json
-{
-  "compilerOptions": {
-    "strict": true,
-    "esModuleInterop": true,
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext"
-  }
-}
-```
-
-**Build:** `cd client && pnpm exec tsc --noEmit` passes with zero errors.
-
----
-
-## Naming Conventions
+## Naming Patterns
 
 **Files:**
-- React components: `PascalCase.tsx` — `ChatView.tsx`, `SettingsView.tsx`, `ExecApprovalModal.tsx`
-- TypeScript modules: `camelCase.ts` — `logger.ts`, `gateway-bridge.ts`, `app-settings.ts`
-- Settings panels: `PascalCase.tsx` subdirectory — `settings/GeneralPanel.tsx`, `settings/ModelsPanel.tsx`
+- Kebab-case module filenames in the main process (e.g., `client/src/main/gateway-bridge.ts`, `client/src/main/ipc-handlers/path-validation.ts`, `client/src/main/app-settings.ts`).
+- PascalCase React component filenames in renderer and web UI (e.g., `client/src/renderer/components/AvatarSelector.tsx`, `client/src/renderer/components/Toast.tsx`, `web/src/components/PortalShell.tsx`).
+- Hook filenames use `useX` in camelCase (e.g., `client/src/renderer/hooks/useTTS.ts`, `client/src/renderer/hooks/useContextMenu.ts`).
+- Store filenames end with `Store` in camelCase (e.g., `client/src/renderer/stores/chatStore.ts`, `client/src/renderer/stores/settingsStore.ts`).
+- Next.js App Router naming for pages and routes (`page.tsx`, `layout.tsx`, `route.ts`) under `web/src/app/...` (e.g., `web/src/app/page.tsx`, `web/src/app/(admin)/layout.tsx`, `web/src/app/api/devices/route.ts`).
 
-**Hooks:** `camelCase.ts` with `use` prefix — `useSpeechRecognition.ts`, `useTTS.ts`, `useContextMenu.ts`
+**Functions:**
+- camelCase for non-component functions and store actions (e.g., `setTheme`, `loadSettings` in `client/src/renderer/stores/settingsStore.ts`; `handleSelect` in `client/src/renderer/components/AvatarSelector.tsx`).
+- PascalCase for React components and exported Next pages (e.g., `AvatarSelector` in `client/src/renderer/components/AvatarSelector.tsx`; `PortalShell` in `web/src/components/PortalShell.tsx`; `LandingPage` in `web/src/app/page.tsx`).
+- `use` prefix reserved for hooks (e.g., `useTTS` in `client/src/renderer/hooks/useTTS.ts`, `useSpeechRecognition` in `client/src/renderer/hooks/useSpeechRecognition.ts`).
 
-**Zustand Stores:** `camelCase.ts` with `Store` suffix — `appStore.ts`, `chatStore.ts`, `taskStore.ts`, `execApprovalStore.ts`
+**Variables:**
+- camelCase for locals and state (e.g., `currentAudioUrl` in `client/src/renderer/hooks/useTTS.ts`, `navItems` in `web/src/app/page.tsx`).
+- SCREAMING_SNAKE_CASE for constants (e.g., `DEFAULT_SPEED`, `MAX_SPEED` in `client/src/renderer/hooks/useTTS.ts`, `MAX_MESSAGES` in `client/src/renderer/stores/chatStore.ts`).
 
-**TypeScript Interfaces:** `PascalCase` defined inline in store files or `renderer/types/`:
-```typescript
-// renderer/stores/appStore.ts
-export interface AvatarItem {
-  id: string
-  name: string
-  status?: 'online' | 'offline' | 'busy'
-}
+**Types:**
+- PascalCase for interfaces and type aliases (e.g., `ChatMessage`, `AttachmentFile` in `client/src/renderer/stores/chatStore.ts`, `SettingsState` in `client/src/renderer/stores/settingsStore.ts`, `RegisterInput` in `web/src/lib/validations.ts`).
 
-// renderer/types/electron.d.ts
-type OpenClawStatus = 'idle' | 'starting' | 'ready' | 'connected' | 'disconnected' | 'error'
-```
+## Code Style
 
-**Path Aliases:** Only one defined in `client/tsconfig.json`:
-```json
-"paths": { "@/*": ["src/renderer/*"] }
-```
+**Formatting:**
+- Semicolons are generally omitted in renderer/web files (e.g., `client/src/renderer/hooks/useTTS.ts`, `web/src/app/page.tsx`), but some legacy files include them (e.g., `client/src/renderer/lib/api.ts`); follow local file style.
+- Single quotes for strings and imports (e.g., `client/src/renderer/components/AvatarSelector.tsx`, `web/src/app/api/auth/login/route.ts`).
+- 2-space indentation with trailing commas in multi-line objects and arrays (e.g., `client/src/renderer/stores/chatStore.ts`, `web/tests/e2e/mocks.ts`).
 
----
+**Linting:**
+- ESLint config exists for the web app via `web/eslint.config.mjs` and is invoked by `web/package.json`.
+- Client lint script runs ESLint across the client package (`client/package.json`), and inline rule disables appear in main process files (e.g., `client/src/main/index.ts`).
 
-## Import Conventions
+## Import Organization
 
-**No barrel files.** Direct imports are used throughout:
-```typescript
-import { useAppStore } from '../stores/appStore'
-import { useChatStore } from '../stores/chatStore'
-import { ChatView } from './ChatView'
-```
+**Order:**
+1. External packages first, then local modules (e.g., `client/src/renderer/components/AvatarSelector.tsx`, `web/src/app/page.tsx`).
+2. Type-only imports use `import type` or inline `type` specifiers (e.g., `client/src/renderer/lib/api.ts`, `client/src/renderer/components/AvatarSelector.tsx`).
+3. Main-process local imports include `.js` extensions to satisfy ESM resolution (e.g., `client/src/main/index.ts`, `client/src/main/gateway-bridge.ts`).
 
-**Import order** (inferred from source files):
-1. Node.js built-ins (`node:path`, `node:fs`, `node:os`)
-2. Third-party packages (`electron`, `zustand`, `framer-motion`, `lucide-react`, `react-markdown`)
-3. Local modules (`../stores`, `./components`, `./hooks`, `./lib`)
-4. Type imports via `import type`
+**Path Aliases:**
+- Web app alias `@/*` -> `src/*` is configured and used (e.g., `web/tsconfig.json`, `web/src/app/page.tsx`, `web/src/app/api/devices/route.ts`).
+- Client renderer alias `@/*` -> `src/renderer/*` is configured but renderer code uses relative paths (e.g., `client/tsconfig.json`, `client/src/renderer/components/AvatarSelector.tsx`, `client/src/renderer/stores/chatStore.ts`).
 
-**Extensions:** ES module `.js` extensions in imports for main process files:
-```typescript
-import { openclawProcess } from './openclaw.js'
-import { registerIpcHandlers } from './ipc-handlers.js'
-```
+## Error Handling
 
----
+**Patterns:**
+- API routes use `try/catch` and return `NextResponse.json` with status codes (e.g., `web/src/app/api/devices/route.ts`, `web/src/app/api/auth/login/route.ts`).
+- Renderer stores guard on missing `window` APIs and log failures (e.g., `client/src/renderer/stores/chatStore.ts`, `client/src/renderer/stores/settingsStore.ts`).
+- Hooks and stores short-circuit invalid input before async calls (e.g., `client/src/renderer/hooks/useTTS.ts`, `client/src/renderer/stores/chatStore.ts`).
 
-## Error Handling Patterns
+## Logging
 
-**IPC Handlers (`client/src/main/ipc-handlers/`):**
-- Use `try/catch` with return `{ success: boolean; data?: T; error?: string }`
-- Every handler wraps Gateway errors gracefully
-- Example pattern from `gateway.ts`:
-```typescript
-ipcMain.handle('openclaw:connect', async () => {
-  try { await g().connect(); return { success: true } }
-  catch (err) { log.error('connect failed:', err); return { success: false, error: String(err) } }
-})
-```
+**Framework:** `electron-log` in the main process (e.g., `client/src/main/logger.ts`, `client/src/main/index.ts`).
 
-**Renderer Components:**
-- Guard checks for `window.openclaw` availability:
-```typescript
-// renderer/stores/chatStore.ts
-if (!window.openclaw) {
-  console.warn('[ChatStore] Cannot send message: window.openclaw unavailable')
-  return
-}
-```
-- Error boundaries via try/catch in async actions
-- Fallback data patterns (not crash on missing Gateway)
-- Safety timeouts for long-running operations (5-minute timeout in `chatStore.sendMessage`)
+**Patterns:**
+- Renderer and hooks use `console.warn`/`console.error` with tagged prefixes (e.g., `client/src/renderer/stores/chatStore.ts`, `client/src/renderer/hooks/useTTS.ts`).
+- Web API routes log errors via `console.error` (e.g., `web/src/app/api/devices/route.ts`, `web/src/app/api/auth/login/route.ts`).
 
-**Main Process:**
-- Global uncaught exception/rejection handlers in `main/index.ts`:
-```typescript
-process.on('uncaughtException', (error) => {
-  log.error('Uncaught exception:', error)
-  dialog.showErrorBox('Error', `An unexpected error occurred: ${error.message}`)
-})
-```
+## Comments
+
+**When to Comment:**
+- File-level docblocks and section headers explain purpose and rationale (e.g., `client/src/renderer/hooks/useTTS.ts`, `client/src/renderer/components/AvatarSelector.tsx`, `client/src/main/index.ts`).
+- Inline comments clarify non-obvious behavior or side effects (e.g., `client/src/renderer/stores/chatStore.ts`, `web/tests/e2e/mocks.ts`).
+
+**JSDoc/TSDoc:**
+- Used mainly for file headers and property notes inside interfaces (e.g., `client/src/renderer/hooks/useTTS.ts`, `client/src/renderer/stores/chatStore.ts`).
+
+## Function Design
+
+**Size:** Prefer focused functions with early returns and scoped helpers (e.g., `client/src/renderer/hooks/useTTS.ts`, `web/src/app/api/auth/login/route.ts`).
+
+**Parameters:** Use typed parameters and narrow unions for state/actions (e.g., `client/src/renderer/stores/settingsStore.ts`, `client/src/renderer/stores/chatStore.ts`).
+
+**Return Values:** Async store actions and route handlers return promises; cleanup functions are returned when needed (e.g., `client/src/renderer/stores/settingsStore.ts`, `web/src/app/api/devices/route.ts`).
+
+## Module Design
+
+**Exports:**
+- Default exports for Next.js pages and some services (e.g., `web/src/app/page.tsx`, `web/src/app/(admin)/layout.tsx`, `client/src/renderer/lib/api.ts`).
+- Named exports for Zustand stores and shared types (e.g., `client/src/renderer/stores/chatStore.ts`, `client/src/renderer/stores/settingsStore.ts`).
+
+**Barrel Files:** Index entrypoints are used for module roots rather than broad barrels (e.g., `client/src/preload/index.ts`, `client/src/renderer/i18n/index.ts`).
 
 ---
 
-## Logging Patterns
-
-**Primary Framework:** `electron-log` (configured in `client/src/main/logger.ts`)
-
-**Log Levels:** `debug`, `info`, `warn`, `error`
-
-**Scoped Logger Pattern:**
-```typescript
-// client/src/main/logger.ts
-const log = logger.scope('main')
-
-// client/src/main/ipc-handlers/gateway.ts
-const log = logger.scope('gateway')
-log.error(`${channel} failed:`, err)
-```
-
-**Log Configuration:**
-```typescript
-log.transports.file.level = 'info'
-log.transports.console.level = 'debug'
-// File: ~/Library/Logs/SynClaw/main.log (macOS)
-```
-
-**Renderer Logging:** Uses `console.*` directly (not electron-log). Pattern:
-```typescript
-console.error('[ChatStore] Failed to load history from Gateway:', error)
-console.warn('[ChatStore] Cannot send message: window.openclaw unavailable')
-console.log('[ChatStore] Exec approval resolved:', payload)
-```
-
-**Inconsistent Logging Found:**
-- Main process uses `logger.scope()` + electron-log
-- Renderer uses `console.*` directly
-- `main/index.ts` has mixed logging: `logger.scope('main')` but also `console.warn()` for encryption key warning
-
----
-
-## Internationalization
-
-**Framework:** Custom lightweight i18n in `renderer/i18n/index.ts`
-
-**Supported Locales:** `'zh' | 'en'`
-
-**Structure:**
-```typescript
-const translations: Record<Locale, Record<string, string>> = { zh, en }
-export function t(key: string, params?: Record<string, string | number>): string
-```
-
-**Key Pattern:** Dot-notation keys (e.g., `'chat.placeholder'`, `'sidebar.tab.avatar'`, `'status.connected'`)
-
-**Fallback:** Falls back to `'zh'` if key missing from current locale
-
-**Current Status:**
-- ~115 keys defined for Chinese, ~90 for English
-- Not all UI text is i18n'd — many inline Chinese strings in JSX remain hardcoded (e.g., `'命令执行审批'`, `'批准执行'`, `'拒绝'`, `'高风险'`, `'环境变量'`)
-- Recommendation: Audit all non-i18n strings in `ExecApprovalModal.tsx`, `SettingsView.tsx`, and panel components
-
----
-
-## Magic Numbers and Constants
-
-**Found hardcoded values:**
-- `5 * 60 * 1000` (5 minutes) — safety timeout in `chatStore.sendMessage` → should be named `SAFETY_TIMEOUT_MS`
-- `MAX_ATTACHMENTS = 5` — `ChatView.tsx` line 448
-- `MAX_FILE_SIZE = 10 * 1024 * 1024` (10 MB) — `ChatView.tsx` line 449
-- `LANDING_PORT = 3847` — `main/index.ts` line 233
-- `LANDING_HOST = '127.0.0.1'` — `main/index.ts` line 234
-- `DEFAULT_TIMEOUT_MS = 60_000` — `gateway-bridge.ts`
-- `DEFAULT_WS_PORT = 18789` — OpenClaw Gateway default port
-- Window dimensions: `width: 1200, height: 800` — `main/index.ts` line 175
-
-**Constants file:** Not present. All magic numbers are inline.
-
----
-
-## Code Smells and Anti-Patterns
-
-**1. Mixed logging APIs (Low severity):**
-- `main/index.ts` uses both `logger.scope('main')` and `console.warn()` on line 42
-- Renderer consistently uses `console.*` — main process should be consistent with electron-log
-
-**2. Type-only issues (Informational):**
-- `main/index.ts` lines 17-24: Dynamic `require('electron-store')` with `// eslint-disable-next-line @typescript-eslint/no-require-imports` comments
-- Wide use of `// eslint-disable-next-line @typescript-eslint/no-explicit-any` for dynamic store access
-
-**3. Incomplete i18n (Medium severity):**
-- `ExecApprovalModal.tsx` has ~20 hardcoded Chinese strings: `'命令执行审批'`, `'待执行命令'`, `'执行意图'`, `'批准执行'`, `'拒绝'`, `'高风险'`, `'需注意'`, `'安全'`, `'低风险命令'`, etc.
-- Panel components (`settings/*.tsx`) likely have similar issues
-
-**4. No ESLint configuration:**
-- No `.eslintrc*` or `eslint.config.*` in project root (`client/`)
-- Prevents automated style enforcement
-- Comment-based eslint-disable directives present but not systematically enforced
-
-**5. Error swallowing:**
-```typescript
-// renderer/components/ChatView.tsx line 336
-} catch {
-  // Ignore
-}
-```
-- Empty catch blocks make debugging difficult
-
-**6. Preload massive flat object:**
-- `preload/index.ts` is 693 lines with a single flat `electronAPI` and `openclaw` object
-- Would benefit from splitting into namespaces or helper modules
-
----
-
-## Component Patterns
-
-**React Components:**
-- Functional components with explicit `export function`
-- Props defined as interfaces in same file (small components) or in separate `types/` files
-- `memo()` used for expensive components (`MessageBubble` in `ChatView.tsx`)
-- Custom comparison function in `memo()` for performance:
-```typescript
-const MessageBubble = memo(({ message, onContextMenu }: MessageBubbleProps) => { ... },
-  (prev, next) => prev.message.id === next.message.id && prev.message.content === next.message.content
-)
-```
-
-**Zustand Stores:**
-- All use `create<Interface>` pattern with explicit state interface
-- Async actions use try/catch with error state
-- Optimistic updates with rollback on failure (visible in `taskStore.ts`)
-
-**Framer Motion:**
-- `motion.div`, `AnimatePresence` used for enter/exit animations
-- Consistent transition durations: `duration: 0.2` for most, `duration: 0.15` for modals
-
----
-
-*Convention analysis: 2026-03-31*
+*Convention analysis: 2026-04-03*

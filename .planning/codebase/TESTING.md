@@ -1,287 +1,124 @@
 # Testing Patterns
 
-**Analysis Date:** 2026-03-31
+**Analysis Date:** 2026-04-03
 
 ## Test Framework
 
-**E2E Framework:** Playwright (`@playwright/test`) ^1.41.0
+**Runner:**
+- Vitest ^2.1.9 for unit tests, configured in `client/vitest.config.ts` and versioned in `client/package.json`.
+- Playwright ^1.58.2 for E2E tests, configured in `client/playwright.config.ts` and `web/playwright.config.ts` with versions in `client/package.json` and `web/package.json`.
 
-**Config:** `client/playwright.config.ts`
+**Assertion Library:**
+- Vitest `expect` for unit tests (e.g., `client/src/renderer/stores/chatStore.test.ts`, `client/src/renderer/hooks/useTTS.test.tsx`).
+- Playwright `expect` for E2E tests (e.g., `client/e2e/chat.spec.ts`, `web/tests/e2e/landing.spec.ts`).
 
 **Run Commands:**
 ```bash
-cd client && pnpm exec playwright test              # Run all tests
-cd client && pnpm exec playwright test --ui        # Run with Playwright UI
-cd client && pnpm exec playwright test --headed     # Run with browser visible
+cd client && npm run test           # from client/package.json
+cd client && npm run test:e2e        # from client/package.json
+cd web && npx playwright test        # uses web/playwright.config.ts
 ```
-
-**No Unit Test Framework Detected:**
-- No Vitest, Jest, or other unit testing framework configured
-- No `*.test.ts` or `*.spec.ts` unit tests in `src/` directory
-- All testing is E2E only
-
----
 
 ## Test File Organization
 
-**Location:** `client/e2e/*.spec.ts`
+**Location:**
+- Unit tests are co-located with renderer code in `client/src/renderer/.../*.test.ts(x)` (e.g., `client/src/renderer/stores/chatStore.test.ts`, `client/src/renderer/hooks/useTTS.test.tsx`).
+- Client E2E tests live in `client/e2e/*.spec.ts` (e.g., `client/e2e/chat.spec.ts`).
+- Web E2E tests live in `web/tests/e2e/*.spec.ts` (e.g., `web/tests/e2e/landing.spec.ts`, `web/tests/e2e/portal.spec.ts`).
 
-**Naming:** `*.spec.ts` pattern
+**Naming:**
+- Unit tests use `*.test.ts` / `*.test.tsx` (e.g., `client/src/renderer/stores/settingsStore.test.ts`, `client/src/renderer/hooks/useTTS.test.tsx`).
+- E2E tests use `*.spec.ts` (e.g., `client/e2e/chat.spec.ts`, `web/tests/e2e/landing.spec.ts`).
 
 **Structure:**
 ```
+client/src/renderer/
+├── hooks/useTTS.test.tsx
+├── stores/chatStore.test.ts
+└── stores/settingsStore.test.ts
 client/e2e/
-├── app.spec.ts            # App shell, window controls, file API
-├── exec-approval.spec.ts   # Exec approval modal integration
-├── tts.spec.ts            # Text-to-speech feature
-├── avatar.spec.ts         # Avatar/agent feature
-└── landing-page.spec.ts   # Landing page E2E
+├── chat.spec.ts
+└── app.spec.ts
+web/tests/e2e/
+├── landing.spec.ts
+└── portal.spec.ts
 ```
 
----
+## Test Structure
 
-## Test File Analysis
-
-### `client/e2e/app.spec.ts` (143 lines)
-
-**Tests (6 tests):**
-- `should load the application without errors` — Checks `#root` or `[data-testid="app"]` is visible
-- `should display the header with connection status` — Verifies header and status indicator
-- `should have functional sidebar tabs` — Clicks through 分身 / IM 频道 / 定时任务 tabs
-- `should toggle sidebar collapse` — Tests collapse/expand button
-- `should open settings modal` — Clicks settings button, checks for dialog
-- `should display chat input` — Verifies chat input exists
-- `should handle window controls via electronAPI` — Checks `window.electronAPI` exists
-- `should have openclaw API available` — Checks `window.openclaw` type
-- `should have file API methods defined` — Verifies `read`, `write`, `list` methods exist
-
-**Pattern:** Uses `page.locator()` + `expect().toBeVisible()` / `toBeTruthy()`
-
----
-
-### `client/e2e/exec-approval.spec.ts` (211 lines)
-
-**Tests (6 tests):**
-- `exec approval store exposes required API` — Verifies root element and modal container
-- `modal is not visible by default` — Checks exec approval modal absent initially
-- `command display renders correctly when triggered` — Injects CustomEvent to trigger modal
-- `approve button sends approved resolution` — Clicks approve, checks modal closes
-- `deny button closes modal without approval` — Clicks deny, checks modal closes
-- `environment variables section expands when env is present` — Tests sensitive env masking
-- `multiple approvals queue correctly` — Tests approval queueing
-
-**Pattern:** Dispatches `CustomEvent('openclaw:event')` to simulate Gateway events:
+**Suite Organization:**
+Example from `client/src/renderer/stores/settingsStore.test.ts`.
 ```typescript
-await page.evaluate(() => {
-  const event = new CustomEvent('openclaw:event', {
-    detail: {
-      event: 'exec.approval.requested',
-      payload: { id: 'test-approval-001', command: 'rm -rf /tmp/test-dir' },
-    },
-  })
-  window.dispatchEvent(event)
+describe('settingsStore', () => {
+  it('loads settings', async () => {})
 })
 ```
 
----
+**Patterns:**
+- Use `beforeEach`/`afterEach` for setup and cleanup with `vi.clearAllMocks`/`vi.restoreAllMocks` (e.g., `client/src/renderer/stores/chatStore.test.ts`, `client/src/renderer/stores/settingsStore.test.ts`).
+- Playwright navigation waits rely on `page.goto()` and `page.waitForLoadState('networkidle')` (e.g., `web/tests/e2e/landing.spec.ts`, `web/tests/e2e/portal.spec.ts`).
 
-### `client/e2e/tts.spec.ts`
+## Mocking
 
-**Not reviewed** — Could not read file.
+**Framework:** Vitest `vi` for unit mocks and Playwright route intercepts for E2E (e.g., `client/src/renderer/stores/chatStore.test.ts`, `web/tests/e2e/mocks.ts`).
 
-### `client/e2e/avatar.spec.ts`
-
-**Not reviewed** — Could not read file.
-
-### `client/e2e/landing-page.spec.ts`
-
-**Not reviewed** — Could not read file.
-
----
-
-## Playwright Config Review
-
-**File:** `client/playwright.config.ts`
-
+**Patterns:**
+Examples from `client/src/renderer/stores/chatStore.test.ts` and `web/tests/e2e/landing.spec.ts`.
 ```typescript
-export default defineConfig({
-  testDir: './e2e',
-  fullyParallel: true,
-  forbidOnly: !!process.env.CI,        // Fail on `test.only` in CI
-  retries: process.env.CI ? 2 : 0,    // Retry 2x in CI, no retries locally
-  workers: process.env.CI ? 1 : undefined,  // Serial in CI for stability
-  reporter: 'html',
-  use: {
-    baseURL: 'http://localhost:5173',
-    trace: 'on-first-retry',           # Capture trace on first retry
-  },
-  projects: [
-    {
-      name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
-    },
-  ],
-  webServer: {
-    command: 'npm run dev',
-    url: 'http://localhost:5173',
-    reuseExistingServer: !process.env.CI,
-    timeout: 120_000,                  # 2-minute startup timeout
-  },
-})
+vi.stubGlobal('window', { openclaw: mock, electronAPI: mock })
+```
+```typescript
+await page.route('/api/credits', route => route.fulfill({ status: 200 }))
 ```
 
-**Observations:**
-- Only Chromium browser tested (no Firefox/Safari)
-- `reuseExistingServer: !process.env.CI` — Dev server reused in dev, forced fresh in CI
-- HTML reporter only (no JUnit/XML for CI integration)
-- Missing: `screenshot: 'only-on-failure'` for debugging
-- Missing: `video: 'retain-on-failure'` for CI artifacts
-- Missing: `headless: true` explicit config
+**What to Mock:**
+- External `window.openclaw` and `window.electronAPI` APIs in unit tests (e.g., `client/src/renderer/stores/chatStore.test.ts`, `client/src/renderer/hooks/useTTS.test.tsx`).
+- HTTP APIs in web E2E using centralized `applyMocks(page)` (e.g., `web/tests/e2e/mocks.ts`, `web/tests/e2e/landing.spec.ts`).
 
----
+**What NOT to Mock:**
+- Internal Zustand stores are imported directly in unit tests (note in `client/src/renderer/stores/chatStore.test.ts`).
 
-## Coverage Analysis
+## Fixtures and Factories
 
-### Covered (E2E)
+**Test Data:**
+- Mock factory for Electron APIs lives in `client/src/test/mocks/electronAPI.ts`.
+- Web E2E data is defined inline in `web/tests/e2e/mocks.ts`.
 
-| Feature | Coverage | File |
-|---------|----------|------|
-| App shell loading | Basic | `app.spec.ts` |
-| Header / connection status | Basic | `app.spec.ts` |
-| Sidebar tabs | Basic | `app.spec.ts` |
-| Settings modal | Basic | `app.spec.ts` |
-| Chat input presence | Basic | `app.spec.ts` |
-| Window API availability | Basic | `app.spec.ts` |
-| File API methods | Basic | `app.spec.ts` |
-| Exec approval modal open/close | Medium | `exec-approval.spec.ts` |
-| Command display | Medium | `exec-approval.spec.ts` |
-| Env variable masking | Medium | `exec-approval.spec.ts` |
-| Approval queueing | Medium | `exec-approval.spec.ts` |
-| TTS feature | Unknown | `tts.spec.ts` |
-| Avatar feature | Unknown | `avatar.spec.ts` |
-| Landing page | Unknown | `landing-page.spec.ts` |
+**Location:**
+- Unit-test mocks under `client/src/test/mocks` (e.g., `client/src/test/mocks/electronAPI.ts`).
+- E2E mocks centralized in `web/tests/e2e/mocks.ts`.
 
-### NOT Covered (Critical Gaps)
+## Coverage
 
-| Area | Risk | Priority |
-|------|------|----------|
-| **Zustand stores** — No unit tests for `appStore`, `chatStore`, `taskStore`, `execApprovalStore`, `avatarStore`, `toastStore`, `openclawStore`, `settingsStore` | Bug in state management goes undetected | HIGH |
-| **IPC handlers** — No tests for `gateway.ts`, `file.ts`, `shell.ts`, `app.ts`, `clawhub.ts` | Broken IPC breaks entire app | HIGH |
-| **Gateway bridge** — No tests for `gateway-bridge.ts` connection logic | Connection failures undetected | HIGH |
-| **Error paths** — No tests for error handling in any IPC handler | Errors silently fail | HIGH |
-| **Settings persistence** — No tests for electron-store operations | Settings data loss | MEDIUM |
-| **File validation** — No tests for path validation logic | Security bypass risk | HIGH |
-| **i18n** — No tests for translation function or missing keys | Untranslated strings | MEDIUM |
-| **Voice/STT hooks** — No tests for `useSpeechRecognition.ts`, `useTTS.ts` | Voice features untested | MEDIUM |
-| **React components** — No unit tests for any UI component | Regression risk | HIGH |
-| **Main process lifecycle** — No tests for app startup, tray, notifications, updater | Critical path untested | HIGH |
-| **Optimistic updates** — No tests for task store rollback logic | State corruption | MEDIUM |
-| **Preload API** — Only type-checking, no behavioral tests | API contract untested | MEDIUM |
+**Requirements:** Coverage is configured for renderer hooks/stores via v8 provider (e.g., `client/vitest.config.ts`).
 
----
-
-## Test Data and Fixtures
-
-**Fixtures:** None detected in `client/e2e/`
-
-**Test Data Patterns:**
-```typescript
-// From exec-approval.spec.ts — inline CustomEvent payloads
-const event = new CustomEvent('openclaw:event', {
-  detail: {
-    event: 'exec.approval.requested',
-    payload: {
-      id: 'test-approval-001',
-      command: 'rm -rf /tmp/test-dir',
-      env: { NODE_ENV: 'production', API_SECRET: 'super-secret-key-123' },
-      nodeId: undefined,
-    },
-  },
-})
+**View Coverage:**
+```bash
+cd client && npx vitest run --coverage    # uses client/vitest.config.ts
 ```
 
-**Test Session Data:**
-- No mock Gateway responses — tests rely on real Gateway (or fail gracefully)
-- No mock IPC — tests dispatch events directly to simulate Gateway
-- No test fixtures/factories for creating consistent test data
+## Test Types
+
+**Unit Tests:**
+- Renderer hooks and stores via Vitest (e.g., `client/src/renderer/hooks/useTTS.test.tsx`, `client/src/renderer/stores/chatStore.test.ts`).
+
+**Integration Tests:**
+- Not detected beyond E2E; tests are either unit or full E2E (e.g., `client/src/renderer/stores/chatStore.test.ts`, `web/tests/e2e/portal.spec.ts`).
+
+**E2E Tests:**
+- Client UI E2E with Playwright in `client/e2e/*.spec.ts` (e.g., `client/e2e/chat.spec.ts`).
+- Web portal/landing E2E with Playwright in `web/tests/e2e/*.spec.ts` (e.g., `web/tests/e2e/landing.spec.ts`).
+
+## Common Patterns
+
+**Async Testing:**
+- `async` tests with `await` on Playwright navigation and assertions (e.g., `web/tests/e2e/landing.spec.ts`, `client/e2e/chat.spec.ts`).
+- `async` store tests using `await` on store actions (e.g., `client/src/renderer/stores/settingsStore.test.ts`, `client/src/renderer/stores/chatStore.test.ts`).
+
+**Error Testing:**
+- Mock error responses with `mockResolvedValue({ success: false })` (e.g., `client/src/renderer/hooks/useTTS.test.tsx`).
+- E2E error-path assertions for invalid API key or missing data (e.g., `client/e2e/chat.spec.ts`, `web/tests/e2e/landing.spec.ts`).
 
 ---
 
-## Flaky Test Patterns
-
-**Potential Issues:**
-
-1. **Gateway dependency:** Most E2E tests require a running OpenClaw Gateway. Tests will fail or hang if Gateway is unavailable.
-
-2. **Timing sensitivity:**
-```typescript
-// exec-approval.spec.ts
-await page.waitForTimeout(800)  // Hardcoded wait — may be flaky on slow machines
-await page.waitForTimeout(400)  // Even shorter — fragile
-```
-
-3. **Network idle assumption:**
-```typescript
-await page.waitForLoadState('networkidle')  // May timeout if Gateway takes long
-```
-
-4. **Conditional visibility:**
-```typescript
-// app.spec.ts — conditional test (may pass or fail depending on state)
-if (await collapseButton.isVisible()) {
-  // test logic
-}
-```
-
-5. **CI config inconsistency:** `retries: process.env.CI ? 2 : 0` means flakiness is hidden locally but exposed in CI.
-
----
-
-## Recommendations for Additional Testing
-
-### HIGH Priority
-
-1. **Zustand Store Unit Tests**
-   - Test state transitions in `chatStore`, `taskStore`, `execApprovalStore`
-   - Test optimistic update/rollback logic in `taskStore`
-   - Test error handling paths
-
-2. **IPC Handler Tests**
-   - Mock the Gateway bridge to test IPC handlers in isolation
-   - Test error propagation from Gateway to renderer
-
-3. **Path Validation Security Tests**
-   - Test that unauthorized paths are rejected
-   - Test path traversal attacks are blocked
-
-### MEDIUM Priority
-
-4. **i18n Coverage Test**
-   - Scan all components for hardcoded strings not in i18n
-   - Verify all `t()` keys exist in both zh/en translation files
-
-5. **React Component Unit Tests**
-   - Use `@testing-library/react` for component rendering tests
-   - Test `ExecApprovalModal` rendering with various approval states
-   - Test `MessageBubble` with different message types
-
-6. **Voice Hook Tests**
-   - Mock Web Speech API to test `useSpeechRecognition`
-   - Mock TTS API to test `useTTS`
-
-### LOW Priority
-
-7. **E2E Test Fixture Library**
-   - Create shared fixtures for approval events, session data, model responses
-   - Reduce duplication in `exec-approval.spec.ts`
-
-8. **Screenshot/Video Artifacts**
-   - Enable `screenshot: 'only-on-failure'` and `video: 'retain-on-failure'` in playwright config
-   - Publish artifacts to CI
-
-9. **Firefox/Safari Coverage**
-   - Add Firefox and Safari to playwright `projects` array for cross-browser testing
-
----
-
-*Testing analysis: 2026-03-31*
+*Testing analysis: 2026-04-03*

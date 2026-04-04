@@ -112,6 +112,7 @@ export function WebLoginPanel({ channel, onSuccess, onClose }: {
   useEffect(() => {
     // 组件挂载时自动开始登录
     startLogin()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   return (

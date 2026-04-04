@@ -49,6 +49,11 @@ export interface AppSettings {
     deviceName: string
     lastReportedAt: string | null
   }
+  security: {
+    encryptionEnabled: boolean
+    encryptionKeySetAt: string | null
+    webApiBase: string
+  }
 }
 
 export interface FileInfo {
@@ -142,6 +147,7 @@ export interface ElectronAPI {
     getAutoLaunch: () => Promise<boolean>
     downloadUpdate: () => Promise<ApiResponse>
     installUpdate: () => Promise<ApiResponse>
+    getSigningStatus: () => Promise<ApiResponse<{ status: 'signed' | 'unsigned' | 'not_macos' | 'unknown'; teamId?: string }>>
   }
   notifications: {
     setEnabled: (enabled: boolean) => Promise<ApiResponse>
@@ -173,6 +179,22 @@ export interface ElectronAPI {
   }
   // Navigation events from main process
   onNavigate: (callback: (data: { page: string }) => void) => () => void
+  // Security & Encryption
+  security: {
+    getStatus: () => Promise<ApiResponse<{
+      encryptionEnabled: boolean
+      encryptionKeySetAt: string | null
+      webApiBaseConfigured: boolean
+      webApiBase: string
+      webApiBaseFromEnv: boolean
+    }>>
+    generateKey: () => Promise<ApiResponse<{
+      key: string
+      setAt: string
+      instructions: string
+    }>>
+    setWebApiBase: (url: string) => Promise<ApiResponse>
+  }
 }
 
 export interface OpenClawAPI {

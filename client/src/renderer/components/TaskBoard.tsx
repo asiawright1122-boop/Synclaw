@@ -1,7 +1,9 @@
 import { useState, useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useTaskStore, Task, TaskStatus } from '../stores/taskStore'
+import { useTaskEvents } from '../hooks/useTaskEvents'
 import { Plus, MoreVertical, Clock, CheckCircle2, Circle, AlertCircle, Play } from 'lucide-react'
+import { ClipboardList } from 'lucide-react'
 
 interface TaskBoardProps {
   fullView?: boolean
@@ -36,7 +38,10 @@ export function TaskBoard({ fullView = false }: TaskBoardProps) {
     deleteTask,
     setSelectedTaskId
   } = useTaskStore()
-  
+
+  // Subscribe to Gateway task events (React lifecycle managed, prevents listener leaks)
+  useTaskEvents()
+
   const [newTaskTitle, setNewTaskTitle] = useState('')
   const [showNewTaskInput, setShowNewTaskInput] = useState(false)
   const [draggedTask, setDraggedTask] = useState<string | null>(null)
@@ -166,6 +171,32 @@ export function TaskBoard({ fullView = false }: TaskBoardProps) {
 
         {/* Kanban columns */}
         <div className="flex-1 overflow-x-auto p-4">
+          {/* Full-view empty state: shown when no tasks exist at all */}
+          {!loading && tasks.length === 0 && (
+            <div className="flex flex-col items-center justify-center h-full w-full gap-4">
+              <div className="w-16 h-16 rounded-full flex items-center justify-center" style={{ background: 'rgba(34,211,238,0.1)' }}>
+                <ClipboardList className="w-8 h-8" style={{ color: '#22d3ee' }} />
+              </div>
+              <div className="text-center">
+                <p className="text-base font-semibold mb-1" style={{ color: 'var(--text)' }}>
+                  开启你的第一个任务
+                </p>
+                <p className="text-sm" style={{ color: 'var(--text-sec)' }}>
+                  描述你的目标，SynClaw 会帮你规划并执行
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowNewTaskInput(true)}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-white"
+                style={{ background: 'linear-gradient(135deg, #22d3ee, #818cf8)' }}
+              >
+                <Plus className="w-4 h-4" />
+                创建任务
+              </button>
+            </div>
+          )}
+          {(!loading || tasks.length > 0) && (
           <div className="flex gap-3 h-full min-w-max">
             {statusColumns.map((column) => (
               <div
@@ -208,6 +239,7 @@ export function TaskBoard({ fullView = false }: TaskBoardProps) {
               </div>
             ))}
           </div>
+          )}
         </div>
       </div>
     )
@@ -226,9 +258,25 @@ export function TaskBoard({ fullView = false }: TaskBoardProps) {
             <div className="w-6 h-6 border-2 border-accent-cyan/30 border-t-accent-cyan rounded-full animate-spin" />
           </div>
         ) : tasks.length === 0 ? (
-          <div className="text-center py-8">
-            <p className="text-slate-500 text-sm">暂无任务</p>
-            <p className="text-slate-500 text-xs mt-1">点击顶部按钮创建新任务</p>
+          <div className="flex flex-col items-center gap-3 py-6">
+            <div
+              className="w-12 h-12 rounded-full flex items-center justify-center"
+              style={{ background: 'rgba(34,211,238,0.1)' }}
+            >
+              <ClipboardList className="w-6 h-6" style={{ color: '#22d3ee' }} />
+            </div>
+            <p className="text-sm font-medium" style={{ color: 'var(--text)' }}>
+              开启你的第一个任务
+            </p>
+            <button
+              type="button"
+              onClick={() => setShowNewTaskInput(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white transition-opacity hover:opacity-90"
+              style={{ background: 'linear-gradient(135deg, #22d3ee, #818cf8)' }}
+            >
+              <Plus className="w-3.5 h-3.5" />
+              创建任务
+            </button>
           </div>
         ) : (
           tasks.slice(0, 5).map((task) => (
