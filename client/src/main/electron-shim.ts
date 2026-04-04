@@ -16,6 +16,7 @@ import { createRequire } from 'module'
 import { dirname, join } from 'path'
 
 // Get the electron binary path from the electron package
+// eslint-disable-next-line @typescript-eslint/no-var-requires
 const electronPath = require('electron')
 
 // Use createRequire with __dirname set to electron's own directory
