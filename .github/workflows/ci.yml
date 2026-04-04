@@ -100,6 +100,7 @@ jobs:
     name: E2E Tests
     runs-on: macos-latest
     needs: [build-renderer]
+    if: false  # E2E requires API key + Gateway — run locally with: cd client && pnpm exec playwright test
     steps:
       - uses: actions/checkout@v4
 
