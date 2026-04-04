@@ -32,7 +32,7 @@ jobs:
         working-directory: client
 
       - name: ESLint
-        run: pnpm exec eslint ./src/
+        run: pnpm run lint
         working-directory: client
 
   build-main:
