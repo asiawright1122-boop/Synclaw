@@ -117,11 +117,11 @@ export function TaskDetailPanel() {
     return () => unsub?.()
   }, [selectedTaskId, appendLog])
 
-  if (!selectedTask) return null
-
   // Debounced saves — use separate refs so title and description don't cancel each other
   const titleTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const descTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  if (!selectedTask) return null
 
   const handleTitleChange = (value: string) => {
     setEditingTitle(value)
