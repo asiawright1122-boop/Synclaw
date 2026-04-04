@@ -20,7 +20,7 @@ import * as path from 'path'
 import * as os from 'node:os'
 import logger from './logger.js'
 import { getAppSettings } from './index.js'
-import { getGatewayClientClass, getGatewayClientOptionsClass } from './openclaw-gateway.js'
+import { getGatewayClientClass } from './openclaw-gateway.js'
 
 const log = logger.scope('gateway-bridge')
 
