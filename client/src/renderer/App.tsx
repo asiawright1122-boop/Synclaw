@@ -117,7 +117,7 @@ function App() {
       else if (top === 'shortcuts') setShortcutsModalOpen(false)
       return prev.slice(0, -1)
     })
-  }, [])
+  }, [setSettingsModalOpen])
 
   // Load persisted settings from electron-store on mount; subscribe to cross-window changes
   useEffect(() => {
@@ -212,7 +212,7 @@ function App() {
     }
     document.addEventListener('keydown', handler)
     return () => document.removeEventListener('keydown', handler)
-  }, [toggleSidebarCollapsed, registerModal, closeTopModal])
+  }, [toggleSidebarCollapsed, registerModal, closeTopModal, setSettingsModalOpen])
 
   // Command palette 中打开 settings 时自动打开 modal
   const handleCommandOpenSettings = useCallback((section: string) => {

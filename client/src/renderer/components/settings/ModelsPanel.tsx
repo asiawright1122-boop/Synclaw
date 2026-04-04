@@ -86,6 +86,7 @@ function ModelsPanel({ currentModel }: { currentModel: string | null }) {
   useEffect(() => {
     loadModels()
     loadParams()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const handleSwitch = async (modelId: string) => {

@@ -33,11 +33,6 @@ function truncate(arg: unknown): string {
   return s.length > MAX_ARG_LEN ? s.slice(0, MAX_ARG_LEN) + '...[truncated]' : s
 }
 
-const fmt = (args: unknown[], prefix = '') =>
-  args.length
-    ? `${prefix}${args.map(truncate).join(' ')}`
-    : prefix
-
 const logger = {
   debug: (...args: unknown[]) => log.debug(...args.map(truncate)),
   info:  (...args: unknown[]) => log.info(...args.map(truncate)),

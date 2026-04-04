@@ -63,6 +63,7 @@ export function TaskDetailPanel() {
       setEditingTitle(selectedTask.title)
       setEditingDescription(selectedTask.description)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedTask?.id])
 
   // Auto-scroll logs
