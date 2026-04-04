@@ -55,7 +55,7 @@ const mockElectronAPI = vi.hoisted(() => {
       set: vi.fn().mockImplementation((key: string, value: unknown) => {
         const parts = key.split('.')
         if (parts.length === 1) {
-          ;(data as Record<string, unknown>)[key] = value
+          (data as Record<string, unknown>)[key] = value
         } else {
           let obj: Record<string, unknown> = data as Record<string, unknown>
           for (let i = 0; i < parts.length - 1; i++) {

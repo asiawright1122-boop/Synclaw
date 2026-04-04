@@ -56,7 +56,7 @@ function setupSettingsBridge(): void {
   try {
     // electron-store 的 onDidChange 在值变化时触发回调，传入 (newValue, oldValue)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    ;(settingsStore as any).onDidChange?.('workspace.limitAccess', async (newVal: unknown) => {
+    (settingsStore as any).onDidChange?.('workspace.limitAccess', async (newVal: unknown) => {
       if (newVal === undefined || newVal === null) return
       try {
         const bridge = getGatewayBridge()

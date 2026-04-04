@@ -1,0 +1,10 @@
+dist/
+node_modules/
+e2e/
+release/
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+**/*.spec.tsx
+*.js
+*.cjs

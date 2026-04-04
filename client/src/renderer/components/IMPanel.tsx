@@ -117,7 +117,7 @@ export function ImPanel() {
         Object.assign(chConfig, { type: 'bot', botToken: formToken.trim() })
       }
 
-      ;(patch.channels as Record<string, unknown>)[addingType] = chConfig
+      (patch.channels as Record<string, unknown>)[addingType] = chConfig
 
       const res = await window.openclaw?.config.patch(patch)
       if (res?.success) {
