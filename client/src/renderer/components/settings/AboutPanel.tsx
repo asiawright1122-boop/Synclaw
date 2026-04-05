@@ -86,7 +86,7 @@ function AboutPanel() {
                       <span className="text-xs" style={{ color: 'var(--text-sec)' }}>Team: {signingStatus.teamId}</span>
                     )}
                   </div>
-                  <p className="text-xs" style={{ color: 'var(--text-sec)' }}>已通过 Apple 公证，Gatekeeper 无警告运行</p>
+                  <p className="text-xs" style={{ color: 'var(--text-sec)' }}>已签名 · 公证在 CI 构建时完成（需配置 Apple ID）</p>
                 </div>
               </div>
             )}
