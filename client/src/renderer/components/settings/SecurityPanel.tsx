@@ -6,6 +6,7 @@
  * - 生成加密密钥并提供操作指引
  * - 配置 WEB_API_BASE（环境变量优先，支持 UI 配置）
  * - Sandbox 执行状态展示（联动 limitAccess）
+ * - 安全审计运行与 CVE 结果展示（手动触发）
  */
 import { useState, useEffect, useCallback } from 'react'
 import { Card } from '../ui'
@@ -26,6 +27,17 @@ interface GenerateKeyResult {
   instructions: string
 }
 
+interface AuditFinding {
+  id?: string
+  cve?: string
+  severity?: string
+  title?: string
+  description?: string
+  recommendation?: string
+  raw?: string
+  stderr?: string
+}
+
 function SecurityPanel() {
   const [status, setStatus] = useState<SecurityStatus | null>(null)
   const [loading, setLoading] = useState(true)
@@ -36,6 +48,9 @@ function SecurityPanel() {
   const [webApiSaving, setWebApiSaving] = useState(false)
   const [webApiSaved, setWebApiSaved] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [auditRunning, setAuditRunning] = useState(false)
+  const [auditResults, setAuditResults] = useState<AuditFinding[] | null>(null)
+  const [auditError, setAuditError] = useState<string | null>(null)
 
   const loadStatus = useCallback(async () => {
     try {
@@ -103,6 +118,25 @@ function SecurityPanel() {
     setShowKeyModal(false)
     setKeyResult(null)
     setCopied(false)
+  }
+
+  const handleRunAudit = async () => {
+    setAuditRunning(true)
+    setAuditError(null)
+    setAuditResults(null)
+    try {
+      const res = await window.electronAPI?.security.runAudit()
+      if (res?.success && res.data != null) {
+        const raw = Array.isArray(res.data) ? res.data : [res.data]
+        setAuditResults(raw as AuditFinding[])
+      } else {
+        setAuditError((res as { error?: string })?.error ?? '审计失败')
+      }
+    } catch {
+      setAuditError('审计命令执行失败')
+    } finally {
+      setAuditRunning(false)
+    }
   }
 
   if (loading) {
@@ -322,7 +356,100 @@ function SecurityPanel() {
         </div>
       </Card>
 
-      {/* ── Section C: 安全建议 ── */}
+      {/* ── Section C: 安全审计 ── */}
+      <h2 className="text-sm font-semibold mb-3 mt-6" style={{ color: 'var(--text)' }}>
+        安全审计
+      </h2>
+      <Card>
+        <div className="px-4 py-4 space-y-4">
+          {auditRunning ? (
+            /* ── Loading state ── */
+            <div className="flex items-center gap-3 py-2">
+              <div className="w-5 h-5 rounded-full animate-spin" style={{ border: '2px solid rgba(99,102,241,0.2)', borderTopColor: '#6366f1' }} />
+              <span className="text-sm" style={{ color: 'var(--text-sec)' }}>正在运行安全审计…</span>
+            </div>
+          ) : auditError ? (
+            /* ── Error state ── */
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ background: 'rgba(239,68,68,0.1)' }}>
+                <AlertTriangle className="w-4 h-4" style={{ color: '#ef4444' }} />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-medium" style={{ color: 'var(--text)' }}>审计无法运行</p>
+                <p className="text-xs mt-0.5" style={{ color: 'var(--text-sec)' }}>{auditError}</p>
+              </div>
+            </div>
+          ) : auditResults && auditResults.length > 0 ? (
+            /* ── Results state ── */
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium" style={{ color: 'var(--text)' }}>
+                  发现 {auditResults.length} 项安全风险
+                </span>
+                <button
+                  type="button"
+                  onClick={handleRunAudit}
+                  className="text-xs px-2.5 py-1 rounded-lg font-medium transition-opacity"
+                  style={{ background: 'var(--bg-subtle)', color: 'var(--text-sec)', border: '1px solid var(--border)' }}
+                >
+                  重新审计
+                </button>
+              </div>
+              {auditResults.map((finding, i) => {
+                const raw = finding.raw ?? finding.description ?? JSON.stringify(finding)
+                return (
+                  <div key={i} className="rounded-lg p-3 text-xs" style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border)' }}>
+                    {(finding.cve || finding.id) && (
+                      <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-mono font-semibold mb-1 mr-2"
+                        style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444' }}>
+                        {finding.cve || finding.id}
+                      </span>
+                    )}
+                    <span className="font-medium" style={{ color: 'var(--text)' }}>
+                      {finding.title ?? finding.severity ?? '安全发现'}
+                    </span>
+                    {finding.recommendation && (
+                      <p className="mt-1" style={{ color: 'var(--text-sec)' }}>{finding.recommendation}</p>
+                    )}
+                    {!finding.recommendation && (
+                      <p className="mt-1" style={{ color: 'var(--text-sec)' }}>{raw.length > 200 ? raw.slice(0, 200) + '…' : raw}</p>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          ) : auditResults && auditResults.length === 0 ? (
+            /* ── Clean state ── */
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ background: 'rgba(34,197,94,0.1)' }}>
+                <CheckCircle2 className="w-4 h-4" style={{ color: '#22c55e' }} />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-medium" style={{ color: 'var(--text)' }}>未发现安全风险</p>
+                <p className="text-xs mt-0.5" style={{ color: 'var(--text-sec)' }}>OpenClaw 安全配置符合最佳实践</p>
+              </div>
+            </div>
+          ) : (
+            /* ── Idle state (never run) ── */
+            <div className="space-y-3">
+              <p className="text-xs" style={{ color: 'var(--text-sec)' }}>
+                运行 OpenClaw 安全审计，检查已知漏洞配置和风险项。审计在本地运行，不上传任何数据。
+              </p>
+              <button
+                type="button"
+                onClick={handleRunAudit}
+                className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-white transition-opacity"
+                style={{ background: 'var(--accent1)' }}
+              >
+                <Shield className="w-4 h-4" />
+                运行安全审计
+              </button>
+            </div>
+          )}
+        </div>
+      </Card>
+
+      {/* ── Section D: 安全建议 ── */}
       <h2 className="text-sm font-semibold mb-3 mt-6" style={{ color: 'var(--text)' }}>
         安全建议
       </h2>
