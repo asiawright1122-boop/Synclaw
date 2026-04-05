@@ -39,6 +39,10 @@ jobs:
         run: pnpm test
         working-directory: client
 
+      - name: OpenClaw version health check
+        run: node scripts/check-openclaw-version.mjs
+        working-directory: client
+
   build-main:
     name: Build Main Process
     runs-on: ubuntu-latest

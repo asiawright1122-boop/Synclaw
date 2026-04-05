@@ -755,6 +755,8 @@ const openclaw = {
     /** 保存用户配置的 WEB_API_BASE 到 electron-store */
     setWebApiBase: (url: string): Promise<ApiResponse> =>
       ipcRenderer.invoke('security:setWebApiBase', { url }),
+    /** 运行 openclaw security audit CLI，返回 CVE 审计结果 */
+    runAudit: () => ipcRenderer.invoke('security:runAudit'),
   },
 
   // ── Events ────────────────────────────────────────────────────────

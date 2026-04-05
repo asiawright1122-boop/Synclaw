@@ -195,6 +195,8 @@ export interface ElectronAPI {
       instructions: string
     }>>
     setWebApiBase: (url: string) => Promise<ApiResponse>
+    /** 运行 openclaw security audit CLI，返回 CVE 审计结果 */
+    runAudit: () => Promise<ApiResponse<unknown>>
   }
 }
 
