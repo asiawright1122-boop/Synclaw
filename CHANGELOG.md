@@ -14,6 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **字体隐私保护**: 移除 CSP 中的 `fonts.googleapis.com` 和 `fonts.gstatic.com` CDN 权限；字体已通过 `@fontsource/inter` 本地打包，无外部请求
 - **macOS 公证配置完善**: `electron-builder.yml` 新增 `notarize: tool: notarytool` 配置块；AboutPanel 签名状态说明区分「签名」与「公证」（公证在 CI 构建时完成，需配置 Apple ID）
 - **Gateway Token 安全**: `fetchAuthToken` 在 token 未配置时显式抛出错误而非静默回退空字符串；移除空字符串默认值，缺失 token 时连接流程透明报错
+- **类型安全增强**: `gateway-bridge.ts` 中 `client` 字段改为 `GatewayClient` 类型；`api.ts` 中 `errorData` 类型注解从 `any` 改为 `Record<string, unknown>`，`getUsageStats` 泛型参数从 `any` 改为 `Record<string, unknown>`
+- **Workspace 路径统一**: 新增 `app:getDefaultWorkspacePath` IPC handler（main process），暴露单一路径来源；`WorkspacePanel` 和 `PrivacyPanel` 改为动态读取，移除硬编码路径
 
 ## [1.3.0] — 2026-04-05
 

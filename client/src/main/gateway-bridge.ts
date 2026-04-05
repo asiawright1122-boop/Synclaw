@@ -42,8 +42,7 @@ export type GatewayBridgeOptions = {
 type EventHandler = (event: string, payload: unknown) => void
 
 export class GatewayBridge {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private client: any = null
+  private client: import('openclaw-source').GatewayClient | null = null
   private status: GatewayStatus = 'idle'
   private statusListeners: Array<(s: GatewayStatus) => void> = []
   private eventListeners: EventHandler[] = []

@@ -158,6 +158,8 @@ const electronAPI = {
       ipcRenderer.invoke('app:installUpdate'),
     getSigningStatus: (): Promise<ApiResponse<{ status: 'signed' | 'unsigned' | 'not_macos' | 'unknown'; teamId?: string }>> =>
       ipcRenderer.invoke('app:getSigningStatus') as Promise<ApiResponse<{ status: 'signed' | 'unsigned' | 'not_macos' | 'unknown'; teamId?: string }>>,
+    getDefaultWorkspacePath: (): Promise<ApiResponse<string>> =>
+      ipcRenderer.invoke('app:getDefaultWorkspacePath'),
   },
 
   landing: {

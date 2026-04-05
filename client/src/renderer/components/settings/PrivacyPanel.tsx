@@ -8,6 +8,7 @@ import { useSettingsStore } from '../../stores/settingsStore'
 
 function PrivacyPanel() {
   const [plan, setPlanState] = useState(false)
+  const [wsPath, setWsPath] = useState('')
 
   useEffect(() => {
     window.electronAPI?.settings.get().then((res) => {
@@ -17,6 +18,9 @@ function PrivacyPanel() {
           setPlanState(privacy.optimizationPlan)
         }
       }
+    }).catch(() => {})
+    window.electronAPI?.app.getDefaultWorkspacePath().then(res => {
+      if (res?.success && res.data) setWsPath(res.data as string)
     }).catch(() => {})
   }, [])
 
@@ -46,7 +50,7 @@ function PrivacyPanel() {
             className="px-3 py-2 rounded-lg text-sm font-mono border"
             style={{ background: 'var(--bg-subtle)', borderColor: 'var(--border-secondary)' }}
           >
-            ~/.openclaw-synclaw/workspace
+            {wsPath || '加载中...'}
           </div>
         </div>
       </Card>

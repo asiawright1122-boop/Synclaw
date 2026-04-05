@@ -29,6 +29,10 @@ ipcMain.handle('ui:openAvatarCreate', async () => {
   return { success: true }
 })
 
+ipcMain.handle('app:getDefaultWorkspacePath', () => {
+  return path.join(app.getPath('home'), '.openclaw-synclaw', 'workspace')
+})
+
 // ── Window ───────────────────────────────────────────────────────────────
 
 ipcMain.handle('window:minimize', () => {
