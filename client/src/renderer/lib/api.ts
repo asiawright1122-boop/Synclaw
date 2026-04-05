@@ -66,8 +66,8 @@ class ApiClient {
     if (!response.ok) {
       const errorData = json as Record<string, unknown>
       const error: ApiError = {
-        message: (errorData as any).message || (errorData as any).error || `API Error: ${response.status}`,
-        code: (errorData as any).code,
+        message: (errorData as Record<string, unknown>).message as string || (errorData as Record<string, unknown>).error as string || `API Error: ${response.status}`,
+        code: (errorData as Record<string, unknown>).code as string | undefined,
         status: response.status,
       }
       throw new Error(error.message)
@@ -195,25 +195,25 @@ class ApiClient {
     revokeApiKey: (id: string) =>
       this.request<ApiResponse>(`/api-keys/${id}`, { method: 'DELETE' }),
 
-    getUsageStats: () =>
-      this.request<ApiResponse<any>>('/usage').then((res) => {
+    getUsageStats: () => {
+      return this.request<Record<string, unknown>>('/usage').then((res) => {
         if (res.success && res.data) {
-          const d = res.data as any
-          const summary = d.summary ?? {}
-          const byModel = d.byModel ?? []
+          const d = res.data as unknown as Record<string, unknown>
+          const summary = ((d['summary'] as Record<string, unknown>) ?? {}) as Record<string, unknown>
+          const byModel = ((d['byModel'] as Array<Record<string, unknown>>) ?? []) as Array<Record<string, unknown>>
           return {
             success: true,
             data: {
-              sessions: summary.totalSessions ?? 0,
-              messages: summary.totalMessages ?? 0,
+              sessions: (summary['totalSessions'] as number) ?? 0,
+              messages: (summary['totalMessages'] as number) ?? 0,
               inputTokens: 0,
-              outputTokens: summary.totalConsumption ?? 0,
-              models: byModel.map((m: any) => ({
-                id: m.model,
-                name: m.model,
-                messages: m.messages ?? 0,
+              outputTokens: (summary['totalConsumption'] as number) ?? 0,
+              models: byModel.map((m) => ({
+                id: m['model'] as string,
+                name: m['model'] as string,
+                messages: (m['messages'] as number) ?? 0,
                 inputTokens: 0,
-                outputTokens: m.tokens ?? 0,
+                outputTokens: (m['tokens'] as number) ?? 0,
               })),
               period: {
                 start: '',
@@ -222,9 +222,9 @@ class ApiClient {
             },
           } as ApiResponse<UsageStats>
         }
-        return res as ApiResponse<UsageStats>
-      }),
-
+        return res as unknown as ApiResponse<UsageStats>
+      })
+    },
     getProfile: () =>
       this.request<ApiResponse<UserProfile>>('/user/profile').then((res) => res),
 

@@ -148,6 +148,7 @@ export interface ElectronAPI {
     downloadUpdate: () => Promise<ApiResponse>
     installUpdate: () => Promise<ApiResponse>
     getSigningStatus: () => Promise<ApiResponse<{ status: 'signed' | 'unsigned' | 'not_macos' | 'unknown'; teamId?: string }>>
+    getDefaultWorkspacePath: () => Promise<ApiResponse<string>>
   }
   notifications: {
     setEnabled: (enabled: boolean) => Promise<ApiResponse>
