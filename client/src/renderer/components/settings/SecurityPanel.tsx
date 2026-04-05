@@ -5,6 +5,7 @@
  * - 显示 electron-store 加密状态（未加密警告 / 已加密）
  * - 生成加密密钥并提供操作指引
  * - 配置 WEB_API_BASE（环境变量优先，支持 UI 配置）
+ * - Sandbox 执行状态展示（联动 limitAccess）
  */
 import { useState, useEffect, useCallback } from 'react'
 import { Card } from '../ui'
@@ -16,6 +17,7 @@ interface SecurityStatus {
   webApiBaseConfigured: boolean
   webApiBase: string
   webApiBaseFromEnv: boolean
+  sandboxEnabled: boolean
 }
 
 interface GenerateKeyResult {
@@ -188,6 +190,57 @@ function SecurityPanel() {
                     </>
                   )}
                 </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </Card>
+
+      {/* ── Section A2: Sandbox 状态 ── */}
+      <h2 className="text-sm font-semibold mb-3 mt-6" style={{ color: 'var(--text)' }}>
+        执行沙箱
+      </h2>
+      <Card>
+        <div className="px-4 py-4">
+          {(status?.sandboxEnabled) ? (
+            /* ── Sandbox enabled ── */
+            <div className="flex items-start gap-3">
+              <div
+                className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
+                style={{ background: 'rgba(34,197,94,0.1)' }}
+              >
+                <Shield className="w-5 h-5" style={{ color: '#22c55e' }} />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-semibold" style={{ color: 'var(--text)' }}>
+                  沙箱已启用
+                </p>
+                <p className="text-xs mt-1" style={{ color: 'var(--text-sec)' }}>
+                  exec 工具在 Docker 隔离环境中运行，网络访问已禁用，根目录只读。
+                  可在「设置 → 通用」中通过「限制工作区访问」开关管理。
+                </p>
+              </div>
+            </div>
+          ) : (
+            /* ── Sandbox disabled ── */
+            <div className="flex items-start gap-3">
+              <div
+                className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
+                style={{ background: 'rgba(234,179,8,0.1)' }}
+              >
+                <AlertTriangle className="w-5 h-5" style={{ color: '#eab308' }} />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-semibold mb-1" style={{ color: 'var(--text)' }}>
+                  沙箱未启用
+                </p>
+                <p className="text-xs" style={{ color: 'var(--text-sec)' }}>
+                  exec 工具在宿主机直接执行，存在潜在安全风险。
+                  启用「限制工作区访问」后，exec 将在沙箱中隔离运行且网络访问被禁用。
+                </p>
+                <p className="text-xs mt-2" style={{ color: 'var(--text-ter)' }}>
+                  提示：在「设置 → 通用」中开启「限制工作区访问」即可启用沙箱。
+                </p>
               </div>
             </div>
           )}

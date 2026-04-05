@@ -23,6 +23,7 @@ function generateEncryptionKey(): string {
 ipcMain.handle('security:status', async () => {
   try {
     const settings = getAppSettings()
+    const limitAccess = settings.workspace?.limitAccess ?? false
     return {
       success: true,
       data: {
@@ -31,6 +32,7 @@ ipcMain.handle('security:status', async () => {
         webApiBaseConfigured: !!(process.env.WEB_API_BASE || settings.security?.webApiBase),
         webApiBase: settings.security?.webApiBase ?? '',
         webApiBaseFromEnv: !!process.env.WEB_API_BASE,
+        sandboxEnabled: limitAccess, // SBX-04: sandbox status reflected via limitAccess toggle
       },
     }
   } catch (err) {

@@ -436,6 +436,11 @@ export class GatewayBridge {
             // 平衡安全性与功能（主进程需要访问 GUI 资源）
             mode: 'non-main' as const,
             scope: 'session' as const,
+            // Docker 隔离配置（SBX-02, SBX-03）
+            docker: {
+              network: 'none' as const,       // SBX-02: 沙箱内网络完全禁用
+              readOnlyRoot: true as const,    // SBX-03: 根目录只读
+            },
           },
         },
       },
