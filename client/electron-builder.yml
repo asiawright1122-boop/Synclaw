@@ -56,12 +56,15 @@ mac:
   entitlements: build/entitlements.mac.plist
   entitlementsInherit: build/entitlements.mac.plist
   # ── macOS Notarization (Apple 公证) ─────────────────────────────────
-  # electron-builder 24+ reads notarization credentials from environment
-  # variables directly; do not inline Apple credentials in this config.
-  # Supported env sets include:
-  #   APPLE_ID + APPLE_APP_SPECIFIC_PASSWORD + APPLE_TEAM_ID
-  #   APPLE_API_KEY + APPLE_API_KEY_ID + APPLE_API_ISSUER
+  # electron-builder 读取环境变量自动提交公证，无需在此硬编码凭证。
+  # 必须环境变量：APPLE_ID / APPLE_APP_SPECIFIC_PASSWORD / APPLE_TEAM_ID
+  # 支持凭证集 A（Apple ID）：见下方注释
+  # 支持凭证集 B（API Key）：设置 APPLE_API_KEY + APPLE_API_KEY_ID + APPLE_API_ISSUER
+  # autoSubmit: true  — 构建完成后自动提交 Apple 公证，CI 中推荐使用
+  # autoSubmit: false — 仅构建，CI workflow 中单独调用 scripts/notarize.mjs
   # See: https://www.electron.build/mac.html#notarize
+  notarize:
+    tool: notarytool
 
 win:
   target:
