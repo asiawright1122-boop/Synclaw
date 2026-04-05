@@ -35,6 +35,10 @@ jobs:
         run: pnpm run lint
         working-directory: client
 
+      - name: Unit tests
+        run: pnpm test
+        working-directory: client
+
   build-main:
     name: Build Main Process
     runs-on: ubuntu-latest
@@ -100,7 +104,6 @@ jobs:
     name: E2E Tests
     runs-on: macos-latest
     needs: [build-renderer]
-    if: false  # E2E requires API key + Gateway — run locally with: cd client && pnpm exec playwright test
     steps:
       - uses: actions/checkout@v4
 

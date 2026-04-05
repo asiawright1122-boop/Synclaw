@@ -1,11 +1,119 @@
-# ROADMAP.md — SynClaw v1.3
+# ROADMAP.md — SynClaw v1.4
 
-**v1.2 Archive:** [v1.2 Milestone Archive](./milestones/v1.2-MILESTONE-ARCHIVE.md) — 27/32 requirements satisfied
+**v1.3 Archive:** [v1.3 Milestone Archive](./milestones/v1.3-MILESTONE-ARCHIVE.md) — 5/5 phases, 23/23 requirements ✅
 
-**v1.3 Archive:** [v1.3 Milestone Archive](./milestones/v1.3-MILESTONE-ARCHIVE.md) — 23/23 requirements satisfied ✅
+**Current milestone:** v1.4 安全加固冲刺 (Security Hardening Sprint) — ⬜ IN PROGRESS
+**Previous milestone:** v1.3 — [Archive](./milestones/v1.3-MILESTONE-ARCHIVE.md)
 
-**Current milestone:** v1.3 首发就绪冲刺 (Launch-Ready Sprint) — ✅ COMPLETE
-**Previous milestone:** v1.2 — [Archive](./milestones/v1.2-MILESTONE-ARCHIVE.md)
+---
+
+## Phases
+
+- [ ] **Phase 15: SHELL-SECURITY** — shell:openExternal 协议白名单
+- [ ] **Phase 16: SANDBOX** — OpenClaw Sandbox 完整对接
+- [ ] **Phase 17: AUDIT** — Security Audit UI + CI 版本扫描
+- [ ] **Phase 18: FONTS** — 移除 Google Fonts CDN
+- [ ] **Phase 19: NOTARY** — macOS 公证提交（需用户 Apple ID）
+
+---
+
+## Phase Details
+
+### Phase 15: SHELL-SECURITY
+
+**Goal:** 修复 shell:openExternal 协议白名单，防止 `javascript:` 和 `data:` 协议攻击。
+
+**Depends on:** None (foundation work)
+
+**Requirements:** SHELL-01, SHELL-02, SHELL-03, SHELL-04
+
+**Success Criteria** (what must be TRUE):
+1. `shell:openExternal('javascript:alert(1)')` 被白名单拦截，不打开任何窗口
+2. `shell:openExternal('data:text/html,<script>alert(1)</script>')` 被白名单拦截
+3. `shell:openExternal('https://example.com')` 正常打开
+4. `shell:openExternal('mailto:test@example.com')` 正常打开
+5. 白名单拦截时显示 toast 提示用户
+
+---
+
+### Phase 16: SANDBOX
+
+**Goal:** 对接 OpenClaw Sandbox 配置，exec 工具在子进程隔离运行，网络访问禁用。
+
+**Depends on:** None (foundation work)
+
+**Requirements:** SBX-01, SBX-02, SBX-03, SBX-04
+
+**Success Criteria** (what must be TRUE):
+1. Gateway 启动时应用 sandbox config（mode: non-main）
+2. 沙箱内网络访问被禁用
+3. 沙箱内根目录为只读
+4. SecurityPanel 显示 Sandbox 开关，默认开启
+
+---
+
+### Phase 17: AUDIT
+
+**Goal:** 对接 `openclaw security audit` CLI，在 SynClaw UI 中展示安全审计结果。
+
+**Depends on:** Phase 15 (SHELL-SECURITY)
+
+**Requirements:** AUD-01, AUD-02, AUD-03
+
+**Success Criteria** (what must be TRUE):
+1. 运行时调用 `openclaw security audit --json` 并解析输出
+2. SecurityPanel 新增「安全审计」卡片展示 CVE 影响评估
+3. CI 中运行 OpenClaw 版本检查，检查已知漏洞版本
+
+---
+
+### Phase 18: FONTS
+
+**Goal:** 移除 Google Fonts CDN 加载，保护用户隐私。
+
+**Depends on:** None (foundation work)
+
+**Requirements:** FNT-01, FNT-02
+
+**Success Criteria** (what must be TRUE):
+1. `globals.css` 和所有组件中无 Google Fonts CDN import
+2. 使用系统字体栈或打包字体作为 fallback
+
+---
+
+### Phase 19: NOTARY
+
+**Goal:** 完成 macOS 公证，让 SynClaw 通过 Gatekeeper 检查。
+
+**Depends on:** Phase 15 (SHELL-SECURITY)
+
+**Requirements:** NOT-01, NOT-02
+
+**Success Criteria** (what must be TRUE):
+1. `electron-builder` 使用用户提供的 Apple ID 提交公证
+2. 公证完成后 `.app` 包通过 `spctl -a -t exec -vv` Gatekeeper 验证
+
+---
+
+## Progress Table
+
+| Phase | Name | Requirements | Status | Completed |
+|-------|------|-------------|--------|-----------|
+| 10. TEST-UNIT | Unit tests | TEST-01–06 | ✅ COMPLETED | 2026-04-01 |
+| 11. TEST-E2E | E2E tests | TEST-07–08 | ✅ COMPLETED | 2026-04-01 |
+| 12. UX-POLISH | UX polish | UX-01–09 | ✅ COMPLETED | 2026-04-01 |
+| 13. SECURITY | Security hardening | SEC-01–04 | ✅ COMPLETED | 2026-04-01 |
+| 14. DEPLOY | Distribution | DEPLOY-01–03 | ✅ COMPLETED | 2026-04-01 |
+| 15. SHELL-SECURITY | Protocol whitelist | SHELL-01–04 | ⬜ PENDING | — |
+| 16. SANDBOX | Sandbox integration | SBX-01–04 | ⬜ PENDING | — |
+| 17. AUDIT | Security audit UI | AUD-01–03 | ⬜ PENDING | — |
+| 18. FONTS | Fonts privacy | FNT-01–02 | ⬜ PENDING | — |
+| 19. NOTARY | macOS notarization | NOT-01–02 | ⬜ PENDING | — |
+
+---
+
+*Roadmap created: 2026-04-05 for v1.4 安全加固冲刺*
+
 
 ---
 

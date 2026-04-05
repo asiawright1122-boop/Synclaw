@@ -13,18 +13,17 @@ export default defineConfig({
     headless: true,
   },
   webServer: {
-    command: 'npm run dev',
+    command: 'pnpm run dev',
     url: 'http://localhost:5173',
     reuseExistingServer: true,
     timeout: 120_000,
   },
+  setupFiles: ['./e2e/gateway-mock.cjs'],
   projects: [
     {
       name: 'chromium',
       use: {
         viewport: { width: 1280, height: 720 },
-        // Use system Chrome directly — bypasses playwright browser download in sandbox
-        executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
         launchOptions: {
           args: [
             '--no-sandbox',
