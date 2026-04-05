@@ -187,6 +187,7 @@ export interface ElectronAPI {
       webApiBaseConfigured: boolean
       webApiBase: string
       webApiBaseFromEnv: boolean
+      sandboxEnabled: boolean
     }>>
     generateKey: () => Promise<ApiResponse<{
       key: string
