@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **协议白名单安全加固**: `shell:openExternal` 收紧协议控制，仅允许 `https:` 和 `mailto:`，明确拦截 `javascript:`、`data:`、`file:`、`ftp:`、`vbscript:` 等危险协议；被拦截时通过系统桌面通知告知用户，并记录结构化安全审计日志
+
 ## [1.3.0] — 2026-04-05
 
 ### Added

@@ -136,7 +136,7 @@ const electronAPI = {
   shell: {
     openPath: (filePath: string): Promise<ApiResponse> =>
       ipcRenderer.invoke('shell:openPath', filePath),
-    openExternal: (url: string): Promise<void> =>
+    openExternal: (url: string): Promise<ApiResponse> =>
       ipcRenderer.invoke('shell:openExternal', url),
     showItemInFolder: (filePath: string): Promise<void> =>
       ipcRenderer.invoke('shell:showItemInFolder', filePath),

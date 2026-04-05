@@ -4,7 +4,7 @@
  * through path-validation.ts to prevent bypass of the workspace sandbox.
  */
 
-import { ipcMain, BrowserWindow, dialog, shell, app } from 'electron'
+import { ipcMain, BrowserWindow, dialog, shell, app, Notification } from 'electron'
 import { downloadUpdate, installUpdate } from '../updater.js'
 import logger from '../logger.js'
 import { validatePath } from './path-validation.js'
@@ -29,7 +29,7 @@ ipcMain.handle('ui:openAvatarCreate', async () => {
   return { success: true }
 })
 
-// ── Window ────────────────────────────────────────────────────────────────
+// ── Window ───────────────────────────────────────────────────────────────
 
 ipcMain.handle('window:minimize', () => {
   BrowserWindow.getFocusedWindow()?.minimize()
@@ -60,11 +60,11 @@ ipcMain.handle('window:toggleFullScreen', () => {
   return { success: true }
 })
 
-// ── Dialogs ────────────────────────────────────────────────────────────────
+// ── Dialogs ───────────────────────────────────────────────────────────────
 
 const DIALOG_ALLOWED_PROPERTIES: Record<string, string[]> = {
   open: ['title', 'defaultPath', 'filters', 'properties', 'buttonLabel', 'message', 'label'],
-  save: ['title', 'defaultPath', 'filters', 'buttonLabel', 'message', 'showsTagField', 'tagField'],
+  save: ['title', 'defaultPath', 'filters', 'buttonLabel', 'showsTagField', 'tagField'],
 }
 
 function sanitizeOpenDialogOptions(opts?: Electron.OpenDialogOptions): Electron.OpenDialogOptions | undefined {
@@ -74,7 +74,6 @@ function sanitizeOpenDialogOptions(opts?: Electron.OpenDialogOptions): Electron.
   for (const key of allowed) {
     if (key in opts) sanitized[key] = (opts as Record<string, unknown>)[key]
   }
-  // Enforce safe property values
   const props = sanitized.properties as string[] | undefined
   if (props) {
     const allowedProps = new Set(['openFile', 'openDirectory', 'multiSelections', 'showHiddenFiles', 'treatPackageAsDirectory'])
@@ -112,7 +111,13 @@ ipcMain.handle('dialog:selectDirectory', async () => {
   }
 })
 
-// ── Shell ────────────────────────────────────────────────────────────────
+// ── Shell ───────────────────────────────────────────────────────────────
+
+// Allowed external URL protocols (deny everything else)
+const ALLOWED_EXTERNAL_PROTOCOLS = new Set(['https:', 'mailto:'])
+
+// Known dangerous protocols — logged with extra context when blocked
+const DANGEROUS_PROTOCOLS = new Set(['javascript:', 'data:', 'file:', 'ftp:', 'vbscript:'])
 
 function getAuthSettings() {
   const { authorizedDirs, workspace: { limitAccess } } = getAppSettings()
@@ -133,17 +138,41 @@ ipcMain.handle('shell:openPath', async (_event, filePath: string) => {
 })
 
 ipcMain.handle('shell:openExternal', async (_event, url: string) => {
-  try {
-    let parsedUrl: URL
-    try { parsedUrl = new URL(url) }
-    catch { return { success: false, error: 'Invalid URL format' } }
-    if (!['https:', 'http:', 'mailto:'].includes(parsedUrl.protocol)) {
-      return { success: false, error: `Disallowed URL protocol: ${parsedUrl.protocol}` }
+  let parsedUrl: URL
+  try { parsedUrl = new URL(url) }
+  catch { return { success: false, error: 'Invalid URL format' } }
+
+  const protocol = parsedUrl.protocol
+
+  if (!ALLOWED_EXTERNAL_PROTOCOLS.has(protocol)) {
+    const isDangerous = DANGEROUS_PROTOCOLS.has(protocol)
+
+    log.warn(`[shell:openExternal] BLOCKED url="${url}" protocol="${protocol}" dangerous=${isDangerous}`)
+
+    if (Notification.isSupported()) {
+      const n = new Notification({
+        title: '链接被安全策略拦截',
+        body: `已被阻止: ${protocol}//`,
+        silent: true,
+      })
+      n.on('failed', (_ev, err) => {
+        log.warn(`[shell:openExternal] Notification failed: ${err}`)
+      })
+      n.show()
     }
+
+    return {
+      success: false,
+      error: 'protocol_blocked',
+      blockedProtocol: protocol,
+    }
+  }
+
+  try {
     await shell.openExternal(url)
     return { success: true }
   } catch (err) {
-    log.error('shell:openExternal failed:', err)
+    log.error('[shell:openExternal] shell.openExternal failed:', err)
     return { success: false, error: String(err) }
   }
 })
@@ -197,7 +226,6 @@ ipcMain.handle('app:getSigningStatus', async (): Promise<{ success: boolean; dat
   }
   try {
     const { execSync } = await import('node:child_process')
-    // Check the running app's own signature
     const execPath = app.isPackaged ? process.execPath : ''
     if (!execPath) {
       return { success: true, data: { status: 'unknown' } }
@@ -206,7 +234,6 @@ ipcMain.handle('app:getSigningStatus', async (): Promise<{ success: boolean; dat
       const out = execSync(`codesign -d "${execPath}" 2>&1 || true`, { timeout: 5000, encoding: 'utf-8' })
       const isSigned = !out.includes('no such') && !out.includes('invalid')
       if (isSigned) {
-        // Try to extract team ID from output
         const teamMatch = out.match(/Team=(\S+)/)
         return { success: true, data: { status: 'signed', teamId: teamMatch?.[1] } }
       }
