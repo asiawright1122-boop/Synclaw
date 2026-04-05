@@ -53,8 +53,8 @@ export class GatewayBridge {
   constructor(opts: GatewayBridgeOptions = {}) {
     this.opts = {
       url: opts.url ?? 'ws://127.0.0.1:18789',
-      token: opts.token ?? '',
-      bootstrapToken: opts.bootstrapToken ?? '',
+      token: opts.token,
+      bootstrapToken: opts.bootstrapToken,
       startupTimeoutMs: opts.startupTimeoutMs ?? 30_000,
       readyCheckIntervalMs: opts.readyCheckIntervalMs ?? 500,
     }
@@ -313,10 +313,10 @@ export class GatewayBridge {
           return token
         }
       }
-      log.warn('所有候选配置文件中均未找到 gateway.auth.token，尝试无认证连接')
-      return ''
+      log.warn('所有候选配置文件中均未找到 gateway.auth.token')
+      throw new Error('Gateway auth token 未配置。请在 OpenClaw 配置文件中设置 gateway.auth.token，或通过 SynClaw 设置界面提供 Token。')
     } catch (err) {
-      log.warn('获取 auth token 失败，将使用无认证连接:', err)
+      log.error('获取 auth token 失败:', err)
       return ''
     }
   }
