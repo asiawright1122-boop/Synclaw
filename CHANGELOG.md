@@ -7,6 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.0] — 2026-04-05
+
+### Added
+- **测试体系**: Vitest + @testing-library/react + jsdom 配置完成，46 个单元测试覆盖 5 个核心 stores/hooks（chatStore、settingsStore、avatarStore、execApprovalStore、useTTS）
+- **Playwright E2E**: Gateway mock（CommonJS）注入，支持 CI 环境无 Gateway 运行，7 个 E2E 测试用例覆盖聊天流程、Enter 键行为、Gateway API 集成
+- **空状态引导**: TaskBoard（"开启你的第一个任务"）、IMPanel（"开始新对话"）、AvatarListPanel（5 个模板快速创建）、McpPanel（快速模板入口）
+- **加载骨架屏**: ChatView AI 响应期间显示 user + 2 个 assistant 气泡骨架动画
+- **全局快捷键**: Cmd+,（打开设置）、Cmd+Shift+S（侧栏展开/收起）、Cmd+/（快捷键参考弹窗）、Escape（LIFO 栈顺序关闭弹窗）
+- **安全面板**: electron-store STORE_ENCRYPTION_KEY 加密状态检测、密钥生成模态框、加密迁移引导
+- **WEB_API_BASE 降级**: 未配置时不崩溃，web:register/report-usage/revoke handlers 返回 `{ skipped: true }`
+- **签名状态检测**: Settings→About 面板通过 `codesign -d` 实时显示 macOS 签名状态（已签名/未签名/非 macOS）
+
+### Fixed
+- **OpenClaw 版本健康检查**: 启动时自动读取 package.json 验证版本 ≥ 2026.3.12（CVE GHSA-rqpp-rjj8-7wv8 补丁版本）
+- **Playwright CI 启用**: 移除 `if: false` 禁用，补充 gateway-mock setupFiles，CI 完整覆盖 lint + type check + Vitest + E2E
+
+## [1.2.0] — 2026-04-01
+
+### Added
+- **Exec 审批弹窗**: Gateway exec event → chatStore → execApprovalStore → Modal → Gateway resolve，完整链路 384 行代码
+- **WEB landing page 集成**: Next.js standalone server 接入 Electron BrowserView，Sidebar "关于" 入口
+- **TTS / Talk Mode UI**: VoiceModePanel + useTTS + useSpeechRecognition hooks + TtsPanel 设置页
+- **Avatar 多分身体系**: AvatarListPanel + AvatarEditModal + avatarStore + 5 个内置模板 + E2E 测试
+- **Exec 审批增强**: "仅本次批准" 按钮 + 超时拒绝 reason 字段
+- **TTS 流式同步增强**: currentWordIndex word-sync 高亮 + ontimeupdate + VoiceModePanel 逐词渲染
+
+### Fixed
+- **WEB 集成验证**: Gateway 通信架构确认安全，主题语义一致
+- **签名配置指南**: README.md 完整签名配置说明（APPLE_ID / APPLE_APP_SPECIFIC_PASSWORD / APPLE_TEAM_ID）
+
+### Changed
+- **macOS 公证**: electron-builder 配置 `notarize: autoSubmit: true`，用户自助配置 Apple ID
+
 ## [1.0.0] — 2026-03-25
 
 ### Added

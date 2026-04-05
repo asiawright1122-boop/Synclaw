@@ -6,6 +6,23 @@ import logger from './logger.js'
 
 const log = logger.scope('openclaw')
 
+// Known CVE-patched versions. GHSA-rqpp-rjj8-7wv8 (CVSS 10.0) fixed in >= 2026.3.12
+const MIN_VERSION = '2026.3.12'
+
+function parseVersion(v: string): number[] {
+  return v.replace(/^v/, '').split('.').map(Number)
+}
+
+function isVersionAtLeast(installed: string, minimum: string): boolean {
+  const a = parseVersion(installed)
+  const b = parseVersion(minimum)
+  for (let i = 0; i < Math.max(a.length, b.length); i++) {
+    if ((a[i] ?? 0) > (b[i] ?? 0)) return true
+    if ((a[i] ?? 0) < (b[i] ?? 0)) return false
+  }
+  return true
+}
+
 export class OpenClawProcess {
   private process: ChildProcess | null = null
   private openclawPath: string = ''
@@ -14,20 +31,27 @@ export class OpenClawProcess {
     this.initPath()
   }
 
-  private findOpenClawPath(startDir: string): string | null {
-    let current = startDir
-    for (let i = 0; i < 4; i++) {
-      const candidate = path.join(current, 'resources', 'openclaw-source')
-      if (fs.existsSync(candidate)) {
-        return candidate
+  private checkVersion(): void {
+    try {
+      const pkgPath = path.join(this.openclawPath, 'package.json')
+      if (!fs.existsSync(pkgPath)) {
+        log.warn('[security] OpenClaw package.json not found — skipping version check')
+        return
       }
-      const parent = path.dirname(current)
-      if (parent === current) {
-        break
+      const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'))
+      const installed = pkg.version ?? 'unknown'
+      if (!isVersionAtLeast(installed, MIN_VERSION)) {
+        log.error(
+          `[security] OpenClaw v${installed} is below minimum recommended ` +
+          `v${MIN_VERSION} (GHSA-rqpp-rjj8-7wv8 patch). ` +
+          'Run: cd client && pnpm run openclaw:update'
+        )
+      } else {
+        log.info(`[security] OpenClaw v${installed} >= v${MIN_VERSION} — CVE check passed`)
       }
-      current = parent
+    } catch (err) {
+      log.warn('[security] Could not read OpenClaw version:', err)
     }
-    return null
   }
 
   private initPath() {
@@ -41,6 +65,7 @@ export class OpenClawProcess {
         path.join(appPath, 'resources', 'openclaw-source')
     }
     log.info('OpenClaw 路径:', this.openclawPath)
+    this.checkVersion()
   }
 
   async start(): Promise<void> {

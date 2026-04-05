@@ -1,19 +1,19 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.3
-milestone_name: milestone
-status: complete
-last_updated: "2026-04-01T21:52:00.000Z"
+milestone: v1.4
+milestone_name: 安全加固冲刺
+status: active
+last_updated: "2026-04-05T00:00:00.000Z"
 progress:
-  total_phases: 5
-  completed_phases: 5
-  total_plans: 5
-  completed_plans: 5
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
 ---
 
-# STATE.md — SynClaw v1.3
+# STATE.md — SynClaw v1.4 安全加固冲刺
 
-**Updated:** 2026-04-01
+**Updated:** 2026-04-05
 
 ---
 
@@ -21,24 +21,17 @@ progress:
 
 **Project:** SynClaw — Electron desktop client for OpenClaw Gateway
 **Core Value:** 用户可以通过自然语言对话，安全地操作用户本地文件系统，且数据永不离开用户设备。
-**Current Milestone:** v1.3 首发就绪冲刺 (Launch-Ready Sprint)
-**Target:** Ship a production-ready SynClaw with testing, security hardening, UX polish, and distribution readiness
+**Current Milestone:** v1.4 安全加固冲刺
+**Target:** 消除剩余安全风险，对接 OpenClaw Sandbox，补充安全运营能力
 
 ---
 
 ## Current Position
 
-Phase: 14 (deploy) — COMPLETED ✓
-Plan: 1 of 1
-
-## Performance Metrics
-
-| Metric | Value | Notes |
-|--------|-------|-------|
-| Total Phases | 5 | Phase 10-14 |
-| Total Requirements | 23 | 100% mapped |
-| Phases Completed | 5 | 100% |
-| Requirements Completed | 23 | 100% |
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-04-05 — Milestone v1.4 started
 
 ---
 
@@ -46,53 +39,49 @@ Plan: 1 of 1
 
 ### Key Decisions
 
-| Decision | Rationale | Status |
+|| Decision | Rationale | Status |
 |----------|-----------|--------|
 | Two-tier shortcuts system | Global (main) for Cmd+,, Context (renderer) for Esc/Cmd+Shift+S | ✅ Implemented (Phase 12) |
 | Mock Gateway for E2E | No real API key needed in CI | ✅ Implemented (Phase 11) |
 | Component-level empty states | Per-panel EmptyState sub-components | ✅ Implemented (Phase 12) |
 | Encryption: UX flow first, Keychain later | No keytar in v1.3, use env var | ✅ Implemented (Phase 13) |
 | WEB_API_BASE optional | Web features silently skip when unset | ✅ Implemented (Phase 13) |
+| Version health check at startup | Read package.json, warn if < 2026.3.12 | ✅ Implemented (v1.3 debt fix) |
 
 ### Known Blockers
 
-| Blocker | Impact | Resolution |
-|---------|--------|------------|
-| None | - | Roadmap created, ready for planning |
+|| Blocker | Impact | Resolution |
+|---------|--------|--------|------------|
+| macOS 公证需 Apple ID | Cannot complete notarization without user credentials | User needs to provide Apple Developer ID |
 
 ### Research Flags
 
-| Flag | Phase | Notes |
-|------|-------|-------|
-| Vitest mocking complexity | 10 | window.openclaw must be mocked before store tests |
-| Escape handler LIFO | 12 | Must close topmost modal first |
-| Shortcut conflicts | 12 | Avoid Cmd+H, Cmd+M, Cmd+Tab, Cmd+Space (system-reserved) |
-| electron-store migration bug | 13 | Library tracks its own version, use explicit checks |
-| Playwright flaky tests | 11 | Use waitForResponse over waitForTimeout |
+|| Flag | Phase | Notes |
+|------|-------|-------|-------|
+| Sandbox config API shape | 15 | Need to verify OpenClaw sandbox field names |
+| Security audit CLI output | 16 | Need to verify `openclaw security audit --json` format |
+| Google Fonts CDN | 17 | Need to audit all font imports in globals.css |
 
 ---
 
 ## Session Continuity
 
-**Last Session:** 2026-04-01 — v1.3 milestone COMPLETE (5/5 phases, 23/23 requirements)
-**Next Action:** Run `pnpm run electron:build:mac` to build the app; then proceed to release checklist
-**Workspace:** `/Users/kaka/Desktop/synclaw`
-**Branch:** (current branch)
+**Last Session:** 2026-04-05 — v1.3 milestone complete; starting v1.4
+**Next Action:** Define requirements for v1.4
+**Workspace:** `/Users/kaka/Dev/synclaw`
 
 ---
 
 ## Phase Dependencies
 
 ```
-Phase 10 (TEST-UNIT)      ✅ COMPLETED
-Phase 11 (TEST-E2E)       ✅ COMPLETED (depends on 10)
-Phase 12 (UX-POLISH)      ✅ COMPLETED (depends on 10)
-Phase 13 (SECURITY)       ✅ COMPLETED (depends on 10)
-Phase 14 (DEPLOY)          ✅ COMPLETED (depends on 13)
+Phase 15 (SHELL-SECURITY)      ⬜ Not started
+Phase 16 (SANDBOX)              ⬜ Not started
+Phase 17 (AUDIT)               ⬜ Not started
+Phase 18 (FONTS)               ⬜ Not started
+Phase 19 (NOTARY)              ⬜ Not started (P0, user action required)
 ```
-
-**All phases complete — v1.3 milestone finished.**
 
 ---
 
-*State last updated: 2026-04-01*
+*State last updated: 2026-04-05*
