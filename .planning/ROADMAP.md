@@ -9,7 +9,7 @@
 
 ## Phases
 
-- [ ] **Phase 15: SHELL-SECURITY** — shell:openExternal 协议白名单
+- [x] **Phase 15: SHELL-SECURITY** — shell:openExternal 协议白名单 ✅
 - [ ] **Phase 16: SANDBOX** — OpenClaw Sandbox 完整对接
 - [ ] **Phase 17: AUDIT** — Security Audit UI + CI 版本扫描
 - [ ] **Phase 18: FONTS** — 移除 Google Fonts CDN
@@ -104,7 +104,7 @@
 | 12. UX-POLISH | UX polish | UX-01–09 | ✅ COMPLETED | 2026-04-01 |
 | 13. SECURITY | Security hardening | SEC-01–04 | ✅ COMPLETED | 2026-04-01 |
 | 14. DEPLOY | Distribution | DEPLOY-01–03 | ✅ COMPLETED | 2026-04-01 |
-| 15. SHELL-SECURITY | Protocol whitelist | SHELL-01–04 | ⬜ PENDING | — |
+| 15. SHELL-SECURITY | Protocol whitelist | SHELL-01–04 | ✅ COMPLETED | 2026-04-05 |
 | 16. SANDBOX | Sandbox integration | SBX-01–04 | ⬜ PENDING | — |
 | 17. AUDIT | Security audit UI | AUD-01–03 | ⬜ PENDING | — |
 | 18. FONTS | Fonts privacy | FNT-01–02 | ⬜ PENDING | — |

@@ -136,7 +136,7 @@ export interface ElectronAPI {
   }
   shell: {
     openPath: (filePath: string) => Promise<string>
-    openExternal: (url: string) => Promise<void>
+    openExternal: (url: string) => Promise<ApiResponse>
     showItemInFolder: (filePath: string) => Promise<void>
     expandTilde: (inputPath: string) => Promise<string>
   }
