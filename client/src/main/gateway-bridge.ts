@@ -41,6 +41,13 @@ export type GatewayBridgeOptions = {
 
 type EventHandler = (event: string, payload: unknown) => void
 
+const DEFAULT_REQUEST_TIMEOUT_MS = 10_000 // 10 seconds
+const SHOULD_RETRY_METHODS = new Set([
+  'agent', 'chat.send', 'chat.abort',
+  'exec.approval.request', 'exec.approval.resolve',
+  'file.read', 'file.write', 'file.delete', 'file.mkdir',
+])
+
 // ── Typed interfaces for dynamic GatewayClient ──────────────────────
 // Avoids `any` when calling client.request<T>() after dynamic import
 
@@ -184,16 +191,63 @@ export class GatewayBridge {
    * @param params  请求参数
    * @param opts.expectFinal  是否等待流式方法的最终响应（默认 false）
    * @param opts.timeoutMs    超时（ms），null 表示无限
+   * @param opts.retry        是否失败后重试 1 次（默认 false）
    */
   async request<T = Record<string, unknown>>(
     method: string,
     params?: unknown,
-    opts: { expectFinal?: boolean; timeoutMs?: number | null } = {},
+    opts: { expectFinal?: boolean; timeoutMs?: number | null; retry?: boolean } = {},
   ): Promise<T> {
-    if (!this.client) {
-      throw new Error('Gateway 未连接，请先调用 connect()')
+    const requestId = crypto.randomUUID()
+    const logPrefix = `[req:${requestId.slice(0, 8)}]`
+    const timeout = opts.timeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS
+    const shouldRetry = opts.retry ?? SHOULD_RETRY_METHODS.has(method)
+
+    log.debug(`${logPrefix} ${method} called`, { params })
+
+    const attempt = async (attemptNum: number): Promise<T> => {
+      try {
+        const result = await this.requestWithTimeout<T>(method, params, opts, requestId, logPrefix, timeout)
+        return result
+      } catch (err) {
+        if (attemptNum === 0 && shouldRetry) {
+          log.warn(`${logPrefix} ${method} failed (attempt 1), retrying once...`, err)
+          return this.requestWithTimeout<T>(method, params, opts, requestId, logPrefix, timeout)
+        }
+        log.error(`${logPrefix} ${method} failed after ${attemptNum + 1} attempt(s):`, err)
+        throw err
+      }
     }
-    return this.client.request<T>(method, params, opts)
+
+    return attempt(0)
+  }
+
+  private async requestWithTimeout<T>(
+    method: string,
+    params: unknown,
+    opts: { expectFinal?: boolean },
+    requestId: string,
+    logPrefix: string,
+    timeoutMs: number,
+  ): Promise<T> {
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => {
+        reject(new Error(`Gateway request timed out after ${timeoutMs}ms: ${method}`))
+      }, timeoutMs)
+
+      const rawPromise = this.client!.request<T>(method, params, opts)
+
+      rawPromise
+        .then((result) => {
+          clearTimeout(timer)
+          log.debug(`${logPrefix} ${method} resolved`)
+          resolve(result)
+        })
+        .catch((err) => {
+          clearTimeout(timer)
+          reject(err)
+        })
+    })
   }
 
   // ── 状态 ─────────────────────────────────────────────────────────────
