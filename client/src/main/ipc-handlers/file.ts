@@ -225,23 +225,20 @@ ipcMain.handle('file:watch', async (event, dirPath: string) => {
     if (fileWatchers.has(dirPath)) {
       return { success: true, data: 'already watching' }
     }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const watcher = (fs.watch as (a: string, b: object, c: (e: string, f: string | null) => void) => any)(
-      dirPath,
-      { recursive: true },
-      (eventType: string, filename: string | null) => {
-        const existing = pendingWatchEvents.get(dirPath)
-        if (existing) clearTimeout(existing)
-        const timer = setTimeout(() => {
-          pendingWatchEvents.delete(dirPath)
-          const win = BrowserWindow.fromWebContents(event.sender)
-          if (win) {
-            win.webContents.send('file:changed', { dirPath, event: eventType, filename })
-          }
-        }, WATCH_DEBOUNCE_MS)
-        pendingWatchEvents.set(dirPath, timer)
-      },
-    )
+    type FsWatchCallback = (eventType: string, filename: string | null) => void
+    const onChange: FsWatchCallback = (eventType, filename) => {
+      const existing = pendingWatchEvents.get(dirPath)
+      if (existing) clearTimeout(existing)
+      const timer = setTimeout(() => {
+        pendingWatchEvents.delete(dirPath)
+        const win = BrowserWindow.fromWebContents(event.sender)
+        if (win) {
+          win.webContents.send('file:changed', { dirPath, event: eventType, filename })
+        }
+      }, WATCH_DEBOUNCE_MS)
+      pendingWatchEvents.set(dirPath, timer)
+    }
+    const watcher = fs.watch(dirPath, { recursive: true }, onChange)
     fileWatchers.set(dirPath, watcher)
     return { success: true }
   } catch (err) {

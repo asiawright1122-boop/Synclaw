@@ -10,6 +10,10 @@ import logger from '../logger.js'
 const log = logger.scope('gateway')
 function g() { return getGatewayBridge() }
 
+// ── Shared response type ───────────────────────────────────────────────────
+
+type ApiResponse<T = unknown> = { success: boolean; data?: T; error?: string }
+
 // ── Unified handler factory ───────────────────────────────────────────────
 
 function gw<T = unknown>(
@@ -30,19 +34,19 @@ function gw<T = unknown>(
 
 // ── Lifecycle ──────────────────────────────────────────────────────────────
 
-ipcMain.handle('openclaw:status', () => g().getStatus())
+ipcMain.handle('openclaw:status', (): ReturnType<typeof g.getStatus> => g().getStatus())
 
-ipcMain.handle('openclaw:connect', async () => {
+ipcMain.handle('openclaw:connect', async (): Promise<ApiResponse> => {
   try { await g().connect(); return { success: true } }
   catch (err) { log.error('connect failed:', err); return { success: false, error: String(err) } }
 })
 
-ipcMain.handle('openclaw:disconnect', async () => {
+ipcMain.handle('openclaw:disconnect', async (): Promise<ApiResponse> => {
   try { await g().disconnect(); return { success: true } }
   catch (err) { log.error('disconnect failed:', err); return { success: false, error: String(err) } }
 })
 
-ipcMain.handle('openclaw:reconnect', async () => {
+ipcMain.handle('openclaw:reconnect', async (): Promise<ApiResponse> => {
   try { await g().reconnect(); return { success: true } }
   catch (err) { log.error('reconnect failed:', err); return { success: false, error: String(err) } }
 })
@@ -67,7 +71,7 @@ gw('openclaw:channels:logout', 'channels.logout')
 
 // ── Agent ─────────────────────────────────────────────────────────────────
 
-ipcMain.handle('openclaw:agent', async (_event, params: Record<string, unknown> = {}) => {
+ipcMain.handle('openclaw:agent', async (_event, params: Record<string, unknown> = {}): Promise<ApiResponse> => {
   try {
     const result = await g().request('agent', params, { expectFinal: true })
     return { success: true, data: result }
@@ -77,7 +81,7 @@ ipcMain.handle('openclaw:agent', async (_event, params: Record<string, unknown> 
   }
 })
 
-ipcMain.handle('openclaw:agent:wait', async (_event, params: { runId: string; timeoutMs?: number }) => {
+ipcMain.handle('openclaw:agent:wait', async (_event, params: { runId: string; timeoutMs?: number }): Promise<ApiResponse> => {
   try {
     const result = await g().request('agent.wait', params)
     return { success: true, data: result }
@@ -87,7 +91,7 @@ ipcMain.handle('openclaw:agent:wait', async (_event, params: { runId: string; ti
   }
 })
 
-ipcMain.handle('openclaw:agent:identity', async (_event, params: Record<string, unknown> = {}) => {
+ipcMain.handle('openclaw:agent:identity', async (_event, params: Record<string, unknown> = {}): Promise<ApiResponse> => {
   try {
     const result = await g().request('agent.identity.get', params)
     return { success: true, data: result }
@@ -99,7 +103,7 @@ ipcMain.handle('openclaw:agent:identity', async (_event, params: Record<string, 
 
 // ── Chat ────────────────────────────────────────────────────────────────
 
-ipcMain.handle('openclaw:chat:send', async (_event, params: Record<string, unknown> = {}) => {
+ipcMain.handle('openclaw:chat:send', async (_event, params: Record<string, unknown> = {}): Promise<ApiResponse> => {
   try {
     const result = await g().request('chat.send', params, { expectFinal: true })
     return { success: true, data: result }
