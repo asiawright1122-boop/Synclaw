@@ -2,6 +2,7 @@
  * SkillsPanel.tsx — 技能管理面板
  */
 import { useState, useEffect } from 'react'
+import { Loader2 } from 'lucide-react'
 import { Card } from '../ui'
 import { pillBtn } from './shared/pillBtn'
 import { useToastStore } from '../../stores/toastStore'
@@ -11,6 +12,9 @@ interface SkillItem {
   badge: string
   desc: string
   warn: string | null
+  installing?: boolean
+  installProgress?: number
+  installMessage?: string
 }
 
 const FALLBACK_SKILLS: SkillItem[] = [
@@ -46,6 +50,8 @@ function SkillsPanel() {
   const [skills, setSkills] = useState<SkillItem[]>([])
   const [loading, setLoading] = useState(true)
   const [toggling, setToggling] = useState<string | null>(null)
+  // skillKey → 安装进度信息
+  const [installingSkills, setInstallingSkills] = useState<Record<string, { progress?: number; message?: string }>>({})
 
   const pills: { id: typeof filter; label: string }[] = [
     { id: 'all', label: '全部' },
@@ -157,10 +163,15 @@ function SkillsPanel() {
 
   const filteredSkills = skills.filter((s) => {
     if (filter === 'installed') return s.badge === '已启用'
-    if (filter === 'avail') return s.badge === '已禁用'
+    if (filter === 'avail') return s.badge === '已禁用' || !!installingSkills[s.name]
     if (filter === 'paid') return s.warn !== null
     return true
-  })
+  }).map((s) => ({
+    ...s,
+    installing: !!installingSkills[s.name],
+    installProgress: installingSkills[s.name]?.progress,
+    installMessage: installingSkills[s.name]?.message,
+  }))
 
   return (
     <div className="pb-10">
