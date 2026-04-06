@@ -1,5 +1,19 @@
 # Milestones
 
+## v1.6 P3 UI 完善冲刺 (Shipped: 2026-04-06)
+
+**Phases completed:** 2 phases (24–25), 7/7 requirements
+
+**Key accomplishments:**
+
+- **Phase 24 SKL:** SkillsPanel 安装进度 — `skill:progress` / `skill:installed` / `skill:error` 事件监听；内联进度条显示安装状态；安装失败显示错误 toast
+- **Phase 25 IM:** IM 频道管理 UI 精简 — 删除占位"编辑"按钮；平台选择器默认隐藏 desc（hover tooltip）；空状态 CTA 改为"添加第一个频道"；频道列表改为紧凑行布局
+
+**Known gaps:**
+- none
+
+---
+
 ## v1.5 P2 架构债冲刺 (Shipped: 2026-04-06)
 
 **Phases completed:** 4 phases (20–23), 12/12 requirements
