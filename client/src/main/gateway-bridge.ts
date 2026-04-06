@@ -41,8 +41,42 @@ export type GatewayBridgeOptions = {
 
 type EventHandler = (event: string, payload: unknown) => void
 
+// ── Typed interfaces for dynamic GatewayClient ──────────────────────
+// Avoids `any` when calling client.request<T>() after dynamic import
+
+interface GatewayClientInterface {
+  start(): void
+  stop(): void
+  request<T>(
+    method: string,
+    params?: unknown,
+    opts?: { expectFinal?: boolean; timeoutMs?: number | null },
+  ): Promise<T>
+}
+
+interface GatewayClientOptionsInterface {
+  url: string
+  token?: string
+  bootstrapToken?: string
+  clientName: string
+  clientDisplayName: string
+  clientVersion: string
+  platform: string
+  role: string
+  scopes: string[]
+  onEvent: (evt: { event: string; payload: unknown }) => void
+  onHelloOk: (hello: unknown) => void
+  onConnectError: (err: { message: string }) => void
+  onClose: (code: number, reason: string) => void
+}
+
+interface ConfigPatchResult {
+  success?: boolean
+  error?: string
+}
+
 export class GatewayBridge {
-  private client: import('openclaw-source').GatewayClient | null = null
+  private client: GatewayClientInterface | null = null
   private status: GatewayStatus = 'idle'
   private statusListeners: Array<(s: GatewayStatus) => void> = []
   private eventListeners: EventHandler[] = []
@@ -159,9 +193,7 @@ export class GatewayBridge {
     if (!this.client) {
       throw new Error('Gateway 未连接，请先调用 connect()')
     }
-    // @ts-expect-error — client is dynamically loaded, type-safe call not possible at compile time
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return (this.client as any).request<T>(method, params, opts)
+    return this.client.request<T>(method, params, opts)
   }
 
   // ── 状态 ─────────────────────────────────────────────────────────────
@@ -292,12 +324,11 @@ export class GatewayBridge {
         path.join(os.homedir(), '.openclaw', 'config.json'),
       ]
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const readTokenFrom = async (filePath: string): Promise<string | null> => {
         try {
           const fs = await import('node:fs/promises')
           const content = await fs.readFile(filePath, 'utf-8')
-          const config = JSON.parse(content)
+          const config: { gateway?: { auth?: { token?: unknown } } } = JSON.parse(content)
           const token = config?.gateway?.auth?.token
           return typeof token === 'string' ? token : null
         } catch {
@@ -326,8 +357,7 @@ export class GatewayBridge {
     let helloReject!: (err: Error) => void
     let connected = false
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const clientOpts: any = {
+    const clientOpts: GatewayClientOptionsInterface = {
       url: this.opts.url,
       token: token || undefined,
       bootstrapToken: this.opts.bootstrapToken || undefined,
@@ -482,8 +512,7 @@ export class GatewayBridge {
     }
 
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const res = await this.request<any>('config.patch', securityConfig)
+      const res = await this.request<ConfigPatchResult>('config.patch', securityConfig)
       if (res?.success === false || res?.error) {
         log.warn('安全加固配置应用失败（非致命，继续运行）:', res?.error)
       } else {
