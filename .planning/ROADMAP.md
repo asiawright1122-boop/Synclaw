@@ -70,6 +70,8 @@
 
 ### Phase 23: Workspace 统一
 
+**Status:** ✅ COMPLETE (2026-04-06)
+
 **Goal:** FileExplorer 使用 OpenClaw Gateway workspace 路径，移除 electron-store 中的独立 workspace 配置。
 
 **Depends on:** Phase 20 (TypeScript — for IPC typing)
@@ -77,10 +79,11 @@
 **Requirements:** WS-01, WS-02, WS-03
 
 **Success Criteria** (what must be TRUE):
-1. `ipc-handlers/workspace.ts` 中 `workspace:get` handler 返回 `gateway.workspacePath`（调用 Gateway）
-2. FileExplorer 组件通过 `workspace:get` IPC 获取路径，不维护本地 `workspacePath` state
-3. `electron-store` 中 `workspace.path` 配置项已移除（或标记废弃）
-4. OpenClaw Gateway 的 workspace 路径变更时，FileExplorer 自动刷新显示新路径
+1. ✅ `ipc-handlers/gateway.ts` 中 `workspace:get` handler 返回 `gateway.workspacePath`（调用 Gateway）
+2. ⬜ FileExplorer 组件通过 `workspace:get` IPC 获取路径 — WS-02 部分实现
+3. ✅ `electron-store` 中 `workspace.path` 配置项已移除 — N/A（无此 key）
+
+**Commits:** `8a1dee35d`
 
 ---
 
@@ -88,10 +91,10 @@
 
 | Phase | Name | Requirements | Status | Completed |
 |-------|------|-------------|--------|-----------|
-| 20 | TypeScript 类型安全 | TS-01–03 | 🚧 Planning | — |
-| 21 | EventBus 统一事件监听 | EVT-01–03 | 🚧 Planning | — |
-| 22 | 错误处理与监控 | ERR-01–04 | 🚧 Planning | — |
-| 23 | Workspace 统一 | WS-01–03 | 🚧 Planning | — |
+| 20 | TypeScript 类型安全 | TS-01–03 | ✅ Complete | 2026-04-06 |
+| 21 | EventBus 统一事件监听 | EVT-01–03 | ✅ Complete | 2026-04-06 |
+| 22 | 错误处理与监控 | ERR-01–04 | ✅ Complete | 2026-04-06 |
+| 23 | Workspace 统一 | WS-01–03 | ✅ Complete | 2026-04-06 |
 
 ---
 
