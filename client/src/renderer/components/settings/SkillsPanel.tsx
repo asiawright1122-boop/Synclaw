@@ -151,13 +151,59 @@ function SkillsPanel() {
 
     const unsub = window.openclaw.on((e) => {
       if (e.event === 'skill:installed' || e.event === 'skill:status-changed') {
+        const payload = e.data as { skillKey?: string }
+        if (e.event === 'skill:status-changed' && payload?.skillKey) {
+          setInstallingSkills((prev) => {
+            const next = { ...prev }
+            delete next[payload.skillKey]
+            return next
+          })
+        }
         reloadSkills()
+      }
+    })
+
+    const installUnsub = window.openclaw.on((e) => {
+      if (e.event === 'skill:progress') {
+        const payload = e.data as { skillKey?: string; progress?: number; message?: string }
+        if (payload?.skillKey) {
+          setInstallingSkills((prev) => ({
+            ...prev,
+            [payload.skillKey]: {
+              progress: payload.progress,
+              message: payload.message,
+            },
+          }))
+        }
+      }
+      if (e.event === 'skill:installed') {
+        const payload = e.data as { skillKey?: string }
+        if (payload?.skillKey) {
+          setInstallingSkills((prev) => {
+            const next = { ...prev }
+            delete next[payload.skillKey]
+            return next
+          })
+          reloadSkills()
+        }
+      }
+      if (e.event === 'skill:status-changed') {
+        const payload = e.data as { skillKey?: string }
+        if (payload?.skillKey) {
+          setInstallingSkills((prev) => {
+            const next = { ...prev }
+            delete next[payload.skillKey]
+            return next
+          })
+          reloadSkills()
+        }
       }
     })
 
     return () => {
       cancelled = true
       unsub?.()
+      installUnsub?.()
     }
   }, [])
 
