@@ -1,78 +1,153 @@
-# Requirements — SynClaw v1.5 P2 架构与质量债
+# Requirements — v1.6 P3 UI 完善冲刺
 
-> 整理自 BACKLOG.md P2 层（2026-04-06）
-> Phase 编号：20–23（延续 v1.4 Phase 19）
-
----
-
-## A — TypeScript 类型安全
-
-- [ ] **TS-01**: `gateway-bridge.ts` 中动态 `import()` 调用重构为静态 import，消除所有 `@ts-expect-error`
-- [ ] **TS-02**: 所有 IPC handler 函数签名添加类型化参数和返回值（`ipc-handlers/*.ts`）
-- [ ] **TS-03**: `preload/index.ts` 中 `window.openclaw` API surface 添加完整 TypeScript 接口声明
-
-## B — EventBus 统一事件监听
-
-- [ ] **EVT-01**: 创建统一 `EventBus` 模块，合并 chatStore 和 openclawStore 的 `window.openclaw.on()` 调用
-- [ ] **EVT-02**: 创建 `useOpenClaw` React Context，封装 EventBus 订阅/取消订阅，组件卸载时自动清理
-- [ ] **EVT-03**: chatStore 和 openclawStore 中的旧事件注册迁移到 EventBus API
-
-## C — 错误处理与监控
-
-- [ ] **ERR-01**: 顶层 App 组件添加 React ErrorBoundary，捕获渲染异常并显示友好降级 UI
-- [ ] **ERR-02**: 每个 IPC 调用携带 `requestId`，日志和错误中记录 requestId，便于追踪
-- [ ] **ERR-03**: 关键 RPC 调用（exec / file 操作）添加超时（10s）和重试（1 次）逻辑
-- [ ] **ERR-04**: main 进程未捕获异常通过 electron-log 持久化记录
-
-## D — Workspace 统一
-
-- [ ] **WS-01**: IPC handler `workspace:get` 改为返回 OpenClaw Gateway 当前 workspace 路径
-- [ ] **WS-02**: FileExplorer 组件改用 `workspace:get` 获取路径，移除本地 workspace 状态
-- [ ] **WS-03**: electron-store 中 `workspace.path` 配置项移除（职责转移给 Gateway）
+**Milestone:** v1.6 P3 UI 完善冲刺
+**Status:** Active
+**Created:** 2026-04-06
+**Requirements:** 7 | **Completed:** 0
 
 ---
 
-## Future Requirements
+## A — SkillsPanel 安装进度
 
-以下 Backlog 项目暂不在 v1.5 范围：
+### SKL-01
+**User can see real-time installation progress for skills.**
 
-- **P3**: Control UI WebView 集成（OpenClaw 控制面板）
-- **P3**: Keytar / macOS Keychain 集成
-- **P3**: SkillsPanel 安装进度状态
-- **P3**: IM 频道管理 UI 精简
-- **v2.0**: Local LLM (Ollama)
-- **v2.0**: 团队协作/共享技能
-- **v2.0**: 企业版私有化部署
+SkillsPanel listens for `skill:progress` events (or `skill:status-changed`) from the Gateway and updates the installation state. While a skill is installing, its list item displays an inline progress bar with the current status message.
+
+**Acceptance criteria:**
+- [ ] `window.openclaw.on('skill:progress', cb)` or `skill:status-changed` listener added in SkillsPanel
+- [ ] Payload `{ skillKey, status, progress?, message? }` correctly typed
+- [ ] Installing skill item shows inline progress bar (not a blocking modal)
+- [ ] Progress bar disappears or transitions to "enabled" state on completion
+
+**Type:** Feature
+**Priority:** P3
+**Source:** BACKLOG.md P3, Phase 24
 
 ---
 
-## Out of Scope
+### SKL-02
+**Installing skill shows inline progress bar with status message.**
 
-- **本地 LLM（Ollama）** — v2.0+，需要 OpenClaw 原生支持
-- **团队协作/共享技能** — v2.0+，架构完全不同
-- **企业版私有化部署** — v2.0+
-- **移动端触控优化** — Electron 桌面非主要场景
+While a skill is being installed, its card/row in the SkillsPanel list displays a horizontal progress bar with a status label (e.g., "下载中...", "配置中...", "完成"). The progress bar uses the existing design system (Tailwind + CSS variables).
+
+**Acceptance criteria:**
+- [ ] Progress bar renders inside the skill list item (not a separate overlay/modal)
+- [ ] Progress percentage shown when `progress` field is available
+- [ ] Status message displayed alongside the bar (e.g., "正在配置工具链...")
+- [ ] Bar fills left-to-right as installation proceeds
+
+**Type:** Feature
+**Priority:** P3
+**Source:** BACKLOG.md P3
+
+---
+
+### SKL-03
+**Installation completes or fails with clear user feedback.**
+
+When installation finishes, the progress bar is replaced by the normal "enabled"/"disabled" badge. If it fails, an error message is shown (not silently ignored), and the skill returns to its previous state.
+
+**Acceptance criteria:**
+- [ ] Success: progress bar replaced by normal badge, skill appears in enabled list
+- [ ] Failure: error message shown (e.g., via toast), skill returns to prior state
+- [ ] `skill:error` event listener added (if Gateway emits one)
+
+**Type:** Feature
+**Priority:** P3
+**Source:** BACKLOG.md P3
+
+---
+
+## B — IM 频道管理 UI 精简
+
+### IM-01
+**Remove the disabled "编辑" placeholder button from channel cards.**
+
+The "编辑" button in each channel card is currently always disabled with tooltip "配置编辑功能开发中". Since this is a placeholder, it should be removed to reduce UI noise.
+
+**Acceptance criteria:**
+- [ ] "编辑" button removed from channel card component
+- [ ] No broken or disabled UI elements remain
+- [ ] Card layout still looks balanced after removal
+
+**Type:** UX improvement
+**Priority:** P3
+**Source:** BACKLOG.md P3
+
+---
+
+### IM-02
+**Platform selector hides descriptive text, shows on hover.**
+
+Each platform button in the "添加频道" form currently shows a full description (`meta.desc`) that is redundant for users who already know which platform they use. Hide it by default, show on hover.
+
+**Acceptance criteria:**
+- [ ] Platform buttons show only icon + name by default
+- [ ] Hover reveals the description text in a tooltip or inline expansion
+- [ ] Existing platform list remains functional
+
+**Type:** UX improvement
+**Priority:** P3
+**Source:** BACKLOG.md P3
+
+---
+
+### IM-03
+**IM empty state CTA text is corrected to "添加第一个频道".**
+
+The empty state button currently says "开始新对话" which is misleading — users coming to the IM panel want to add channels, not start conversations. Change to "添加第一个频道".
+
+**Acceptance criteria:**
+- [ ] Empty state button text updated to "添加第一个频道"
+- [ ] Empty state icon and layout unchanged
+
+**Type:** Content / UX fix
+**Priority:** P3
+**Source:** BACKLOG.md P3
+
+---
+
+### IM-04
+**Channel list uses compact row layout instead of full-width cards.**
+
+The current channel list renders each channel as a full-width card with generous padding. For a settings panel, a more compact list row is appropriate. Refactor to reduce vertical space and visual hierarchy.
+
+**Acceptance criteria:**
+- [ ] Channel cards replaced by compact list rows
+- [ ] Each row shows: platform icon, name, status pill, action buttons
+- [ ] "断开" button retained (or removed per IM-01 decision)
+- [ ] No functional changes — only layout/style refactor
+
+**Type:** UX improvement
+**Priority:** P3
+**Source:** BACKLOG.md P3
 
 ---
 
 ## Traceability
 
-| REQ-ID | Phase | Requirement | Status |
-|--------|-------|-------------|--------|
-| TS-01 | 20 | gateway-bridge 静态 import | ⬜ |
-| TS-02 | 20 | IPC handler 类型化 | ⬜ |
-| TS-03 | 20 | window.openclaw 接口声明 | ⬜ |
-| EVT-01 | 21 | EventBus 模块 | ⬜ |
-| EVT-02 | 21 | useOpenClaw Context | ⬜ |
-| EVT-03 | 21 | 事件注册迁移 | ⬜ |
-| ERR-01 | 22 | ErrorBoundary | ⬜ |
-| ERR-02 | 22 | requestId 追踪 | ⬜ |
-| ERR-03 | 22 | 超时 + 重试 | ⬜ |
-| ERR-04 | 22 | electron-log 未捕获异常 | ⬜ |
-| WS-01 | 23 | workspace:get 返回 Gateway 路径 | ⬜ |
-| WS-02 | 23 | FileExplorer 使用 workspace:get | ⬜ |
-| WS-03 | 23 | 移除 workspace.path 配置项 | ⬜ |
+| REQ | Phase | Criteria | Status |
+|-----|-------|---------|--------|
+| SKL-01 | Phase 24 | SkillsPanel event listeners | - |
+| SKL-02 | Phase 24 | Inline progress bar | - |
+| SKL-03 | Phase 24 | Completion/error feedback | - |
+| IM-01 | Phase 25 | Remove 编辑 button | - |
+| IM-02 | Phase 25 | Platform selector tooltip | - |
+| IM-03 | Phase 25 | Empty state text fix | - |
+| IM-04 | Phase 25 | Compact row layout | - |
 
 ---
 
-*Requirements created: 2026-04-06 for v1.5 P2 架构与质量债*
+## Out of Scope
+
+| Item | Reason |
+|------|--------|
+| Keytar / macOS Keychain integration | v2.0 scope — requires deeper security architecture |
+| Control UI WebView integration | v2.0 scope — large feature requiring design work |
+| IM channel message history | Not in BACKLOG, separate feature |
+| Skill installation from within SkillsPanel | SkillsPanel only manages existing skills; new installs happen via Agent |
+
+---
+
+*Last updated: 2026-04-06*
