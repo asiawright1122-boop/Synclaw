@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: milestone
 status: unknown
-last_updated: "2026-04-06T15:33:58.287Z"
+last_updated: "2026-04-06T15:55:45.308Z"
 last_activity: 2026-04-06
 progress:
   total_phases: 2
@@ -31,8 +31,6 @@ progress:
 
 Phase: 25
 Plan: Not started
-
-**Next Action:** `/gsd-plan-phase 25` — start Phase 25: IM 频道管理 UI 精简
 
 ## Accumulated Context
 
