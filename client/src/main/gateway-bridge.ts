@@ -89,6 +89,7 @@ export class GatewayBridge {
   private eventListeners: EventHandler[] = []
   private browserWindows: Set<BrowserWindow> = new Set()
   private opts: Required<GatewayBridgeOptions>
+  private workspacePath: string | null = null
 
   constructor(opts: GatewayBridgeOptions = {}) {
     this.opts = {
@@ -144,6 +145,10 @@ export class GatewayBridge {
       // 步骤 5: 应用 SynClaw 安全加固配置
       log.info('[Step 5] 应用安全加固配置...')
       await this.applySecurityConfig()
+
+      // 步骤 6: 获取 Gateway workspace 路径
+      log.info('[Step 6] 获取 Gateway workspace 路径...')
+      await this.fetchWorkspacePath()
 
       this.setStatus('connected')
       log.info('OpenClaw Gateway 连接成功')
@@ -254,6 +259,34 @@ export class GatewayBridge {
 
   getStatus(): GatewayStatus {
     return this.status
+  }
+
+  /**
+   * Returns the Gateway workspace path, or falls back to the default path.
+   */
+  getWorkspacePath(): string {
+    return this.workspacePath ?? path.join(app.getPath('home'), '.openclaw-synclaw', 'workspace')
+  }
+
+  /**
+   * Fetches the Gateway workspace path via RPC and caches it.
+   * Called after connection is established.
+   */
+  private async fetchWorkspacePath(): Promise<void> {
+    try {
+      // Try to get workspace path from Gateway config
+      const result = await this.client!.request<{ workspacePath?: string }>('config.get', {})
+      if (result?.workspacePath) {
+        this.workspacePath = result.workspacePath
+        log.info(`Gateway workspace path: ${this.workspacePath}`)
+      } else {
+        log.warn('Gateway config.get did not return workspacePath — using default')
+        this.workspacePath = path.join(app.getPath('home'), '.openclaw-synclaw', 'workspace')
+      }
+    } catch (err) {
+      log.warn('Failed to fetch workspace path from Gateway, using default:', err)
+      this.workspacePath = path.join(app.getPath('home'), '.openclaw-synclaw', 'workspace')
+    }
   }
 
   onStatusChange(listener: (s: GatewayStatus) => void): () => void {
