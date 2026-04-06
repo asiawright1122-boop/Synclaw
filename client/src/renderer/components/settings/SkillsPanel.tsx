@@ -198,6 +198,21 @@ function SkillsPanel() {
           reloadSkills()
         }
       }
+      if (e.event === 'skill:error') {
+        const payload = e.data as { skillKey?: string; error?: string }
+        if (payload?.skillKey) {
+          setInstallingSkills((prev) => {
+            const next = { ...prev }
+            delete next[payload.skillKey]
+            return next
+          })
+          addToast({
+            type: 'error',
+            message: `"${payload.skillKey}" 安装失败${payload.error ? `：${payload.error}` : ''}`,
+            duration: 4000,
+          })
+        }
+      }
     })
 
     return () => {
