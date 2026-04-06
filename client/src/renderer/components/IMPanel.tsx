@@ -273,11 +273,6 @@ export function ImPanel() {
                     </div>
                     <div className="flex gap-1 shrink-0">
                       <button type="button" className={`${pillBtn(false)} text-xs`}
-                        style={{ borderColor: 'var(--border)', color: 'var(--text-sec)' }}
-                        onClick={() => addToast({ type: 'info', message: '配置编辑功能开发中', duration: 2000 })}>
-                        编辑
-                      </button>
-                      <button type="button" className={`${pillBtn(false)} text-xs`}
                         style={{ borderColor: 'var(--danger)', color: 'var(--danger)' }}
                         onClick={() => handleDisconnect(ch)} disabled={disconnectingId === id}>
                         {disconnectingId === id ? <Spinner size={12} /> : '断开'}
