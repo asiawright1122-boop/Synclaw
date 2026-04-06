@@ -290,7 +290,7 @@ export function ImPanel() {
         <div className="rounded-[12px] border py-16 px-6 text-center" style={{ borderColor: 'var(--border)' }}>
           <button type="button" className={pillBtn(true)} style={{ background: 'var(--accent1)' }}
             onClick={() => setShowAddForm(true)}>
-            开始新对话
+            添加第一个频道
           </button>
           <p className="text-sm font-medium mt-4" style={{ color: 'var(--text)' }}>连接 IM 渠道</p>
           <p className="text-xs mt-2 max-w-sm mx-auto" style={{ color: 'var(--text-ter)' }}>
