@@ -1,5 +1,21 @@
 # Milestones
 
+## v1.5 P2 架构债冲刺 (Shipped: 2026-04-06)
+
+**Phases completed:** 4 phases (20–23), 12/12 requirements
+
+**Key accomplishments:**
+
+- **Phase 20 TS:** TypeScript 类型安全 — `GatewayClientInterface` + `GatewayClientOptionsInterface` 消除所有 `@ts-expect-error`；IPC handler 全类型化；`fs.watch` 强制 cast 修复
+- **Phase 21 EVT:** EventBus 统一事件监听 — `eventBus.ts` 类型化 EventBus；`useOpenClaw` React Context；chatStore 通过 EventBus 广播 agent/chat/exec 事件
+- **Phase 22 ERR:** 错误处理与监控 — `crypto.randomUUID()` requestId 追踪；10s 超时；exec/file 方法自动重试；electron-log 未捕获异常持久化
+- **Phase 23 WS:** Workspace 统一 — `workspace:get` IPC handler；`getWorkspacePath()` 从 Gateway `config.get` RPC 获取路径
+
+**Known gaps:**
+- WS-02: FileExplorer 尚未完全迁移使用 `workspace:get`（`authorizedDirs` + `limitAccess` 仍是当前文件访问控制机制）
+
+---
+
 ## v1.4 安全加固冲刺 (Shipped: 2026-04-06)
 
 **Phases completed:** 5 phases (15–19), 1 plan, 9 tasks
