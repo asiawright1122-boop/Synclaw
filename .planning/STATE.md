@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: milestone
-status: in_progress
-last_updated: "2026-04-06T15:25:00.000Z"
+status: unknown
+last_updated: "2026-04-06T15:33:58.287Z"
 last_activity: 2026-04-06
 progress:
   total_phases: 2
-  completed_phases: 1
+  completed_phases: 0
   total_plans: 2
-  completed_plans: 1
+  completed_plans: 0
 ---
 
 # STATE.md — SynClaw v1.6 P3 UI 完善冲刺
@@ -29,8 +29,8 @@ progress:
 
 ## Current Position
 
-Phase: 24 (SkillsPanel 安装进度) — ✅ COMPLETED
-Plan: 1 of 1 — ✅ COMPLETED
+Phase: 25
+Plan: Not started
 
 **Next Action:** `/gsd-plan-phase 25` — start Phase 25: IM 频道管理 UI 精简
 

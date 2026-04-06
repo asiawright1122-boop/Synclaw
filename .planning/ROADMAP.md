@@ -41,7 +41,7 @@
 
 | Phase | Name | Requirements | Status | Completed |
 |-------|------|-------------|--------|-----------|
-| 24 | SkillsPanel 安装进度 | SKL-01–03 | ✅ Complete | 2026-04-06 |
+| 24 | SkillsPanel 安装进度 | SKL-01–03 | Complete    | 2026-04-06 |
 | 25 | IM 频道管理 UI 精简 | IM-01–04 | 🚧 Planning | — |
 
 ---
