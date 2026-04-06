@@ -192,13 +192,13 @@ export function ImPanel() {
                   style={{
                     borderColor: addingType === key ? meta.color : 'var(--border)',
                     background: addingType === key ? `${meta.color}10` : 'var(--bg-subtle)',
-                  }}>
-                  <div className="flex items-center gap-2 mb-1">
+                  }}
+                  title={meta.desc}>
+                  <div className="flex items-center gap-2">
                     <span className="text-lg">{meta.icon}</span>
                     <span className="text-sm font-semibold" style={{ color: addingType === key ? meta.color : 'var(--text)' }}>{meta.label}</span>
                     {addingType === key && <span className="ml-auto text-[10px] px-1.5 py-0.5 rounded font-medium" style={{ background: meta.color, color: '#fff' }}>已选择</span>}
                   </div>
-                  <p className="text-xs" style={{ color: 'var(--text-sec)' }}>{meta.desc}</p>
                 </button>
               ))}
             </div>
