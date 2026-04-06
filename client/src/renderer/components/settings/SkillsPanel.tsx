@@ -293,6 +293,34 @@ function SkillsPanel() {
                       {s.warn}
                     </p>
                   ) : null}
+                  {/* 安装进度条 */}
+                  {s.installing ? (
+                    <div className="mt-2">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-[10px] flex items-center gap-1" style={{ color: 'var(--accent1)' }}>
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                          {s.installMessage ?? '安装中...'}
+                        </span>
+                        {s.installProgress !== undefined && (
+                          <span className="text-[10px]" style={{ color: 'var(--text-ter)' }}>
+                            {s.installProgress}%
+                          </span>
+                        )}
+                      </div>
+                      <div
+                        className="h-1.5 rounded-full overflow-hidden"
+                        style={{ background: 'var(--bg-elevated)' }}
+                      >
+                        <div
+                          className="h-full rounded-full transition-all duration-300"
+                          style={{
+                            width: `${s.installProgress ?? 0}%`,
+                            background: 'var(--accent1)',
+                          }}
+                        />
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
                 <button
                   type="button"
