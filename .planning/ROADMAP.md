@@ -1,55 +1,90 @@
-# Roadmap: SynClaw
+# ROADMAP.md — SynClaw v1.5 P2 架构与质量债
 
-## Milestones
+**v1.4 Archive:** [v1.4 Milestone Archive](./milestones/v1.4-ROADMAP.md) — 5/5 phases, 13/13 requirements ✅
 
-- ✅ **v1.2** — 基础功能集（EXEC审批弹窗 + WEB集成 + TTS UI + Avatar体系）([Archive](./milestones/v1.2-MILESTONE-ARCHIVE.md))
-- ✅ **v1.3** — 首发就绪冲刺（测试 + UX + Security + DEPLOY）([Archive](./milestones/v1.3-MILESTONE-ARCHIVE.md)) — 5/5 phases, 23/23 requirements
-- ✅ **v1.4** — 安全加固冲刺（协议白名单 + Sandbox + 审计 + Fonts + 公证）([Archive](./milestones/v1.4-ROADMAP.md)) — 5/5 phases, 13/13 requirements
-- 🚧 **v1.5** — 规划中
+**Current milestone:** v1.5 P2 架构与质量债 — 🚧 PLANNING
+**Previous milestone:** v1.4 — [Archive](./milestones/v1.4-ROADMAP.md)
 
 ---
 
 ## Phases
 
-<details>
-<summary>✅ v1.2 (Phase 1–9) — SHIPPED 2026-04-01</summary>
+### 🚧 Phase 20: TypeScript 类型安全
 
-> → [v1.2 Milestone Archive](./milestones/v1.2-MILESTONE-ARCHIVE.md)
+**Goal:** 消除 `gateway-bridge.ts` 中的 `any`，IPC handler 参数与返回值全类型化，让 TypeScript 真正发挥类型安全作用。
 
-</details>
+**Depends on:** None (foundation work)
 
-<details>
-<summary>✅ v1.3 首发就绪冲刺 (Phase 10–14) — SHIPPED 2026-04-01</summary>
+**Requirements:** TS-01, TS-02, TS-03
 
-> → [v1.3 Milestone Archive](./milestones/v1.3-MILESTONE-ARCHIVE.md)
-
-</details>
-
-<details>
-<summary>✅ v1.4 安全加固冲刺 (Phase 15–19) — SHIPPED 2026-04-06</summary>
-
-- [x] Phase 15: SHELL-SECURITY — shell:openExternal 协议白名单（✅ TS 0 errors, 46 tests）
-- [x] Phase 16: SANDBOX — OpenClaw Sandbox 完整对接（✅ gateway-bridge.ts verified）
-- [x] Phase 17: AUDIT — Security Audit UI + CI 版本扫描（✅ GitHub Actions）
-- [x] Phase 18: FONTS — 移除 Google Fonts CDN（✅ privacy protection）
-- [x] Phase 19: NOTARY — macOS 公证配置完善（✅ 配置就绪，等待用户 Apple ID）
-
-</details>
-
-### 🚧 v1.5 (Planned)
-
-- [ ] Phase 20: TBD — 规划中
+**Success Criteria** (what must be TRUE):
+1. `gateway-bridge.ts` 中无 `@ts-expect-error` 或 `@ts-ignore` 注释
+2. `gateway-bridge.ts` 中无 `require()` 动态调用，全部改为静态 `import`
+3. 所有 IPC handler 函数签名声明具体类型（参数类型 + 返回值类型 `Promise<T>`）
+4. `preload/index.ts` 中 `window.openclaw` 所有方法有完整 TypeScript 接口
+5. `tsc --noEmit` 全程零错误（包括新类型约束）
 
 ---
 
-## Progress
+### 🚧 Phase 21: EventBus 统一事件监听
 
-| Phase | Milestone | Requirements | Status | Completed |
-|-------|-----------|-------------|--------|-----------|
-| 1–9 | v1.2 | 27/32 | ✅ | 2026-04-01 |
-| 10–14 | v1.3 | 23/23 | ✅ | 2026-04-01 |
-| 15–19 | v1.4 | 13/13 | ✅ | 2026-04-06 |
+**Goal:** 合并 chatStore 和 openclawStore 的事件注册为统一 EventBus，并提供 React Context 封装。
+
+**Depends on:** None (foundation work)
+
+**Requirements:** EVT-01, EVT-02, EVT-03
+
+**Success Criteria** (what must be TRUE):
+1. `src/renderer/lib/eventBus.ts` 导出统一 EventBus，支持 `.on()` / `.off()` / `.once()` / `.emit()`
+2. `useOpenClaw` Context 提供 `useOpenClaw()` hook，返回 gateway API 对象和事件订阅方法
+3. chatStore 中的 `window.openclaw.on()` 调用替换为 EventBus API
+4. openclawStore 中的 `window.openclaw.on()` 调用替换为 EventBus API
+5. 所有订阅在组件卸载时自动清理（无内存泄漏警告）
 
 ---
 
-*Roadmap updated: 2026-04-06 after v1.4 milestone completion*
+### 🚧 Phase 22: 错误处理与监控
+
+**Goal:** 添加 React ErrorBoundary 和 operation tracing，让 SynClaw 达到生产级稳定性标准。
+
+**Depends on:** Phase 20 (TypeScript — for requestId typing)
+
+**Requirements:** ERR-01, ERR-02, ERR-03, ERR-04
+
+**Success Criteria** (what must be TRUE):
+1. 顶层 App 组件存在 ErrorBoundary，任何组件渲染异常显示友好降级 UI（而非白屏崩溃）
+2. 每个 IPC 调用（经 bridge）携带 `requestId` UUID，日志输出包含 `{ requestId, method, args }`
+3. exec 和 file 相关 RPC 调用有 10s 超时，超时后显示错误状态
+4. exec 和 file 相关 RPC 调用失败后自动重试 1 次
+5. main 进程 `process.on('uncaughtException')` 和 `process.on('unhandledRejection')` 通过 electron-log 记录到文件
+
+---
+
+### 🚧 Phase 23: Workspace 统一
+
+**Goal:** FileExplorer 使用 OpenClaw Gateway workspace 路径，移除 electron-store 中的独立 workspace 配置。
+
+**Depends on:** Phase 20 (TypeScript — for IPC typing)
+
+**Requirements:** WS-01, WS-02, WS-03
+
+**Success Criteria** (what must be TRUE):
+1. `ipc-handlers/workspace.ts` 中 `workspace:get` handler 返回 `gateway.workspacePath`（调用 Gateway）
+2. FileExplorer 组件通过 `workspace:get` IPC 获取路径，不维护本地 `workspacePath` state
+3. `electron-store` 中 `workspace.path` 配置项已移除（或标记废弃）
+4. OpenClaw Gateway 的 workspace 路径变更时，FileExplorer 自动刷新显示新路径
+
+---
+
+## Progress Table
+
+| Phase | Name | Requirements | Status | Completed |
+|-------|------|-------------|--------|-----------|
+| 20 | TypeScript 类型安全 | TS-01–03 | 🚧 Planning | — |
+| 21 | EventBus 统一事件监听 | EVT-01–03 | 🚧 Planning | — |
+| 22 | 错误处理与监控 | ERR-01–04 | 🚧 Planning | — |
+| 23 | Workspace 统一 | WS-01–03 | 🚧 Planning | — |
+
+---
+
+*Roadmap created: 2026-04-06 for v1.5 P2 架构与质量债*
