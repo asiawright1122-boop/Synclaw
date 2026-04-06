@@ -17,6 +17,7 @@ import { OnboardingView } from './components/OnboardingView'
 import { ExecApprovalModal } from './components/ExecApprovalModal'
 import { X, Keyboard } from 'lucide-react'
 import { ErrorBoundary } from './components/ErrorBoundary'
+import { eventBus, EventBusContext } from './contexts/EventBusContext'
 
 function ShortcutsModal({ onClose }: { onClose: () => void }) {
   const shortcuts = [
@@ -301,6 +302,7 @@ function App() {
 
       {/* Error boundary: catches rendering errors in main UI */}
       <ErrorBoundary name="主界面">
+      <EventBusContext.Provider value={eventBus}>
       <div
         className="h-screen w-screen flex flex-col overflow-hidden"
         style={{ background: 'var(--bg-layout)', color: 'var(--text)' }}
@@ -404,6 +406,7 @@ function App() {
         {/* Exec Approval Modal */}
         <ExecApprovalModal />
       </div>
+      </EventBusContext.Provider>
       </ErrorBoundary>
     </>
   )
