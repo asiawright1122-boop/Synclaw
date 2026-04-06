@@ -36,6 +36,10 @@ function gw<T = unknown>(
 
 ipcMain.handle('openclaw:status', (): ReturnType<typeof g.getStatus> => g().getStatus())
 
+ipcMain.handle('workspace:get', () => {
+  return g().getWorkspacePath()
+})
+
 ipcMain.handle('openclaw:connect', async (): Promise<ApiResponse> => {
   try { await g().connect(); return { success: true } }
   catch (err) { log.error('connect failed:', err); return { success: false, error: String(err) } }
