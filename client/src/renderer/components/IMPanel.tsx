@@ -243,44 +243,39 @@ export function ImPanel() {
       )}
 
       {channels.length > 0 && (
-        <div className="space-y-3">
-          {channels.map((ch) => {
+        <div className="rounded-[10px] border overflow-hidden" style={{ borderColor: 'var(--border)' }}>
+          {channels.map((ch, idx) => {
             const id = ch.id || ch.channel || ch.platform || ''
             const meta = getMeta(ch.platform || ch.channel)
             return (
-              <Card key={id}>
-                <div className="px-4 py-4">
-                  <div className="flex items-start gap-3">
-                    <div className="w-9 h-9 rounded-lg flex items-center justify-center text-xl shrink-0"
-                      style={{ background: `${meta.color}15` }}>{meta.icon}</div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap mb-1">
-                        <span className="text-sm font-semibold" style={{ color: 'var(--text)' }}>{ch.name || meta.label}</span>
-                        <span className="text-[10px] px-1.5 py-0.5 rounded font-medium" style={{ background: `${meta.color}15`, color: meta.color }}>{meta.label}</span>
-                        {ch.enabled !== undefined && (
-                          <span className="text-[10px] px-1.5 py-0.5 rounded font-medium"
-                            style={{ background: ch.enabled ? 'rgba(47,158,91,0.15)' : 'rgba(0,0,0,0.06)', color: ch.enabled ? 'var(--success)' : 'var(--text-ter)' }}>
-                            {ch.enabled ? '已启用' : '已禁用'}
-                          </span>
-                        )}
-                        {ch.status && (
-                          <span className="text-[10px] px-1.5 py-0.5 rounded" style={{ background: 'rgba(34,197,94,0.1)', color: '#22c55e' }}>
-                            {ch.status}
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-xs" style={{ color: 'var(--text-sec)' }}>{ch.description || meta.desc}</p>
-                    </div>
-                    <div className="flex gap-1 shrink-0">
-                      <button type="button" className={`${pillBtn(false)} text-xs`}
-                        style={{ borderColor: 'var(--danger)', color: 'var(--danger)' }}
-                        onClick={() => handleDisconnect(ch)} disabled={disconnectingId === id}>
-                        {disconnectingId === id ? <Spinner size={12} /> : '断开'}
-                      </button>
-                    </div>
-                  </div>
+              <div
+                key={id}
+                className="flex items-center gap-3 px-4 py-3"
+                style={{ borderBottom: idx < channels.length - 1 ? '1px solid var(--border)' : undefined }}
+              >
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center text-base shrink-0"
+                  style={{ background: `${meta.color}15` }}>{meta.icon}</div>
+                <div className="flex-1 min-w-0 flex items-center gap-2 flex-wrap">
+                  <span className="text-sm font-medium" style={{ color: 'var(--text)' }}>{ch.name || meta.label}</span>
+                  <span className="text-[10px] px-1.5 py-0.5 rounded font-medium" style={{ background: `${meta.color}15`, color: meta.color }}>{meta.label}</span>
+                  {ch.enabled !== undefined && (
+                    <span className="text-[10px] px-1.5 py-0.5 rounded font-medium"
+                      style={{ background: ch.enabled ? 'rgba(47,158,91,0.15)' : 'rgba(0,0,0,0.06)', color: ch.enabled ? 'var(--success)' : 'var(--text-ter)' }}>
+                      {ch.enabled ? '已启用' : '已禁用'}
+                    </span>
+                  )}
+                  {ch.status && (
+                    <span className="text-[10px] px-1.5 py-0.5 rounded" style={{ background: 'rgba(34,197,94,0.1)', color: '#22c55e' }}>
+                      {ch.status}
+                    </span>
+                  )}
                 </div>
-              </Card>
+                <button type="button" className={`${pillBtn(false)} text-xs shrink-0`}
+                  style={{ borderColor: 'var(--danger)', color: 'var(--danger)' }}
+                  onClick={() => handleDisconnect(ch)} disabled={disconnectingId === id}>
+                  {disconnectingId === id ? <Spinner size={12} /> : '断开'}
+                </button>
+              </div>
             )
           })}
         </div>
