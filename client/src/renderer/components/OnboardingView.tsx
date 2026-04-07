@@ -15,8 +15,10 @@ import {
   Loader2,
   ShieldCheck,
   Sparkles,
+  XCircle,
 } from 'lucide-react'
 import { useSettingsStore } from '../stores/settingsStore'
+import { useGatewayStatus } from '../hooks/useGatewayStatus'
 
 interface OnboardingViewProps {
   onComplete: () => void
@@ -54,6 +56,9 @@ export function OnboardingView({ onComplete }: OnboardingViewProps) {
 
   const [authorizedDirs, setAuthorizedDirs] = useState<string[]>(storedAuthorizedDirs)
 
+  // Gateway ping status from useGatewayStatus hook
+  const { ping, isPinging, pingResult } = useGatewayStatus()
+
   // 同步外部变更（如从设置页面添加的目录）
   useEffect(() => {
     setAuthorizedDirs(storedAuthorizedDirs)
@@ -84,27 +89,21 @@ export function OnboardingView({ onComplete }: OnboardingViewProps) {
   const handleStep1Next = async () => {
     if (!apiKeyInput.trim() || !validateApiKey(apiKeyInput)) return
     setApiKeyError('')
+    setApiKeySuccess(false)
     setApiKeySaving(true)
     try {
       const res = await window.openclaw?.skills?.update?.({ apiKey: apiKeyInput.trim() })
       if (res?.success) {
         setApiKeySuccess(true)
-        // Re-validate Gateway connection after saving the API key
-        let connectionOk = false
-        try {
-          const status = await window.openclaw?.getStatus?.()
-          connectionOk = status === 'ready' || status === 'connected'
-        } catch {
-          connectionOk = false
-        }
-        if (!connectionOk) {
+        // Per ONB-01: verify connection with gateway.ping()
+        await ping()
+        if (pingResult === true) {
+          setGatewayStatus('ready')
+          setStep(2)
+        } else {
           setGatewayStatus('error')
-          setApiKeyError('API Key 已保存，但 Gateway 连接失败。请确认 OpenClaw 已启动，或前往「设置 → Gateway」查看状态。')
-          setApiKeySaving(false)
-          return
+          setApiKeyError('API Key 已保存，但 Gateway 连接验证失败。请确认 OpenClaw 已启动，或前往「设置 → Gateway」查看状态。')
         }
-        setGatewayStatus('ready')
-        setStep(2)
       } else {
         setApiKeyError(res?.error ? `保存失败：${res.error}` : '保存 API Key 时出错，请重试')
       }
@@ -371,6 +370,41 @@ export function OnboardingView({ onComplete }: OnboardingViewProps) {
                     <CheckCircle className="w-3.5 h-3.5" />
                     API Key 已保存
                   </p>
+                )}
+
+                {(apiKeySuccess || isPinging) && (
+                  <div
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg mb-3 text-sm"
+                    style={{
+                      background: isPinging
+                        ? 'var(--bg-elevated)'
+                        : pingResult === true
+                          ? 'rgba(34,197,94,0.1)'
+                          : 'rgba(239,68,68,0.1)',
+                      color: isPinging
+                        ? 'var(--text-sec)'
+                        : pingResult === true
+                          ? 'var(--success)'
+                          : 'var(--danger)',
+                    }}
+                  >
+                    {isPinging ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        正在验证 Gateway 连接…
+                      </>
+                    ) : pingResult === true ? (
+                      <>
+                        <CheckCircle className="w-3.5 h-3.5" />
+                        连接成功
+                      </>
+                    ) : (
+                      <>
+                        <XCircle className="w-3.5 h-3.5" />
+                        连接失败
+                      </>
+                    )}
+                  </div>
                 )}
 
                 <div className="flex items-center justify-between mt-4">
