@@ -33,22 +33,38 @@ interface GatewayState {
 
   // Async actions
   reconnect: () => Promise<void>
+  disconnect: () => void
   ping: () => Promise<void>
   loadIdentity: () => Promise<void>
   loadConnectionUrl: () => Promise<void>
 }
 
 let statusUnsubscribe: (() => void) | null = null
+/** True once the singleton subscription has been established */
+let statusSubscribed = false
+/** Guard against calling the cleanup more than once */
+let _statusCleanedUp = false
 
 export const useGatewayStore = create<GatewayState>((set) => {
   // Subscribe to window.openclaw status changes (once)
   const ensureStatusSubscription = () => {
-    if (statusUnsubscribe) return
+    if (statusSubscribed) return
     if (typeof window === 'undefined' || !window.openclaw) return
 
     statusUnsubscribe = window.openclaw.onStatusChange((newStatus: GatewayStatus) => {
       set({ status: newStatus })
+      // Auto-cleanup subscription when Gateway signals disconnection
+      if (_statusCleanedUp) return
+      if (newStatus === 'disconnected' || newStatus === 'error') {
+        _statusCleanedUp = true
+        if (statusUnsubscribe) {
+          statusUnsubscribe()
+          statusUnsubscribe = null
+          statusSubscribed = false
+        }
+      }
     })
+    statusSubscribed = true
   }
 
   // Subscribe immediately on store creation
@@ -70,6 +86,15 @@ export const useGatewayStore = create<GatewayState>((set) => {
     setConnectionUrl: (connectionUrl) => set({ connectionUrl }),
     setIsPinging: (isPinging) => set({ isPinging }),
     setPingResult: (pingResult) => set({ pingResult }),
+
+    disconnect: () => {
+      // Clean up the singleton status subscription to prevent memory leaks
+      if (statusUnsubscribe) {
+        statusUnsubscribe()
+        statusUnsubscribe = null
+        statusSubscribed = false
+      }
+    },
 
     reconnect: async () => {
       set({ lastError: null })

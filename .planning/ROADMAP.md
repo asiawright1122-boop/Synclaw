@@ -11,7 +11,7 @@
 - [x] **Phase 26: Onboarding + Gateway 状态** — API key 验证 + 断连 banner + 状态显示 (completed 2026-04-07)
 - [x] **Phase 27: 空状态补全** — 4 个面板的空状态引导 (completed 2026-04-07)
 - [x] **Phase 28: UX 补全** — Avatar 状态、快捷键、Toast、CLI 检测、降级 (completed 2026-04-07)
-- [ ] **Phase 29: 性能优化（启动 + IPC）** — 启动链路 + IPC 批量 + 缓存
+- [x] **Phase 29: 性能优化（启动 + IPC）** — 启动链路 + IPC 批量 + 缓存 (completed 2026-04-07)
 - [ ] **Phase 30: 性能优化（React + 内存）** — 重渲染 + 虚拟化 + 内存泄漏
 
 ---
@@ -113,15 +113,15 @@
 3. Frequent gateway status polling requests are batched or deduplicated (no redundant IPC calls within 500ms window)
 4. Hot gateway-bridge RPC methods return cached results when inputs unchanged
 
-**Plans:** 3/4 plans executed
+**Plans:** 4/4 plans executed
 
 **Plan list:**
 - [x] 29-01-PLAN.md — 启动链路计时
 - [x] 29-02-PLAN.md — 首屏渲染优化
 - [x] 29-03-PLAN.md — RPC 请求去重
-- [ ] 29-04-PLAN.md — IPC 热点缓存
+- [x] 29-04-PLAN.md — IPC 热点缓存
 
-**Status:** ⏳ In Progress
+**Status:** ✅ Complete
 
 ---
 
@@ -138,7 +138,7 @@
 2. ChatView maintains smooth 60fps scrolling with 100+ messages (via virtualization)
 3. No memory leaks detected after 30 minutes of active use (no growing heap in Chrome DevTools)
 
-**Plans:** TBD
+**Plans:** 1/3 plans executed
 
 ---
 
@@ -149,8 +149,8 @@
 | 26 | Onboarding + Gateway 状态 | ONB-01, GATE-01, GATE-02 | 4/4 | ✅ Complete | 2026-04-07 |
 | 27 | 空状态补全 | EMPTY-01~04 | 4/4 | ✅ Complete | 2026-04-07 |
 | 28 | UX 补全 | UX-01~04, DEG-01, CLI-01 | 5/5 | ✅ Complete | 2026-04-07 |
-| 29 | 性能优化（启动 + IPC） | PERF-01~04 | 1/4 | ⏳ In Progress | - |
-| 30 | 性能优化（React + 内存） | PERF-05~07 | 0/3 | Not started | - |
+| 29 | 性能优化（启动 + IPC） | PERF-01~04 | 4/4 | ✅ Complete | 2026-04-07 |
+| 30 | 性能优化（React + 内存） | PERF-05~07 | 0/3 | ⏳ In Progress | - |
 
 ---
 
