@@ -19,6 +19,7 @@ import { VoiceModePanel } from './VoiceModePanel'
 import { useTTS } from '../hooks/useTTS'
 import { useSpeechRecognition } from '../hooks/useSpeechRecognition'
 import { useGatewayStatusToast } from '../hooks/useGatewayStatusToast'
+import { useToast } from './Toast'
 import { DisconnectBanner } from './DisconnectBanner'
 import 'highlight.js/styles/github-dark.css'
 
@@ -283,6 +284,9 @@ export function ChatView({ onShowContextMenu }: ChatViewProps) {
   // Gateway status Toast notifications
   useGatewayStatusToast()
 
+  // Toast for TTS errors
+  const toast = useToast()
+
   // Auto-scroll to bottom when messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -313,7 +317,9 @@ export function ChatView({ onShowContextMenu }: ChatViewProps) {
       if (!lastMessage.thinking && lastMessage.content.trim()) {
         // Small delay to allow streaming to complete
         const timer = setTimeout(() => {
-          speak(lastMessage.content).catch(console.error)
+          speak(lastMessage.content).catch(() => {
+            toast.error('语音播放失败', 3000)
+          })
         }, 500)
         return () => clearTimeout(timer)
       }
@@ -494,7 +500,9 @@ export function ChatView({ onShowContextMenu }: ChatViewProps) {
       {
         label: '朗读',
         icon: <Volume2 className="w-4 h-4" />,
-        onClick: () => speak(message.content).catch(console.error),
+        onClick: () => speak(message.content).catch(() => {
+          toast.error('语音播放失败', 3000)
+        }),
       },
       {
         label: '全选',
