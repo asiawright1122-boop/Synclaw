@@ -8,12 +8,12 @@
 
 ### Onboarding 与连接
 
-- [ ] **ONB-01**: Onboarding API key 保存后调用 `gateway.ping()` 验证连接，显示"连接成功/失败"状态
+- [x] **ONB-01**: Onboarding API key 保存后调用 `gateway.ping()` 验证连接，显示"连接成功/失败"状态
 
 ### Gateway 状态 UI
 
-- [ ] **GATE-01**: Gateway 断连时 ChatView 显示专属断连 banner + "重新连接"按钮
-- [ ] **GATE-02**: GatewayPanel 显示 Gateway 状态（connected/disconnected/error）、OpenClaw 版本、连接地址
+- [x] **GATE-01**: Gateway 断连时 ChatView 显示专属断连 banner + "重新连接"按钮
+- [x] **GATE-02**: GatewayPanel 显示 Gateway 状态（connected/disconnected/error）、OpenClaw 版本、连接地址
 
 ### 空状态补全
 
@@ -86,9 +86,9 @@
 
 | REQ-ID | Phase | Requirement | Status |
 |--------|-------|-------------|--------|
-| ONB-01 | Phase 26 | Onboarding API key 验证 | — |
-| GATE-01 | Phase 26 | Gateway 断连 banner | — |
-| GATE-02 | Phase 26 | GatewayPanel 状态显示 | — |
+| ONB-01 | Phase 26 | Onboarding API key 验证 | ✅ |
+| GATE-01 | Phase 26 | Gateway 断连 banner | ✅ |
+| GATE-02 | Phase 26 | GatewayPanel 状态显示 | ✅ |
 | EMPTY-01 | Phase 27 | AvatarListPanel 空状态 | — |
 | EMPTY-02 | Phase 27 | TaskBoard 空状态 | — |
 | EMPTY-03 | Phase 27 | SkillsMarketPanel 空状态 | — |
