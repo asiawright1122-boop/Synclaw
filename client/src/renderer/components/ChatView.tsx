@@ -264,7 +264,14 @@ export function ChatView({ onShowContextMenu }: ChatViewProps) {
   const modelMenuRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const { currentModel, setCurrentModel, selectedAvatar, setActiveTab, setActiveView, setSettingsModalOpen, setSettingsSection } = useAppStore()
+  // Precise selectors — only re-render when these specific values change
+  const currentModel = useAppStore(s => s.currentModel)
+  const setCurrentModel = useAppStore(s => s.setCurrentModel)
+  const selectedAvatar = useAppStore(s => s.selectedAvatar)
+  const setActiveTab = useAppStore(s => s.setActiveTab)
+  const setActiveView = useAppStore(s => s.setActiveView)
+  const setSettingsModalOpen = useAppStore(s => s.setSettingsModalOpen)
+  const setSettingsSection = useAppStore(s => s.setSettingsSection)
   const { messages, sending, sendMessage, abortRun, init } = useChatStore()
 
   // Gateway status from unified store
@@ -577,7 +584,10 @@ export function ChatView({ onShowContextMenu }: ChatViewProps) {
       </div>
 
       {/* Messages area */}
-      <div className="flex-1 overflow-y-auto px-6 py-6">
+      <div
+        className="flex-1 overflow-y-auto px-6 py-6"
+        style={{ contain: 'strict' }}
+      >
         <AnimatePresence mode="wait">
           {messages.length === 0 ? (
             <motion.div
@@ -670,20 +680,29 @@ export function ChatView({ onShowContextMenu }: ChatViewProps) {
               className="max-w-3xl mx-auto space-y-4"
             >
               <AnimatePresence>
-                {messages.map((message, index) => (
-                  <motion.div
-                    key={message.id}
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.2, delay: Math.min(index * 0.03, 0.3) }}
-                  >
+                {messages.map((message, index) => {
+                  const isRecent = index >= messages.length - 3
+                  return isRecent ? (
+                    <motion.div
+                      key={message.id}
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <MessageBubble
+                        message={message}
+                        onContextMenu={(e) => handleMessageContextMenu(message, e)}
+                      />
+                    </motion.div>
+                  ) : (
                     <MessageBubble
+                      key={message.id}
                       message={message}
                       onContextMenu={(e) => handleMessageContextMenu(message, e)}
                     />
-                  </motion.div>
-                ))}
+                  )
+                })}
               </AnimatePresence>
 
               {/* AI 响应骨架屏 — sending 时显示 */}
