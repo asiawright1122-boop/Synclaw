@@ -20,7 +20,7 @@
 - [x] **EMPTY-01**: AvatarListPanel 无数据时显示"创建分身"CTA（已部分实现，审查补全）
 - [x] **EMPTY-02**: TaskBoard 无任务时显示"开启你的第一个任务"引导
 - [x] **EMPTY-03**: SkillsMarketPanel 无引导时显示 ClawHub CLI 检测 + 安装引导
-- [ ] **EMPTY-04**: McpPanel 无 server 时显示添加引导
+- [x] **EMPTY-04**: McpPanel 无 server 时显示添加引导
 
 ### 关键 UX 补全
 

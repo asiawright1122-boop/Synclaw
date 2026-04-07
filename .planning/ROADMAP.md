@@ -58,12 +58,12 @@
 3. User sees ClawHub CLI detection + installation guide in SkillsMarketPanel when CLI is not detected
 4. User sees "添加 MCP server" guide in empty McpPanel
 
-**Plans:** 2/4 plans executed
+**Plans:** 3/4 plans executed
 
 **Plan list:**
 - [x] 27-01-PLAN.md — AvatarListPanel 空状态 CTA 增强
 - [x] 27-02-PLAN.md — TaskBoard 空状态验证
-- [ ] 27-03-PLAN.md — SkillsMarketPanel CLI 检测验证
+- [x] 27-03-PLAN.md — SkillsMarketPanel CLI 检测验证
 - [ ] 27-04-PLAN.md — McpPanel 空状态增强
 
 **Status:** Planning
