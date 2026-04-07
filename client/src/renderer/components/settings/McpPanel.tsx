@@ -2,6 +2,7 @@
  * McpPanel.tsx — MCP 服务管理面板
  */
 import { useState, useEffect } from 'react'
+import { Plus, Plug } from 'lucide-react'
 import { Card } from '../ui'
 import { pillBtn } from './shared/pillBtn'
 import { useToastStore } from '../../stores/toastStore'
@@ -501,14 +502,44 @@ function McpPanel() {
       {/* 空状态 + 快速添加模板 */}
       {servers.length === 0 && tools.length === 0 && !loading && (
         <div className="mt-8">
-          <div className="text-center mb-6">
-            <p className="text-sm font-semibold mb-1" style={{ color: 'var(--text)' }}>
+          {/* 空状态头部 */}
+          <div className="flex flex-col items-center mb-6">
+            {/* 空状态图标 */}
+            <div
+              className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4"
+              style={{ background: 'rgba(252,93,30,0.08)' }}
+            >
+              <Plug className="w-8 h-8" style={{ color: 'var(--accent1)' }} />
+            </div>
+
+            {/* 标题 */}
+            <p className="text-base font-semibold mb-1.5" style={{ color: 'var(--text)' }}>
               配置你的第一个 MCP 服务
             </p>
-            <p className="text-xs max-w-sm mx-auto" style={{ color: 'var(--text-sec)' }}>
+
+            {/* 描述 */}
+            <p className="text-sm max-w-sm text-center" style={{ color: 'var(--text-sec)' }}>
               MCP 服务扩展 SynClaw 的能力，访问文件、搜索、数据库等
             </p>
           </div>
+
+          {/* 手动添加入口 */}
+          <div className="mb-3">
+            <button
+              type="button"
+              onClick={() => setShowAddForm(true)}
+              className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-semibold transition-all hover:opacity-90"
+              style={{
+                background: 'var(--accent1)',
+                color: '#fff',
+                boxShadow: '0 4px 12px rgba(252,93,30,0.25)',
+              }}
+            >
+              <Plus className="w-4 h-4" />
+              添加 MCP 服务
+            </button>
+          </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {QUICK_TEMPLATES.map(tpl => (
               <Card key={tpl.id}>
