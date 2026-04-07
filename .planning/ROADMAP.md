@@ -8,7 +8,7 @@
 
 ## Phases
 
-- [ ] **Phase 26: Onboarding + Gateway 状态** — API key 验证 + 断连 banner + 状态显示
+- [x] **Phase 26: Onboarding + Gateway 状态** — API key 验证 + 断连 banner + 状态显示 (completed 2026-04-07)
 - [ ] **Phase 27: 空状态补全** — 4 个面板的空状态引导
 - [ ] **Phase 28: UX 补全** — Avatar 状态、快捷键、Toast、CLI 检测、降级
 - [ ] **Phase 29: 性能优化（启动 + IPC）** — 启动链路 + IPC 批量 + 缓存
@@ -32,7 +32,7 @@
 3. User can click "重新连接" button on the banner to attempt reconnection
 4. User can see Gateway status (connected/disconnected/error), OpenClaw version, and connection address in GatewayPanel
 
-**Plans:** 4/4 plans executed
+**Plans:** 4/4 plans complete
 - [x] 26-01-PLAN.md — Gateway 连接状态 Hook（Zustand store + useGatewayStatus）
 - [x] 26-02-PLAN.md — 断连 Banner UI（ChatView DisconnectBanner）
 - [x] 26-03-PLAN.md — Onboarding API Key 验证（gateway.ping 集成）
