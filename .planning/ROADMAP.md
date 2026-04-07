@@ -1,65 +1,157 @@
-# Roadmap — SynClaw
+# ROADMAP — v1.7 Backlog 清理 + 性能优化
 
-## Milestones
-
-- ✅ **v1.6 P3 UI 完善冲刺** — Phases 24–25 (shipped 2026-04-06)
-- ✅ **v1.5 P2 架构与质量债** — Phases 20–23 (shipped 2026-04-06) · [Archive](./milestones/v1.5-ROADMAP.md)
-- ✅ **v1.4 安全加固冲刺** — Phases 15–19 (shipped 2026-04-06) · [Archive](./milestones/v1.4-ROADMAP.md)
-- ✅ **v1.3 首发就绪冲刺** — Phases 10–14 (shipped 2026-04-01)
-- 🚧 **Next milestone** — Not yet planned
+**Milestone:** v1.7
+**Created:** 2026-04-07
+**Phases:** 5 | **Requirements:** 20 | **Covered:** 20/20 ✓
 
 ---
 
-## Current: v1.6 P3 UI 完善冲刺 ✅ SHIPPED 2026-04-06
+## Phases
 
-<details>
-<summary>Phase 24–25 Details (click to expand)</summary>
-
-### Phase 24: SkillsPanel 安装进度 ✅
-
-**Goal:** SkillsPanel 安装过程中显示实时进度条，替代原来无反馈的静默等待。
-
-- [x] SKL-01: SkillsPanel 监听 `skill:progress` / `skill:status-changed` 事件
-- [x] SKL-02: 内联进度条（progress bar + status message）
-- [x] SKL-03: 安装完成进度条消失；安装失败显示错误 toast
-
-**Commits:** `604a34946`, `a2c57086b`, `e401e4662`, `a4183d4d2`
+- [ ] **Phase 26: Onboarding + Gateway 状态** — API key 验证 + 断连 banner + 状态显示
+- [ ] **Phase 27: 空状态补全** — 4 个面板的空状态引导
+- [ ] **Phase 28: UX 补全** — Avatar 状态、快捷键、Toast、CLI 检测、降级
+- [ ] **Phase 29: 性能优化（启动 + IPC）** — 启动链路 + IPC 批量 + 缓存
+- [ ] **Phase 30: 性能优化（React + 内存）** — 重渲染 + 虚拟化 + 内存泄漏
 
 ---
 
-### Phase 25: IM 频道管理 UI 精简 ✅
+## Phase Details
 
-**Goal:** 移除 IM 面板中的占位 UI 和视觉噪音，修正误导文字，使用紧凑行布局。
+### Phase 26: Onboarding + Gateway 状态
 
-- [x] IM-01: 删除频道卡片中的"编辑"占位按钮
-- [x] IM-02: 平台选择器默认隐藏 desc，hover 显示 tooltip
-- [x] IM-03: 空状态按钮文字改为"添加第一个频道"
-- [x] IM-04: 频道列表从 Card 改为紧凑行布局
+**Goal:** 用户可以清楚知道 Gateway 连接状态并在连接失败时快速重连
 
-**Commits:** `073ffec54`, `8182bd7c2`, `aabac1ea5`, `d62652da1`
+**Depends on:** None
 
-</details>
+**Requirements:** ONB-01, GATE-01, GATE-02
+
+**Success Criteria** (what must be TRUE):
+1. User saves API key in onboarding and immediately sees "连接成功" or "连接失败" status after `gateway.ping()` call
+2. User sees a prominent disconnect banner in ChatView when Gateway disconnects unexpectedly
+3. User can click "重新连接" button on the banner to attempt reconnection
+4. User can see Gateway status (connected/disconnected/error), OpenClaw version, and connection address in GatewayPanel
+
+**Plans:** TBD
+
+**UI hint:** yes
+
+---
+
+### Phase 27: 空状态补全
+
+**Goal:** 用户在空面板看到清晰的引导 CTA，不再面对空白界面
+
+**Depends on:** None (independent UI components)
+
+**Requirements:** EMPTY-01, EMPTY-02, EMPTY-03, EMPTY-04
+
+**Success Criteria** (what must be TRUE):
+1. User sees "创建分身" CTA button in AvatarListPanel when no avatars exist
+2. User sees "开启你的第一个任务" guidance in empty TaskBoard
+3. User sees ClawHub CLI detection + installation guide in SkillsMarketPanel when CLI is not detected
+4. User sees "添加 MCP server" guide in empty McpPanel
+
+**Plans:** TBD
+
+**UI hint:** yes
+
+---
+
+### Phase 28: UX 补全
+
+**Goal:** 关键 UX 流程完善，提升用户操作反馈感知
+
+**Depends on:** None (independent UX improvements)
+
+**Requirements:** UX-01, UX-02, UX-03, UX-04, DEG-01, CLI-01
+
+**Success Criteria** (what must be TRUE):
+1. User sees current Avatar name displayed in ChatView Header after switching avatars
+2. User's active chat resets Avatar state to "未选择" after deleting the current Avatar
+3. User can use Cmd+, to open Settings, Escape to close any modal, Cmd+Shift+M to toggle voice mode
+4. User sees toast notifications for these events: Gateway connect/disconnect, API key save, Avatar save, TTS play failure, approval timeout
+5. User sees friendly ClawHub CLI installation guidance in SkillsMarketPanel when CLI is not installed (not silent failure)
+6. User can still use main app features (chat, file ops) when WEB_API_BASE API is unavailable
+
+**Plans:** TBD
+
+**UI hint:** yes
+
+---
+
+### Phase 29: 性能优化（启动 + IPC）
+
+**Goal:** 提升应用启动速度，降低 IPC 通信延迟
+
+**Depends on:** None (independent technical work)
+
+**Requirements:** PERF-01, PERF-02, PERF-03, PERF-04
+
+**Success Criteria** (what must be TRUE):
+1. Developer can see Electron main process startup timing breakdown (module load, Gateway init, window creation phases)
+2. User experiences measurably faster first screen paint (TTI improvement via lazy loading non-critical components)
+3. Frequent gateway status polling requests are batched or deduplicated (no redundant IPC calls within 500ms window)
+4. Hot gateway-bridge RPC methods return cached results when inputs unchanged
+
+**Plans:** TBD
+
+---
+
+### Phase 30: 性能优化（React + 内存）
+
+**Goal:** 提升 React 渲染效率，消除内存泄漏
+
+**Depends on:** Phase 29 (needs baseline metrics first)
+
+**Requirements:** PERF-05, PERF-06, PERF-07
+
+**Success Criteria** (what must be TRUE):
+1. Zustand stores only trigger re-renders for components subscribing to actually changed state (no unnecessary re-renders in React DevTools)
+2. ChatView maintains smooth 60fps scrolling with 100+ messages (via virtualization)
+3. No memory leaks detected after 30 minutes of active use (no growing heap in Chrome DevTools)
+
+**Plans:** TBD
 
 ---
 
 ## Progress Table
 
-| Phase | Name | Requirements | Status | Completed |
-|-------|------|-------------|--------|-----------|
-| 24 | SkillsPanel 安装进度 | SKL-01–03 | ✅ Complete | 2026-04-06 |
-| 25 | IM 频道管理 UI 精简 | IM-01–04 | ✅ Complete | 2026-04-06 |
+| Phase | Name | Requirements | Plans | Status | Completed |
+|-------|------|-------------|-------|--------|-----------|
+| 26 | Onboarding + Gateway 状态 | ONB-01, GATE-01, GATE-02 | 0/4 | Not started | - |
+| 27 | 空状态补全 | EMPTY-01~04 | 0/4 | Not started | - |
+| 28 | UX 补全 | UX-01~04, DEG-01, CLI-01 | 0/6 | Not started | - |
+| 29 | 性能优化（启动 + IPC） | PERF-01~04 | 0/4 | Not started | - |
+| 30 | 性能优化（React + 内存） | PERF-05~07 | 0/3 | Not started | - |
 
 ---
 
-## Archived Milestones
+## Coverage Map
 
-See `.planning/milestones/` for full archives:
-- `v1.6-ROADMAP.md` / `v1.6-REQUIREMENTS.md`
-- `v1.5-ROADMAP.md` / `v1.5-REQUIREMENTS.md`
-- `v1.4-ROADMAP.md`
-- `v1.3-MILESTONE-ARCHIVE.md` / `v1.3-REQUIREMENTS.md`
-- `v1.2-MILESTONE-ARCHIVE.md` / `v1.2-REQUIREMENTS.md`
+| REQ-ID | Phase | Requirement |
+|--------|-------|-------------|
+| ONB-01 | Phase 26 | Onboarding API key 验证 |
+| GATE-01 | Phase 26 | Gateway 断连 banner |
+| GATE-02 | Phase 26 | GatewayPanel 状态显示 |
+| EMPTY-01 | Phase 27 | AvatarListPanel 空状态 |
+| EMPTY-02 | Phase 27 | TaskBoard 空状态 |
+| EMPTY-03 | Phase 27 | SkillsMarketPanel 空状态 |
+| EMPTY-04 | Phase 27 | McpPanel 空状态 |
+| UX-01 | Phase 28 | Avatar Header 显示 |
+| UX-02 | Phase 28 | Avatar 删除状态重置 |
+| UX-03 | Phase 28 | 快捷键扩展 |
+| UX-04 | Phase 28 | Toast 体系完整性 |
+| DEG-01 | Phase 28 | WEB_API_BASE 降级 |
+| CLI-01 | Phase 28 | ClawHub CLI 检测 |
+| PERF-01 | Phase 29 | 启动链路分析 |
+| PERF-02 | Phase 29 | 首屏渲染优化 |
+| PERF-03 | Phase 29 | IPC 批量处理 |
+| PERF-04 | Phase 29 | IPC 热点缓存 |
+| PERF-05 | Phase 30 | Zustand selector 审查 |
+| PERF-06 | Phase 30 | ChatView 虚拟化 |
+| PERF-07 | Phase 30 | 内存泄漏排查 |
 
 ---
 
-*Roadmap created: 2026-04-07 — v1.6 shipped*
+*Roadmap created: 2026-04-07 for v1.7 Backlog 清理 + 性能优化*
