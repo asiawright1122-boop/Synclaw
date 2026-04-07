@@ -261,6 +261,11 @@ export class GatewayBridge {
     return this.status
   }
 
+  /** Returns the WebSocket connection URL used by this bridge. */
+  getConnectionUrl(): string {
+    return this.opts.url
+  }
+
   /**
    * Returns the Gateway workspace path, or falls back to the default path.
    */

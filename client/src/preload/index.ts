@@ -666,6 +666,10 @@ const openclaw = {
   gateway: {
     identity: (): Promise<ApiResponse> => ipcRenderer.invoke('openclaw:gateway:identity'),
     health: (): Promise<ApiResponse> => ipcRenderer.invoke('openclaw:health'),
+    ping: (): Promise<ApiResponse<{ ok: boolean; status: string }>> =>
+      ipcRenderer.invoke('gateway:ping'),
+    connectionUrl: (): Promise<string> =>
+      ipcRenderer.invoke('gateway:connection:url'),
   },
 
   // ── App Settings (electron-store) ─────────────────────────────────
