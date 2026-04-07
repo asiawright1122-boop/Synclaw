@@ -218,6 +218,12 @@ export const useChatStore = create<ChatState>((set, get) => ({
         content: '[无法连接 OpenClaw Gateway]\n\n请检查 SynClaw 是否正在运行，或尝试重启应用。',
         thinking: false,
       })
+      // Surface a toast so the user notices the error without needing to read the assistant message
+      useToastStore.getState().addToast({
+        type: 'error',
+        message: '无法连接 OpenClaw Gateway，请检查网络或重启 SynClaw',
+        duration: 4000,
+      })
       return
     }
 
