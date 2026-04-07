@@ -375,6 +375,7 @@ export interface OpenClawAPI {
   gateway: {
     identity: () => Promise<ApiResponse>
     health: () => Promise<ApiResponse>
+    ping: () => Promise<ApiResponse<{ ok: boolean; status: string }>>
   }
 
   // Device
