@@ -32,7 +32,11 @@
 3. User can click "重新连接" button on the banner to attempt reconnection
 4. User can see Gateway status (connected/disconnected/error), OpenClaw version, and connection address in GatewayPanel
 
-**Plans:** TBD
+**Plans:** 1/4 plans executed
+- [x] 26-01-PLAN.md — Gateway 连接状态 Hook（Zustand store + useGatewayStatus）
+- [ ] 26-02-PLAN.md — 断连 Banner UI（ChatView DisconnectBanner）
+- [ ] 26-03-PLAN.md — Onboarding API Key 验证（gateway.ping 集成）
+- [ ] 26-04-PLAN.md — GatewayPanel 状态显示（增强版）
 
 **UI hint:** yes
 
@@ -119,7 +123,7 @@
 
 | Phase | Name | Requirements | Plans | Status | Completed |
 |-------|------|-------------|-------|--------|-----------|
-| 26 | Onboarding + Gateway 状态 | ONB-01, GATE-01, GATE-02 | 0/4 | Not started | - |
+| 26 | Onboarding + Gateway 状态 | ONB-01, GATE-01, GATE-02 | 0/4 | Planning | - |
 | 27 | 空状态补全 | EMPTY-01~04 | 0/4 | Not started | - |
 | 28 | UX 补全 | UX-01~04, DEG-01, CLI-01 | 0/6 | Not started | - |
 | 29 | 性能优化（启动 + IPC） | PERF-01~04 | 0/4 | Not started | - |
