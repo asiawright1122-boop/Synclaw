@@ -359,6 +359,27 @@ export function AvatarListPanel() {
                   选择一个模板快速创建分身
                 </p>
               </div>
+
+              {/* CTA: 创建分身 */}
+              <button
+                type="button"
+                onClick={handleCreate}
+                className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-semibold transition-all hover:opacity-90"
+                style={{
+                  background: 'var(--accent1)',
+                  color: '#fff',
+                  boxShadow: '0 4px 12px rgba(252,93,30,0.25)',
+                }}
+              >
+                <Plus className="w-4 h-4" />
+                {t('avatar.create.title') ?? '创建分身'}
+              </button>
+
+              <div className="text-center">
+                <p className="text-xs" style={{ color: 'var(--text-ter)' }}>— 或选择以下模板 —</p>
+              </div>
+
+              {/* Templates grid */}
               <div className="grid grid-cols-1 gap-2">
                 {AVATAR_TEMPLATES.map((template) => (
                   <button

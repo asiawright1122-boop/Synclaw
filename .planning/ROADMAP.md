@@ -58,9 +58,15 @@
 3. User sees ClawHub CLI detection + installation guide in SkillsMarketPanel when CLI is not detected
 4. User sees "添加 MCP server" guide in empty McpPanel
 
-**Plans:** TBD
+**Plans:** 4/4 plans
 
-**UI hint:** yes
+**Plan list:**
+- [ ] 27-01-PLAN.md — AvatarListPanel 空状态 CTA 增强
+- [ ] 27-02-PLAN.md — TaskBoard 空状态验证
+- [ ] 27-03-PLAN.md — SkillsMarketPanel CLI 检测验证
+- [ ] 27-04-PLAN.md — McpPanel 空状态增强
+
+**Status:** Planning
 
 ---
 
@@ -126,7 +132,7 @@
 | Phase | Name | Requirements | Plans | Status | Completed |
 |-------|------|-------------|-------|--------|-----------|
 | 26 | Onboarding + Gateway 状态 | ONB-01, GATE-01, GATE-02 | 4/4 | ✅ Complete | 2026-04-07 |
-| 27 | 空状态补全 | EMPTY-01~04 | 0/4 | Not started | - |
+| 27 | 空状态补全 | EMPTY-01~04 | 2/2 | 🚧 Planning | — |
 | 28 | UX 补全 | UX-01~04, DEG-01, CLI-01 | 0/6 | Not started | - |
 | 29 | 性能优化（启动 + IPC） | PERF-01~04 | 0/4 | Not started | - |
 | 30 | 性能优化（React + 内存） | PERF-05~07 | 0/3 | Not started | - |
