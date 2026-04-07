@@ -28,7 +28,9 @@ export function AvatarEditModal({
   editAvatar,
   initialTemplateId,
 }: AvatarEditModalProps) {
-  const { createAvatar, updateAvatar, loading } = useAvatarStore()
+  const createAvatar = useAvatarStore(s => s.createAvatar)
+  const updateAvatar = useAvatarStore(s => s.updateAvatar)
+  const loading = useAvatarStore(s => s.loading)
   const toast = useToast()
 
   // Form state

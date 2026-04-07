@@ -90,7 +90,10 @@ function ShortcutsModal({ onClose }: { onClose: () => void }) {
 }
 
 function App() {
-  const { settingsModalOpen, setSettingsModalOpen, setSettingsSection, toggleSidebarCollapsed } = useAppStore()
+  const settingsModalOpen = useAppStore(s => s.settingsModalOpen)
+  const setSettingsModalOpen = useAppStore(s => s.setSettingsModalOpen)
+  const setSettingsSection = useAppStore(s => s.setSettingsSection)
+  const toggleSidebarCollapsed = useAppStore(s => s.toggleSidebarCollapsed)
   const { theme, hasCompletedOnboarding, setHasCompletedOnboarding, loadSettings, loadError, setLoadError } = useSettingsStore()
   const { menu, showMenuAt, closeMenu } = useContextMenu()
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false)

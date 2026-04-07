@@ -89,7 +89,9 @@ const NAV: { id: SettingsSection; label: string; icon: typeof Pencil }[] = [
 /* ─── 各面板已迁移至 settings/*.tsx ─── */
 
 export function SettingsView() {
-  const { currentModel, setSettingsModalOpen, settingsSection } = useAppStore()
+  const currentModel = useAppStore(s => s.currentModel)
+  const setSettingsModalOpen = useAppStore(s => s.setSettingsModalOpen)
+  const settingsSection = useAppStore(s => s.settingsSection)
   const [section, setSection] = useState<SettingsSection>('general')
 
   // 同步来自 command palette 的 section 切换

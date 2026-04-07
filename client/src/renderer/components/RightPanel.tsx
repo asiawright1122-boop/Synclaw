@@ -55,7 +55,8 @@ interface UserContext {
 }
 
 export function RightPanel() {
-  const { rightPanelOpen, toggleRightPanel } = useAppStore()
+  const rightPanelOpen = useAppStore(s => s.rightPanelOpen)
+  const toggleRightPanel = useAppStore(s => s.toggleRightPanel)
   const addToast = useToastStore(s => s.addToast)
   const [identity, setIdentity] = useState<IdentityInfo | null>(null)
   const [lessons, setLessons] = useState<Lesson[]>([])

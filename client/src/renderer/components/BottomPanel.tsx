@@ -44,7 +44,10 @@ function HighlightedText({ text, highlight }: { text: string; highlight: string 
 }
 
 export function BottomPanel() {
-  const { bottomPanelOpen, setBottomPanelOpen, bottomPanelHeight, setBottomPanelHeight } = useAppStore()
+  const bottomPanelOpen = useAppStore(s => s.bottomPanelOpen)
+  const setBottomPanelOpen = useAppStore(s => s.setBottomPanelOpen)
+  const bottomPanelHeight = useAppStore(s => s.bottomPanelHeight)
+  const setBottomPanelHeight = useAppStore(s => s.setBottomPanelHeight)
   const { selectedTaskId } = useTaskStore()
   const tasks = useTaskStore(s => s.tasks)
   const selectedTask = tasks.find(t => t.id === selectedTaskId) || null

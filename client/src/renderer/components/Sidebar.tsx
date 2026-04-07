@@ -74,20 +74,19 @@ function AboutButton({ landingAvailable, onClick, className }: {
 }
 
 export function Sidebar() {
-  const {
-    sidebarCollapsed,
-    activeTab,
-    setActiveTab,
-    selectedAvatar,
-    setSelectedAvatar,
-    selectedSession,
-    setSelectedSession,
-    settingsModalOpen,
-    setSettingsModalOpen,
-    activeView,
-    setActiveView,
-  } = useAppStore()
-  const { avatars } = useAvatarStore()
+  // Precise selectors — only re-render when these specific values change
+  const sidebarCollapsed = useAppStore(s => s.sidebarCollapsed)
+  const activeTab = useAppStore(s => s.activeTab)
+  const setActiveTab = useAppStore(s => s.setActiveTab)
+  const selectedAvatar = useAppStore(s => s.selectedAvatar)
+  const setSelectedAvatar = useAppStore(s => s.setSelectedAvatar)
+  const selectedSession = useAppStore(s => s.selectedSession)
+  const setSelectedSession = useAppStore(s => s.setSelectedSession)
+  const settingsModalOpen = useAppStore(s => s.settingsModalOpen)
+  const setSettingsModalOpen = useAppStore(s => s.setSettingsModalOpen)
+  const activeView = useAppStore(s => s.activeView)
+  const setActiveView = useAppStore(s => s.setActiveView)
+  const avatars = useAvatarStore(s => s.avatars)
 
   // Landing page (About) state
   const [landingAvailable, setLandingAvailable] = useState(false)

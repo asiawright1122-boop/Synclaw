@@ -272,7 +272,11 @@ export function ChatView({ onShowContextMenu }: ChatViewProps) {
   const setActiveView = useAppStore(s => s.setActiveView)
   const setSettingsModalOpen = useAppStore(s => s.setSettingsModalOpen)
   const setSettingsSection = useAppStore(s => s.setSettingsSection)
-  const { messages, sending, sendMessage, abortRun, init } = useChatStore()
+  const messages = useChatStore(s => s.messages)
+  const sending = useChatStore(s => s.sending)
+  const sendMessage = useChatStore(s => s.sendMessage)
+  const abortRun = useChatStore(s => s.abortRun)
+  const init = useChatStore(s => s.init)
 
   // Gateway status from unified store
   const status = useGatewayStore((s) => s.status)

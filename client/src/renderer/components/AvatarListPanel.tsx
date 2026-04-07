@@ -187,16 +187,14 @@ function DeleteConfirmModal({ open, avatar, onConfirm, onCancel, loading }: Dele
 }
 
 export function AvatarListPanel() {
-  const {
-    avatars,
-    activeAvatarId,
-    loading,
-    error,
-    demoMode,
-    loadAvatars,
-    deleteAvatar,
-    activateAvatar,
-  } = useAvatarStore()
+  const avatars = useAvatarStore(s => s.avatars)
+  const activeAvatarId = useAvatarStore(s => s.activeAvatarId)
+  const loading = useAvatarStore(s => s.loading)
+  const error = useAvatarStore(s => s.error)
+  const demoMode = useAvatarStore(s => s.demoMode)
+  const loadAvatars = useAvatarStore(s => s.loadAvatars)
+  const deleteAvatar = useAvatarStore(s => s.deleteAvatar)
+  const activateAvatar = useAvatarStore(s => s.activateAvatar)
 
   const [search, setSearch] = useState('')
   const [editModalOpen, setEditModalOpen] = useState(false)

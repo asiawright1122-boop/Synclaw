@@ -22,7 +22,10 @@ interface ContextMenuState {
 }
 
 export function FileExplorer() {
-  const { currentPath, setCurrentPath, files, setFiles } = useAppStore()
+  const currentPath = useAppStore(s => s.currentPath)
+  const setCurrentPath = useAppStore(s => s.setCurrentPath)
+  const files = useAppStore(s => s.files)
+  const setFiles = useAppStore(s => s.setFiles)
   const { favorites, addFavorite, removeFavorite } = useSettingsStore()
   const toast = useToast()
   const [loading, setLoading] = useState(false)

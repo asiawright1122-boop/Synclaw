@@ -12,8 +12,11 @@ import { useAvatarStore } from '../../stores/avatarStore'
 import { useAppStore } from '../../stores/appStore'
 
 export function AvatarSettingsPanel() {
-  const { avatars, loadAvatars, activateAvatar } = useAvatarStore()
-  const { setSettingsModalOpen, setActiveTab } = useAppStore()
+  const avatars = useAvatarStore(s => s.avatars)
+  const loadAvatars = useAvatarStore(s => s.loadAvatars)
+  const activateAvatar = useAvatarStore(s => s.activateAvatar)
+  const setSettingsModalOpen = useAppStore(s => s.setSettingsModalOpen)
+  const setActiveTab = useAppStore(s => s.setActiveTab)
   const [defaultId, setDefaultId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
 

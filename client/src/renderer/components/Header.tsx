@@ -523,7 +523,13 @@ function ModelConfigPanel({ onClose }: { onClose: () => void }) {
 // ── Main Component ─────────────────────────────────────────────────────────────
 
 export function Header() {
-  const { activeTab, selectedAvatar, setSelectedAvatar, setActiveTab, sidebarCollapsed, toggleSidebarCollapsed } = useAppStore()
+  // Precise selectors — only re-render when these specific values change
+  const activeTab = useAppStore(s => s.activeTab)
+  const selectedAvatar = useAppStore(s => s.selectedAvatar)
+  const setSelectedAvatar = useAppStore(s => s.setSelectedAvatar)
+  const setActiveTab = useAppStore(s => s.setActiveTab)
+  const sidebarCollapsed = useAppStore(s => s.sidebarCollapsed)
+  const toggleSidebarCollapsed = useAppStore(s => s.toggleSidebarCollapsed)
 
   // ── Real API data ────────────────────────────────────────────────────────
   const [status, setStatus] = useState<string>('idle')

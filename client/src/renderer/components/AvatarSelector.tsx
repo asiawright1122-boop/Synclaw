@@ -24,14 +24,12 @@ function ClawGlyph({ className }: { className?: string }) {
 }
 
 export function AvatarSelector({ onAvatarChange }: AvatarSelectorProps) {
-  const {
-    avatars,
-    activeAvatarId,
-    loading,
-    loadAvatars,
-    activateAvatar,
-    createFromTemplate,
-  } = useAvatarStore()
+  const avatars = useAvatarStore(s => s.avatars)
+  const activeAvatarId = useAvatarStore(s => s.activeAvatarId)
+  const loading = useAvatarStore(s => s.loading)
+  const loadAvatars = useAvatarStore(s => s.loadAvatars)
+  const activateAvatar = useAvatarStore(s => s.activateAvatar)
+  const createFromTemplate = useAvatarStore(s => s.createFromTemplate)
 
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState('')

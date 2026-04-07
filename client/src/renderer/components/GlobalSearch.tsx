@@ -38,7 +38,8 @@ export function GlobalSearch({ isOpen, onClose }: GlobalSearchProps) {
   const [selectedIndex, setSelectedIndex] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
-  const { setSettingsModalOpen, setSettingsSection } = useAppStore()
+  const setSettingsModalOpen = useAppStore(s => s.setSettingsModalOpen)
+  const setSettingsSection = useAppStore(s => s.setSettingsSection)
 
   const TYPE_CONFIG: Record<ResultType, { icon: React.ElementType; color: string; label: string }> = {
     session: { icon: MessageSquare, color: '#fc5d1e', label: '会话' },

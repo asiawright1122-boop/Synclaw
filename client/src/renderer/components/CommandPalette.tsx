@@ -28,7 +28,9 @@ export function CommandPalette({ isOpen, onClose, onOpenSettings }: CommandPalet
   const [availableModels, setAvailableModels] = useState<{ id: string; name: string }[]>([])
   const inputRef = useRef<HTMLInputElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
-  const { setActiveView, setActiveTab, toggleRightPanel } = useAppStore()
+  const setActiveView = useAppStore(s => s.setActiveView)
+  const setActiveTab = useAppStore(s => s.setActiveTab)
+  const toggleRightPanel = useAppStore(s => s.toggleRightPanel)
 
   const handleSettings = useCallback((section: string) => {
     if (onOpenSettings) {
