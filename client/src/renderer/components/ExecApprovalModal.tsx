@@ -3,7 +3,7 @@
  * Displays pending shell commands from OpenClaw Gateway and lets the user
  * approve, deny, or allow-once before execution proceeds.
  */
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -12,6 +12,7 @@ import {
   X
 } from 'lucide-react'
 import { useExecApprovalStore, type ApprovalDecisionReason } from '../stores/execApprovalStore'
+import { useToast } from './Toast'
 
 // ── Risk helpers ─────────────────────────────────────────────────────────────
 
@@ -76,12 +77,30 @@ export function ExecApprovalModal() {
   const [denialReason, setDenialReason] = useState('')
   const [showDenialInput, setShowDenialInput] = useState(false)
 
+  // Toast notifications
+  const toast = useToast()
+
   // Reset env expanded and denial state when current changes
   useEffect(() => {
     setEnvExpanded(false)
     setDenialReason('')
     setShowDenialInput(false)
   }, [current?.id])
+
+  // Show toast when approval times out (modal becomes invisible with a current approval)
+  const hasTimedOutRef = useRef(false)
+  useEffect(() => {
+    // Reset ref when a new approval comes in
+    hasTimedOutRef.current = false
+  }, [current?.id])
+
+  useEffect(() => {
+    if (!current) return
+    if (!isVisible && !hasTimedOutRef.current) {
+      hasTimedOutRef.current = true
+      toast.warning('审批请求超时，请重新发起请求', 3000)
+    }
+  }, [isVisible, current, toast])
 
   const handleApprove = useCallback(() => {
     resolveCurrent('approved')
