@@ -41,12 +41,57 @@ export type GatewayBridgeOptions = {
 
 type EventHandler = (event: string, payload: unknown) => void
 
+// ── Request Deduplication & Hot Method Caching ─────────────────────────
+// 29-03: Request deduplication within 500ms window
+// 29-04: Hot method caching with per-method TTL
+
 const DEFAULT_REQUEST_TIMEOUT_MS = 10_000 // 10 seconds
 const SHOULD_RETRY_METHODS = new Set([
   'agent', 'chat.send', 'chat.abort',
   'exec.approval.request', 'exec.approval.resolve',
   'file.read', 'file.write', 'file.delete', 'file.mkdir',
 ])
+
+// Hot methods with per-method TTL (ms) — 29-04
+const HOT_METHODS: Record<string, number> = {
+  'models.list': 30_000,        // 30s — Header + ChatView model selector
+  'models.getCurrent': 10_000,  // 10s — Header model selector
+  'config.get': 5_000,          // 5s — Settings access
+  'skills.status': 30_000,      // 30s — SkillsPanel
+  'gateway.ping': 2_000,        // 2s — Status polling (most frequent)
+  'sessions.list': 10_000,      // 10s — Session list
+}
+
+const CACHE_TTL_MS = 500        // Default TTL for non-hot methods (29-03)
+const DEDUP_WINDOW_MS = 500     // Deduplication window (29-03)
+
+// Methods excluded from caching/dedup — must always execute fresh
+const DEDUP_EXCLUDED = new Set([
+  'chat.send', 'chat.inject', 'chat.abort',
+  'file.write', 'file.delete', 'file.mkdir',
+  'sessions.patch', 'sessions.delete',
+  'memory.store', 'memory.delete',
+  'skills.install', 'skills.update',
+  'cron.add', 'cron.update', 'cron.remove', 'cron.run',
+  'models.setCurrent', 'models.configure',
+  'config.patch',
+])
+
+// ── 请求去重配置 ──────────────────────────────────────────────────────
+
+/** 写操作不参与去重（每次都应执行） */
+const DEDUP_EXCLUDED = new Set([
+  'chat.send', 'chat.inject', 'chat.abort',
+  'file.write', 'file.delete', 'file.mkdir',
+  'sessions.patch', 'sessions.delete',
+  'memory.store', 'memory.delete',
+  'skills.install', 'skills.update',
+  'cron.add', 'cron.update', 'cron.remove', 'cron.run',
+  'exec.approval.resolve',
+])
+
+const CACHE_TTL_MS = 500  // 缓存有效期 500ms
+const CACHE_CLEANUP_THRESHOLD_MS = 1000  // 超过 1000ms 的缓存条目清理
 
 // ── Typed interfaces for dynamic GatewayClient ──────────────────────
 // Avoids `any` when calling client.request<T>() after dynamic import
@@ -90,6 +135,16 @@ export class GatewayBridge {
   private browserWindows: Set<BrowserWindow> = new Set()
   private opts: Required<GatewayBridgeOptions>
   private workspacePath: string | null = null
+
+  // ── Request Deduplication & Caching (29-03, 29-04) ──────────────────
+  private pendingRequests: Map<string, Promise<unknown>> = new Map()
+  private requestCache: Map<string, { result: unknown; timestamp: number }> = new Map()
+  private cacheStats = { hits: 0, misses: 0, invalidations: 0 }
+
+  /** 正在进行的请求（用于去重：500ms 内相同请求等待同一 Promise） */
+  private pendingRequests: Map<string, Promise<unknown>> = new Map()
+  /** 请求结果缓存（TTL 500ms） */
+  private requestCache: Map<string, { result: unknown; timestamp: number }> = new Map()
 
   constructor(opts: GatewayBridgeOptions = {}) {
     this.opts = {
@@ -191,6 +246,7 @@ export class GatewayBridge {
 
   /**
    * 向 Gateway 发送 RPC 请求。
+   * 包含请求去重：500ms 内相同 method+params 的请求合并为一次 RPC 调用。
    *
    * @param method  Gateway 方法名（如 'agent', 'chat.send', 'sessions.list'）
    * @param params  请求参数
@@ -203,6 +259,69 @@ export class GatewayBridge {
     params?: unknown,
     opts: { expectFinal?: boolean; timeoutMs?: number | null; retry?: boolean } = {},
   ): Promise<T> {
+    // 写操作不参与去重，直接执行
+    if (DEDUP_EXCLUDED.has(method)) {
+      return this.executeRequest<T>(method, params, opts, '__no_cache__')
+    }
+
+    const cacheKey = this.buildRequestKey(method, params)
+    const now = Date.now()
+
+    // 步骤 1: 检查缓存（TTL 500ms 内的读请求直接返回缓存）
+    const cached = this.requestCache.get(cacheKey)
+    if (cached && now - cached.timestamp < CACHE_TTL_MS) {
+      log.debug(`[cache-hit] ${method}`)
+      return cached.result as T
+    }
+
+    // 步骤 2: 检查去重窗口（500ms 内相同请求等待同一 Promise）
+    const existing = this.pendingRequests.get(cacheKey)
+    if (existing) {
+      log.debug(`[dedup] ${method} — 等待进行中的请求`)
+      return existing as Promise<T>
+    }
+
+    // 步骤 3: 清理过期缓存（超过 1000ms 的条目）
+    this.cleanupExpiredCache(now)
+
+    // 步骤 4: 执行实际请求
+    const promise = this.executeRequest<T>(method, params, opts, cacheKey)
+    this.pendingRequests.set(cacheKey, promise)
+
+    try {
+      return await promise
+    } finally {
+      this.pendingRequests.delete(cacheKey)
+    }
+  }
+
+  /**
+   * 构建请求去重 key：method + JSON.stringify(params)
+   */
+  private buildRequestKey(method: string, params: unknown): string {
+    return `${method}:${JSON.stringify(params ?? {})}`
+  }
+
+  /**
+   * 清理过期缓存条目，防止内存泄漏
+   */
+  private cleanupExpiredCache(now: number): void {
+    for (const [key, { timestamp }] of this.requestCache) {
+      if (now - timestamp > CACHE_CLEANUP_THRESHOLD_MS) {
+        this.requestCache.delete(key)
+      }
+    }
+  }
+
+  /**
+   * 执行实际 RPC 请求
+   */
+  private async executeRequest<T>(
+    method: string,
+    params: unknown,
+    opts: { expectFinal?: boolean; timeoutMs?: number | null; retry?: boolean },
+    cacheKey: string,
+  ): Promise<T> {
     const requestId = crypto.randomUUID()
     const logPrefix = `[req:${requestId.slice(0, 8)}]`
     const timeout = opts.timeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS
@@ -213,13 +332,27 @@ export class GatewayBridge {
     const attempt = async (attemptNum: number): Promise<T> => {
       try {
         const result = await this.requestWithTimeout<T>(method, params, opts, requestId, logPrefix, timeout)
+        // 成功时缓存结果
+        if (cacheKey !== '__no_cache__') {
+          this.requestCache.set(cacheKey, { result, timestamp: Date.now() })
+        }
         return result
       } catch (err) {
         if (attemptNum === 0 && shouldRetry) {
           log.warn(`${logPrefix} ${method} failed (attempt 1), retrying once...`, err)
           return this.requestWithTimeout<T>(method, params, opts, requestId, logPrefix, timeout)
+            .then(result => {
+              if (cacheKey !== '__no_cache__') {
+                this.requestCache.set(cacheKey, { result, timestamp: Date.now() })
+              }
+              return result
+            })
         }
         log.error(`${logPrefix} ${method} failed after ${attemptNum + 1} attempt(s):`, err)
+        // 失败时不缓存，允许下次重试
+        if (cacheKey !== '__no_cache__') {
+          this.requestCache.delete(cacheKey)
+        }
         throw err
       }
     }
@@ -513,6 +646,63 @@ export class GatewayBridge {
 
   private sleep(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms))
+  }
+
+  // ── Request Deduplication & Caching (29-03, 29-04) ──────────────────
+
+  /**
+   * Build cache/dedup key from method and params.
+   */
+  private buildRequestKey(method: string, params: unknown): string {
+    return `${method}:${JSON.stringify(params ?? {})}`
+  }
+
+  /**
+   * Invalidate related read caches after a write operation (29-04).
+   * Maps write methods to their related read caches.
+   */
+  private invalidateRelatedCache(method: string): void {
+    const maps: Record<string, string[]> = {
+      'models.setCurrent': ['models.list:{}', 'models.getCurrent:{}'],
+      'models.configure': ['models.list:{}', 'models.getCurrent:{}'],
+      'config.patch': ['config.get:{}'],
+      'skills.install': ['skills.status:{}'],
+      'skills.update': ['skills.status:{}'],
+    }
+    const toDelete = maps[method] ?? []
+    for (const key of toDelete) {
+      this.requestCache.delete(key)
+      this.cacheStats.invalidations++
+    }
+  }
+
+  /**
+   * Cleanup expired cache entries to prevent memory leaks (29-03).
+   */
+  private cleanupExpiredCache(): void {
+    const now = Date.now()
+    for (const [key, { timestamp }] of this.requestCache) {
+      const ttl = this.getCacheTTL(key.split(':')[0])
+      if (now - timestamp > ttl * 2) {
+        this.requestCache.delete(key)
+      }
+    }
+  }
+
+  /**
+   * Get TTL for a method (hot method or default 500ms).
+   */
+  private getCacheTTL(method: string): number {
+    return HOT_METHODS[method] ?? CACHE_TTL_MS
+  }
+
+  /**
+   * Get cache statistics for debugging (29-04).
+   */
+  getCacheStats(): { hits: number; misses: number; invalidations: number; hitRate: string } {
+    const total = this.cacheStats.hits + this.cacheStats.misses
+    const hitRate = total > 0 ? `${((this.cacheStats.hits / total) * 100).toFixed(1)}%` : '0%'
+    return { ...this.cacheStats, hitRate }
   }
 
   /**
