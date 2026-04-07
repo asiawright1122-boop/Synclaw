@@ -1,26 +1,44 @@
-import { app, BrowserWindow, Tray, Menu, nativeImage, dialog, shell, globalShortcut } from 'electron'
+import { app, BrowserWindow, BrowserView, Tray, dialog, globalShortcut } from 'electron'
 import * as os from 'node:os'
 import * as path from 'node:path'
 import * as fs from 'node:fs'
-import { spawn, ChildProcess } from 'child_process'
-import { fileURLToPath } from 'url'
-import { openclawProcess } from './openclaw.js'
+import { spawn } from 'child_process'
 import { registerIpcHandlers } from './ipc-handlers.js'
 import { getGatewayBridge } from './gateway-bridge.js'
 import logger from './logger.js'
 import { setupAutoUpdater } from './updater.js'
-import { createTray, destroyTray, registerTrayStatusListener } from './tray.js'
+import { createTray, registerTrayStatusListener } from './tray.js'
 import { NotificationManager, setNotificationManagerInstance } from './notifications.js'
 import { AppSettings, DEFAULT_SETTINGS } from './app-settings.js'
 
-// electron-store must be added to package.json dependencies
+// electron-store is CJS; initialize synchronously at startup.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let Store: any = null
-try {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  Store = require('electron-store')
-} catch {
-  Store = null
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let settingsStore: any = null
+
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const _StoreModule: any = require('electron-store')
+Store = _StoreModule
+
+// ── Settings store (electron-store) ──────────────────────────────────
+// Persists UI preferences at app level (survives renderer restarts)
+const defaultSettings: AppSettings = DEFAULT_SETTINGS
+
+if (Store) {
+  const hasEncryption = !!process.env.STORE_ENCRYPTION_KEY
+  if (process.env.NODE_ENV !== 'development' && !hasEncryption) {
+    console.warn(
+      '[Store] WARNING: STORE_ENCRYPTION_KEY is not set. ' +
+      'Sensitive settings (authorized dirs, API keys) will be stored in plaintext. ' +
+      'Set STORE_ENCRYPTION_KEY in your environment to enable encryption.'
+    )
+  }
+  settingsStore = new Store({
+    name: 'settings',
+    defaults: defaultSettings,
+    encryptionKey: process.env.STORE_ENCRYPTION_KEY ?? undefined,
+  })
 }
 
 // Re-export AppSettings so existing callers (e.g. ipc-handlers) keep working
@@ -28,38 +46,6 @@ export type { AppSettings } from './app-settings.js'
 
 // Re-export landing page functions for IPC handlers
 export { showLandingPage, hideLandingPage, getLandingPageAvailable }
-
-// ── Settings store (electron-store) ──────────────────────────────────
-// Persists UI preferences at app level (survives renderer restarts)
-const defaultSettings: AppSettings = DEFAULT_SETTINGS
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-let settingsStore: any = null
-try {
-  if (Store) {
-    const hasEncryption = !!process.env.STORE_ENCRYPTION_KEY
-    if (process.env.NODE_ENV !== 'development' && !hasEncryption) {
-      console.warn(
-        '[Store] WARNING: STORE_ENCRYPTION_KEY is not set. ' +
-        'Sensitive settings (authorized dirs, API keys) will be stored in plaintext. ' +
-        'Set STORE_ENCRYPTION_KEY in your environment to enable encryption.'
-      )
-    }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    // @ts-expect-error — Store is dynamically loaded CJS default export; type-safe call not expressible
-    settingsStore = (Store as any).default ? (Store as any).default<AppSettings>({
-      name: 'settings',
-      defaults: defaultSettings,
-      encryptionKey: process.env.STORE_ENCRYPTION_KEY ?? undefined,
-    }) : (Store as any)({
-      name: 'settings',
-      defaults: defaultSettings,
-      encryptionKey: process.env.STORE_ENCRYPTION_KEY ?? undefined,
-    })
-  }
-} catch {
-  // electron-store unavailable — settings will fall back to renderer defaults
-}
 
 // ── Settings change → Gateway security config bridge ──────────────────────
 // 当 workspace.limitAccess 变更时，若 Gateway 已连接则实时推送配置更新。
@@ -69,21 +55,21 @@ function setupSettingsBridge(): void {
   try {
     // electron-store 的 onDidChange 在值变化时触发回调，传入 (newValue, oldValue)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    ;(settingsStore as any).onDidChange?.('workspace.limitAccess', async (newVal: unknown) => {
+    (settingsStore as any).onDidChange?.('workspace.limitAccess', async (newVal: unknown) => {
       if (newVal === undefined || newVal === null) return
       try {
         const bridge = getGatewayBridge()
-        if (bridge.status === 'connected' || bridge.status === 'ready') {
-          logger('INFO', `[settings-bridge] limitAccess changed → 刷新 Gateway 安全配置`)
+        if (bridge.getStatus() === 'connected' || bridge.getStatus() === 'ready') {
+          logger.info(`[settings-bridge] limitAccess changed → 刷新 Gateway 安全配置`)
           await bridge.refreshSecurityConfig()
         }
       } catch (err) {
-        logger('WARN', '[settings-bridge] 刷新安全配置失败:', err)
+        logger.warn('[settings-bridge] 刷新安全配置失败:', err)
       }
     })
-    logger('INFO', '[settings-bridge] electron-store → Gateway 订阅已注册')
+    logger.info('[settings-bridge] electron-store → Gateway 订阅已注册')
   } catch (err) {
-    logger('WARN', '[settings-bridge] 订阅失败（不影响运行）:', err)
+    logger.warn('[settings-bridge] 订阅失败（不影响运行）:', err)
   }
 }
 
@@ -130,7 +116,7 @@ export function resetAppSettings(): AppSettings {
   return defaultSettings
 }
 
-const currentDirPath = path.dirname(fileURLToPath(import.meta.url))
+const currentDirPath = __dirname
 
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged
 
@@ -139,19 +125,6 @@ let tray: Tray | null = null
 let notificationManager: NotificationManager | null = null
 // ── Logging (electron-log backed) ────────────────────────────────────────
 const log = logger.scope('main')
-// Legacy compat: logCompat('LEVEL', msg) → electron-log
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function logCompat(level: string, message: string, ...args: any[]): void {
-  const fn = (log as Record<string, (...a: unknown[]) => void>)[level.toLowerCase()] ?? log.info
-  fn(message, ...args)
-}
-
-function getAssetPath(...paths: string[]): string {
-  const resourcesPath = isDev
-    ? path.join(currentDirPath, '../../')
-    : process.resourcesPath
-  return path.join(resourcesPath, ...paths)
-}
 
 // ── Window state store ──────────────────────────────────────────────────
 
@@ -383,7 +356,6 @@ function hideLandingPage(): void {
 function destroyLandingPageView(): void {
   if (landingPageView) {
     hideLandingPage()
-    landingPageView.webContents.destroy()
     landingPageView = null
   }
   if (landingProcess) {
@@ -414,7 +386,7 @@ function createWindow() {
     show: false,
     ...(process.platform === 'darwin' ? { titleBarStyle: 'hiddenInset' } : {}),
     webPreferences: {
-      preload: path.join(currentDirPath, '../preload/index.cjs'),
+      preload: path.join(currentDirPath, '../../preload/preload/index.js'),
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: false
@@ -439,7 +411,7 @@ function createWindow() {
   if (isDev) {
     mainWindow.loadURL('http://localhost:5173')
   } else {
-    mainWindow.loadFile(path.join(currentDirPath, '../renderer/index.html'))
+    mainWindow.loadFile(path.join(currentDirPath, '../../renderer/index.html'))
   }
 
   // Hide instead of close when tray is active
@@ -574,13 +546,13 @@ app.whenReady().then(async () => {
     bridge.registerWindow(mainWindow!)
 
     // Subscribe to status changes for auto-reconnect
-    const unsubscribe = bridge.onStatusChange((status) => {
+    bridge.onStatusChange((status) => {
       if (status === 'disconnected' || status === 'error') {
         log.warn(`[gateway-status] Gateway 断开 (${status})，准备重连...`)
         scheduleReconnect(0)
       }
     })
-    // Keep the unsubscribe fn alive — it will be called on window close via the window-on-closed listener below
+    // NOTE: unsubscribe will be called on window close via the window-on-closed listener below
 
     await bridge.connect()
     log.info('OpenClaw Gateway 连接成功')

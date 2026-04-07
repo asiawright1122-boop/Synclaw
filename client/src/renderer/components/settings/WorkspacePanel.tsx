@@ -1,7 +1,7 @@
 /**
  * WorkspacePanel.tsx — 工作区设置面板
  */
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { Card, Row, ToggleStrip } from '../ui'
 import { pillBtn } from './shared/pillBtn'
 import { useSettingsStore } from '../../stores/settingsStore'
@@ -17,7 +17,14 @@ function WorkspacePanel() {
   const setWatch = useSettingsStore(s => s.setWorkspaceWatch)
   const setHeartbeat = useSettingsStore(s => s.setWorkspaceHeartbeat)
   const [saving, setSaving] = useState(false)
+  const [defaultWsPath, setDefaultWsPath] = useState<string>('')
   const addToast = useToastStore(s => s.addToast)
+
+  useEffect(() => {
+    window.electronAPI?.app.getDefaultWorkspacePath().then(res => {
+      if (res?.success && res.data) setDefaultWsPath(res.data as string)
+    }).catch(() => {})
+  }, [])
 
   const handleLimitAccess = useCallback((val: boolean) => {
     setSaving(true)
@@ -78,16 +85,17 @@ function WorkspacePanel() {
               readOnly
               className="flex-1 min-w-0 px-3 py-2 rounded-lg text-sm border"
               style={{ borderColor: 'var(--border)', background: 'var(--input-bg)' }}
-              value="~/.openclaw-synclaw/workspace"
+              value={defaultWsPath ? defaultWsPath.replace(process.env.HOME || '', '~') : '加载中...'}
             />
             <button
               type="button"
               className={pillBtn(false)}
               style={{ borderColor: 'var(--border)', color: 'var(--text)' }}
               onClick={() => {
+                if (!defaultWsPath) return
                 addToast({ type: 'info', message: '正在打开工作区目录...', duration: 2000 })
-                window.electronAPI?.shell?.expandTilde?.('~/.openclaw-synclaw/workspace').then((expanded) => {
-                  const resolvedPath = expanded ?? '~/.openclaw-synclaw/workspace'
+                window.electronAPI?.shell?.expandTilde?.(defaultWsPath).then((expanded) => {
+                  const resolvedPath = expanded ?? defaultWsPath
                   window.electronAPI?.shell?.openPath?.(resolvedPath).catch(() => {
                     addToast({ type: 'warning', message: '无法打开目录，请确认路径是否存在', duration: 3000 })
                   })

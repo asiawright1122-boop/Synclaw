@@ -61,17 +61,23 @@ class ApiClient {
       },
     })
 
+    const json = await response.json().catch(() => ({}))
+
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}))
+      const errorData = json as Record<string, unknown>
       const error: ApiError = {
-        message: errorData.message || errorData.error || `API Error: ${response.status}`,
-        code: errorData.code,
+        message: (errorData as Record<string, unknown>).message as string || (errorData as Record<string, unknown>).error as string || `API Error: ${response.status}`,
+        code: (errorData as Record<string, unknown>).code as string | undefined,
         status: response.status,
       }
       throw new Error(error.message)
     }
 
-    return response.json()
+    // Normalize: if backend doesn't wrap { success, data }, wrap it here.
+    if (json && typeof json === 'object' && 'success' in (json as Record<string, unknown>)) {
+      return json as T
+    }
+    return ({ success: true, data: json } as T)
   }
 
   // 认证相关
@@ -103,46 +109,124 @@ class ApiClient {
   // 用户相关
   user = {
     getSubscription: () =>
-      this.request<ApiResponse<Subscription>>('/user/subscription'),
+      this.request<ApiResponse<Subscription>>('/subscription'),
 
     updateSubscription: (plan: string) =>
-      this.request<ApiResponse<Subscription>>('/user/subscription', {
+      this.request<ApiResponse<Subscription>>('/subscription', {
         method: 'PUT',
         body: JSON.stringify({ plan }),
       }),
 
     cancelSubscription: () =>
-      this.request<ApiResponse>('/user/subscription/cancel', { method: 'POST' }),
+      this.request<ApiResponse>('/subscription', { method: 'POST' }),
 
-    getCredits: () =>
-      this.request<ApiResponse<CreditsBalance>>('/user/credits'),
+    getCredits: async () => {
+      const res = await this.request<ApiResponse<Subscription>>('/subscription')
+      if (res.success && res.data) {
+        return {
+          success: true,
+          data: {
+            total: res.data.creditsBalance,
+            general: res.data.creditsBalance,
+            activity: 0,
+          },
+        } as ApiResponse<CreditsBalance>
+      }
+      return res as unknown as ApiResponse<CreditsBalance>
+    },
 
-    getCreditsHistory: (params?: { limit?: number; offset?: number; type?: 'all' | 'use' | 'earn' }) =>
-      this.request<ApiResponse<CreditsHistoryItem[]>>('/user/credits/history', {
-        method: 'GET',
-        ...(params && { headers: { 'X-Query': JSON.stringify(params) } }),
-      }),
+    getCreditsHistory: async (params?: { limit?: number; offset?: number; type?: 'all' | 'use' | 'earn' }) => {
+      const search = new URLSearchParams()
+      if (params?.limit) search.set('limit', String(params.limit))
+      if (params?.offset) {
+        const page = Math.max(1, Math.floor(params.offset / (params.limit || 20)) + 1)
+        search.set('page', String(page))
+      }
+      if (params?.type && params.type !== 'all') search.set('type', params.type)
+      const query = search.toString()
+      const res = await this.request<ApiResponse<{ items: CreditsHistoryItem[] }>>(`/credits/history${query ? `?${query}` : ''}`)
+      if (res.success && (res.data as { items?: CreditsHistoryItem[] })?.items) {
+        return { success: true, data: (res.data as { items: CreditsHistoryItem[] }).items } as unknown as ApiResponse<CreditsHistoryItem[]>
+      }
+      return res as unknown as ApiResponse<CreditsHistoryItem[]>
+    },
 
     getApiKeys: () =>
-      this.request<ApiResponse<ApiKey[]>>('/user/api-keys'),
+      this.request<ApiResponse<{ items: ApiKey[] }>>('/api-keys').then((res) => {
+        if (res.success && (res.data as { items?: ApiKey[] })?.items) {
+          return { success: true, data: (res.data as { items: ApiKey[] }).items } as unknown as ApiResponse<ApiKey[]>
+        }
+        return res as unknown as ApiResponse<ApiKey[]>
+      }),
 
     createApiKey: (name: string, permissions?: string[]) =>
-      this.request<ApiResponse<{ key: string; apiKey: ApiKey }>>('/user/api-keys', {
+      this.request<ApiResponse<{ key: string; apiKey: ApiKey }>>('/api-keys', {
         method: 'POST',
         body: JSON.stringify({ name, permissions }),
+      }).then((res) => {
+        if (res.success && res.data && (res.data as any).key) {
+          const d = res.data as any
+          return {
+            success: true,
+            data: {
+              key: d.key,
+              apiKey: {
+                id: d.id,
+                name: d.name,
+                key: d.key,
+                prefix: d.prefix ?? '',
+                permissions: d.permissions ?? [],
+                usageCount: d.usageCount ?? 0,
+                usageLimit: d.usageLimit,
+                lastUsedAt: d.lastUsedAt,
+                createdAt: d.createdAt,
+                expiresAt: d.expiresAt,
+                isActive: d.revokedAt == null,
+              },
+            },
+          } as ApiResponse<{ key: string; apiKey: ApiKey }>
+        }
+        return res as ApiResponse<{ key: string; apiKey: ApiKey }>
       }),
 
     deleteApiKey: (id: string) =>
-      this.request<ApiResponse>(`/user/api-keys/${id}`, { method: 'DELETE' }),
+      this.request<ApiResponse>(`/api-keys/${id}`, { method: 'DELETE' }),
 
     revokeApiKey: (id: string) =>
-      this.request<ApiResponse>(`/user/api-keys/${id}/revoke`, { method: 'POST' }),
+      this.request<ApiResponse>(`/api-keys/${id}`, { method: 'DELETE' }),
 
-    getUsageStats: () =>
-      this.request<ApiResponse<UsageStats>>('/user/usage'),
-
+    getUsageStats: () => {
+      return this.request<Record<string, unknown>>('/usage').then((res) => {
+        if (res.success && res.data) {
+          const d = res.data as unknown as Record<string, unknown>
+          const summary = ((d['summary'] as Record<string, unknown>) ?? {}) as Record<string, unknown>
+          const byModel = ((d['byModel'] as Array<Record<string, unknown>>) ?? []) as Array<Record<string, unknown>>
+          return {
+            success: true,
+            data: {
+              sessions: (summary['totalSessions'] as number) ?? 0,
+              messages: (summary['totalMessages'] as number) ?? 0,
+              inputTokens: 0,
+              outputTokens: (summary['totalConsumption'] as number) ?? 0,
+              models: byModel.map((m) => ({
+                id: m['model'] as string,
+                name: m['model'] as string,
+                messages: (m['messages'] as number) ?? 0,
+                inputTokens: 0,
+                outputTokens: (m['tokens'] as number) ?? 0,
+              })),
+              period: {
+                start: '',
+                end: '',
+              },
+            },
+          } as ApiResponse<UsageStats>
+        }
+        return res as unknown as ApiResponse<UsageStats>
+      })
+    },
     getProfile: () =>
-      this.request<ApiResponse<UserProfile>>('/user/profile'),
+      this.request<ApiResponse<UserProfile>>('/user/profile').then((res) => res),
 
     updateProfile: (data: Partial<UserProfile>) =>
       this.request<ApiResponse<UserProfile>>('/user/profile', {

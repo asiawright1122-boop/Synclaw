@@ -10,9 +10,11 @@ import logger from '../logger.js'
 const log = logger.scope('gateway')
 function g() { return getGatewayBridge() }
 
-// ── Unified handler factory ───────────────────────────────────────────────
+// ── Shared response type ───────────────────────────────────────────────────
 
-type HandlerFn<T = unknown> = (...args: unknown[]) => Promise<{ success: boolean; data?: T; error?: string }>
+type ApiResponse<T = unknown> = { success: boolean; data?: T; error?: string }
+
+// ── Unified handler factory ───────────────────────────────────────────────
 
 function gw<T = unknown>(
   channel: string,
@@ -32,19 +34,23 @@ function gw<T = unknown>(
 
 // ── Lifecycle ──────────────────────────────────────────────────────────────
 
-ipcMain.handle('openclaw:status', () => g().getStatus())
+ipcMain.handle('openclaw:status', (): ReturnType<typeof g.getStatus> => g().getStatus())
 
-ipcMain.handle('openclaw:connect', async () => {
+ipcMain.handle('workspace:get', () => {
+  return g().getWorkspacePath()
+})
+
+ipcMain.handle('openclaw:connect', async (): Promise<ApiResponse> => {
   try { await g().connect(); return { success: true } }
   catch (err) { log.error('connect failed:', err); return { success: false, error: String(err) } }
 })
 
-ipcMain.handle('openclaw:disconnect', async () => {
+ipcMain.handle('openclaw:disconnect', async (): Promise<ApiResponse> => {
   try { await g().disconnect(); return { success: true } }
   catch (err) { log.error('disconnect failed:', err); return { success: false, error: String(err) } }
 })
 
-ipcMain.handle('openclaw:reconnect', async () => {
+ipcMain.handle('openclaw:reconnect', async (): Promise<ApiResponse> => {
   try { await g().reconnect(); return { success: true } }
   catch (err) { log.error('reconnect failed:', err); return { success: false, error: String(err) } }
 })
@@ -69,7 +75,7 @@ gw('openclaw:channels:logout', 'channels.logout')
 
 // ── Agent ─────────────────────────────────────────────────────────────────
 
-ipcMain.handle('openclaw:agent', async (_event, params: Record<string, unknown> = {}) => {
+ipcMain.handle('openclaw:agent', async (_event, params: Record<string, unknown> = {}): Promise<ApiResponse> => {
   try {
     const result = await g().request('agent', params, { expectFinal: true })
     return { success: true, data: result }
@@ -79,7 +85,7 @@ ipcMain.handle('openclaw:agent', async (_event, params: Record<string, unknown> 
   }
 })
 
-ipcMain.handle('openclaw:agent:wait', async (_event, params: { runId: string; timeoutMs?: number }) => {
+ipcMain.handle('openclaw:agent:wait', async (_event, params: { runId: string; timeoutMs?: number }): Promise<ApiResponse> => {
   try {
     const result = await g().request('agent.wait', params)
     return { success: true, data: result }
@@ -89,7 +95,7 @@ ipcMain.handle('openclaw:agent:wait', async (_event, params: { runId: string; ti
   }
 })
 
-ipcMain.handle('openclaw:agent:identity', async (_event, params: Record<string, unknown> = {}) => {
+ipcMain.handle('openclaw:agent:identity', async (_event, params: Record<string, unknown> = {}): Promise<ApiResponse> => {
   try {
     const result = await g().request('agent.identity.get', params)
     return { success: true, data: result }
@@ -101,7 +107,7 @@ ipcMain.handle('openclaw:agent:identity', async (_event, params: Record<string, 
 
 // ── Chat ────────────────────────────────────────────────────────────────
 
-ipcMain.handle('openclaw:chat:send', async (_event, params: Record<string, unknown> = {}) => {
+ipcMain.handle('openclaw:chat:send', async (_event, params: Record<string, unknown> = {}): Promise<ApiResponse> => {
   try {
     const result = await g().request('chat.send', params, { expectFinal: true })
     return { success: true, data: result }
@@ -300,5 +306,27 @@ gw('openclaw:status:get', 'status')
 gw('openclaw:gateway:identity', 'gateway.identity.get')
 
 // ── Gateway ────────────────────────────────────────────────────────
+
+ipcMain.handle('gateway:ping', async (): Promise<ApiResponse<{ ok: boolean; status: string }>> => {
+  try {
+    const bridge = g()
+    const status = bridge.getStatus()
+    if (status === 'connected' || status === 'ready') {
+      try {
+        await bridge.request('gateway.identity.get', {}, { timeoutMs: 5000 })
+        return { success: true, data: { ok: true, status } }
+      } catch {
+        return { success: false, error: 'Gateway RPC call failed' }
+      }
+    }
+    return { success: false, error: `Gateway not connected (status: ${status})` }
+  } catch (err) {
+    return { success: false, error: String(err) }
+  }
+})
+
+ipcMain.handle('gateway:connection:url', (): string => {
+  return g().getConnectionUrl()
+})
 
 log.info('Gateway handlers registered')

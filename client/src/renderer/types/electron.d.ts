@@ -49,6 +49,11 @@ export interface AppSettings {
     deviceName: string
     lastReportedAt: string | null
   }
+  security: {
+    encryptionEnabled: boolean
+    encryptionKeySetAt: string | null
+    webApiBase: string
+  }
 }
 
 export interface FileInfo {
@@ -131,7 +136,7 @@ export interface ElectronAPI {
   }
   shell: {
     openPath: (filePath: string) => Promise<string>
-    openExternal: (url: string) => Promise<void>
+    openExternal: (url: string) => Promise<ApiResponse>
     showItemInFolder: (filePath: string) => Promise<void>
     expandTilde: (inputPath: string) => Promise<string>
   }
@@ -142,6 +147,8 @@ export interface ElectronAPI {
     getAutoLaunch: () => Promise<boolean>
     downloadUpdate: () => Promise<ApiResponse>
     installUpdate: () => Promise<ApiResponse>
+    getSigningStatus: () => Promise<ApiResponse<{ status: 'signed' | 'unsigned' | 'not_macos' | 'unknown'; teamId?: string }>>
+    getDefaultWorkspacePath: () => Promise<ApiResponse<string>>
   }
   notifications: {
     setEnabled: (enabled: boolean) => Promise<ApiResponse>
@@ -173,6 +180,25 @@ export interface ElectronAPI {
   }
   // Navigation events from main process
   onNavigate: (callback: (data: { page: string }) => void) => () => void
+  // Security & Encryption
+  security: {
+    getStatus: () => Promise<ApiResponse<{
+      encryptionEnabled: boolean
+      encryptionKeySetAt: string | null
+      webApiBaseConfigured: boolean
+      webApiBase: string
+      webApiBaseFromEnv: boolean
+      sandboxEnabled: boolean
+    }>>
+    generateKey: () => Promise<ApiResponse<{
+      key: string
+      setAt: string
+      instructions: string
+    }>>
+    setWebApiBase: (url: string) => Promise<ApiResponse>
+    /** 运行 openclaw security audit CLI，返回 CVE 审计结果 */
+    runAudit: () => Promise<ApiResponse<unknown>>
+  }
 }
 
 export interface OpenClawAPI {
@@ -349,6 +375,8 @@ export interface OpenClawAPI {
   gateway: {
     identity: () => Promise<ApiResponse>
     health: () => Promise<ApiResponse>
+    ping: () => Promise<ApiResponse<{ ok: boolean; status: string }>>
+    connectionUrl: () => Promise<string>
   }
 
   // Device

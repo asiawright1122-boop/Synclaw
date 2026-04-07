@@ -20,24 +20,7 @@ import * as path from 'path'
 import * as os from 'node:os'
 import logger from './logger.js'
 import { getAppSettings } from './index.js'
-
-// ── 运行时路径判断（与 openclaw.ts 一致）───────────────────────────────
-// 构建时不做任何注入，完全在运行时决定路径。
-// 打包后：process.resourcesPath + '/openclaw-source'
-// 开发时：app.getAppPath() + '/resources/openclaw-source'
-function getOpenClawPath(): string {
-  if (app.isPackaged) {
-    return path.join(process.resourcesPath, 'openclaw-source')
-  }
-  return path.join(app.getAppPath(), 'resources', 'openclaw-source')
-}
-
-const _openclawPath = getOpenClawPath()
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const _m: any = await import(_openclawPath + '/src/gateway/client.ts')
-const GatewayClient = _m.GatewayClient
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const GatewayClientOptions: any = _m.GatewayClientOptions
+import { getGatewayClientClass } from './openclaw-gateway.js'
 
 const log = logger.scope('gateway-bridge')
 
@@ -58,20 +41,61 @@ export type GatewayBridgeOptions = {
 
 type EventHandler = (event: string, payload: unknown) => void
 
+const DEFAULT_REQUEST_TIMEOUT_MS = 10_000 // 10 seconds
+const SHOULD_RETRY_METHODS = new Set([
+  'agent', 'chat.send', 'chat.abort',
+  'exec.approval.request', 'exec.approval.resolve',
+  'file.read', 'file.write', 'file.delete', 'file.mkdir',
+])
+
+// ── Typed interfaces for dynamic GatewayClient ──────────────────────
+// Avoids `any` when calling client.request<T>() after dynamic import
+
+interface GatewayClientInterface {
+  start(): void
+  stop(): void
+  request<T>(
+    method: string,
+    params?: unknown,
+    opts?: { expectFinal?: boolean; timeoutMs?: number | null },
+  ): Promise<T>
+}
+
+interface GatewayClientOptionsInterface {
+  url: string
+  token?: string
+  bootstrapToken?: string
+  clientName: string
+  clientDisplayName: string
+  clientVersion: string
+  platform: string
+  role: string
+  scopes: string[]
+  onEvent: (evt: { event: string; payload: unknown }) => void
+  onHelloOk: (hello: unknown) => void
+  onConnectError: (err: { message: string }) => void
+  onClose: (code: number, reason: string) => void
+}
+
+interface ConfigPatchResult {
+  success?: boolean
+  error?: string
+}
+
 export class GatewayBridge {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private client: any = null
+  private client: GatewayClientInterface | null = null
   private status: GatewayStatus = 'idle'
   private statusListeners: Array<(s: GatewayStatus) => void> = []
   private eventListeners: EventHandler[] = []
   private browserWindows: Set<BrowserWindow> = new Set()
   private opts: Required<GatewayBridgeOptions>
+  private workspacePath: string | null = null
 
   constructor(opts: GatewayBridgeOptions = {}) {
     this.opts = {
       url: opts.url ?? 'ws://127.0.0.1:18789',
-      token: opts.token ?? '',
-      bootstrapToken: opts.bootstrapToken ?? '',
+      token: opts.token,
+      bootstrapToken: opts.bootstrapToken,
       startupTimeoutMs: opts.startupTimeoutMs ?? 30_000,
       readyCheckIntervalMs: opts.readyCheckIntervalMs ?? 500,
     }
@@ -122,6 +146,10 @@ export class GatewayBridge {
       log.info('[Step 5] 应用安全加固配置...')
       await this.applySecurityConfig()
 
+      // 步骤 6: 获取 Gateway workspace 路径
+      log.info('[Step 6] 获取 Gateway workspace 路径...')
+      await this.fetchWorkspacePath()
+
       this.setStatus('connected')
       log.info('OpenClaw Gateway 连接成功')
     } catch (err) {
@@ -168,24 +196,102 @@ export class GatewayBridge {
    * @param params  请求参数
    * @param opts.expectFinal  是否等待流式方法的最终响应（默认 false）
    * @param opts.timeoutMs    超时（ms），null 表示无限
+   * @param opts.retry        是否失败后重试 1 次（默认 false）
    */
   async request<T = Record<string, unknown>>(
     method: string,
     params?: unknown,
-    opts: { expectFinal?: boolean; timeoutMs?: number | null } = {},
+    opts: { expectFinal?: boolean; timeoutMs?: number | null; retry?: boolean } = {},
   ): Promise<T> {
-    if (!this.client) {
-      throw new Error('Gateway 未连接，请先调用 connect()')
+    const requestId = crypto.randomUUID()
+    const logPrefix = `[req:${requestId.slice(0, 8)}]`
+    const timeout = opts.timeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS
+    const shouldRetry = opts.retry ?? SHOULD_RETRY_METHODS.has(method)
+
+    log.debug(`${logPrefix} ${method} called`, { params })
+
+    const attempt = async (attemptNum: number): Promise<T> => {
+      try {
+        const result = await this.requestWithTimeout<T>(method, params, opts, requestId, logPrefix, timeout)
+        return result
+      } catch (err) {
+        if (attemptNum === 0 && shouldRetry) {
+          log.warn(`${logPrefix} ${method} failed (attempt 1), retrying once...`, err)
+          return this.requestWithTimeout<T>(method, params, opts, requestId, logPrefix, timeout)
+        }
+        log.error(`${logPrefix} ${method} failed after ${attemptNum + 1} attempt(s):`, err)
+        throw err
+      }
     }
-    // @ts-expect-error — client is dynamically loaded, type-safe call not possible at compile time
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return (this.client as any).request<T>(method, params, opts)
+
+    return attempt(0)
+  }
+
+  private async requestWithTimeout<T>(
+    method: string,
+    params: unknown,
+    opts: { expectFinal?: boolean },
+    requestId: string,
+    logPrefix: string,
+    timeoutMs: number,
+  ): Promise<T> {
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => {
+        reject(new Error(`Gateway request timed out after ${timeoutMs}ms: ${method}`))
+      }, timeoutMs)
+
+      const rawPromise = this.client!.request<T>(method, params, opts)
+
+      rawPromise
+        .then((result) => {
+          clearTimeout(timer)
+          log.debug(`${logPrefix} ${method} resolved`)
+          resolve(result)
+        })
+        .catch((err) => {
+          clearTimeout(timer)
+          reject(err)
+        })
+    })
   }
 
   // ── 状态 ─────────────────────────────────────────────────────────────
 
   getStatus(): GatewayStatus {
     return this.status
+  }
+
+  /** Returns the WebSocket connection URL used by this bridge. */
+  getConnectionUrl(): string {
+    return this.opts.url
+  }
+
+  /**
+   * Returns the Gateway workspace path, or falls back to the default path.
+   */
+  getWorkspacePath(): string {
+    return this.workspacePath ?? path.join(app.getPath('home'), '.openclaw-synclaw', 'workspace')
+  }
+
+  /**
+   * Fetches the Gateway workspace path via RPC and caches it.
+   * Called after connection is established.
+   */
+  private async fetchWorkspacePath(): Promise<void> {
+    try {
+      // Try to get workspace path from Gateway config
+      const result = await this.client!.request<{ workspacePath?: string }>('config.get', {})
+      if (result?.workspacePath) {
+        this.workspacePath = result.workspacePath
+        log.info(`Gateway workspace path: ${this.workspacePath}`)
+      } else {
+        log.warn('Gateway config.get did not return workspacePath — using default')
+        this.workspacePath = path.join(app.getPath('home'), '.openclaw-synclaw', 'workspace')
+      }
+    } catch (err) {
+      log.warn('Failed to fetch workspace path from Gateway, using default:', err)
+      this.workspacePath = path.join(app.getPath('home'), '.openclaw-synclaw', 'workspace')
+    }
   }
 
   onStatusChange(listener: (s: GatewayStatus) => void): () => void {
@@ -298,30 +404,41 @@ export class GatewayBridge {
         throw new Error(`health check failed: ${res.status}`)
       }
       // Gateway 已就绪后，尝试读取配置文件获取 token
-      // OpenClaw config 存储在 ~/.openclaw/config.json（开发时）或 resources/openclaw-source/.openclaw/config.json
-      const openclawConfigPath = app.isPackaged
-        ? path.join(process.resourcesPath, 'openclaw-source', '.openclaw', 'config.json')
-        : path.join(os.homedir(), '.openclaw', 'config.json')
+      // 优先使用 OPENCLAW_HOME（与 openclawProcess 启动参数一致）
+      const openclawHome =
+        (process.env.OPENCLAW_HOME && process.env.OPENCLAW_HOME.trim()) ||
+        path.join(app.getPath('userData'), 'openclaw')
+      const candidates = [
+        path.join(openclawHome, '.openclaw', 'openclaw.json'),
+        path.join(openclawHome, '.openclaw', 'config.json'),
+        path.join(openclawHome, 'openclaw.json'),
+        path.join(os.homedir(), '.openclaw', 'openclaw.json'),
+        path.join(os.homedir(), '.openclaw', 'config.json'),
+      ]
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      let config: any = null
-      try {
-        const fs = await import('node:fs/promises')
-        const content = await fs.readFile(openclawConfigPath, 'utf-8')
-        config = JSON.parse(content)
-      } catch {
-        config = null
+      const readTokenFrom = async (filePath: string): Promise<string | null> => {
+        try {
+          const fs = await import('node:fs/promises')
+          const content = await fs.readFile(filePath, 'utf-8')
+          const config: { gateway?: { auth?: { token?: unknown } } } = JSON.parse(content)
+          const token = config?.gateway?.auth?.token
+          return typeof token === 'string' ? token : null
+        } catch {
+          return null
+        }
       }
-      const token = config?.gateway?.auth?.token
-      if (token && typeof token === 'string') {
-        log.info('从配置文件读取 gateway token 成功')
-        return token
+
+      for (const filePath of candidates) {
+        const token = await readTokenFrom(filePath)
+        if (token) {
+          log.info(`从配置文件读取 gateway token 成功: ${filePath}`)
+          return token
+        }
       }
-      // 未找到 token，尝试用 bootstrap token
-      log.warn('配置文件中未找到 gateway.auth.token，尝试无认证连接')
-      return ''
+      log.warn('所有候选配置文件中均未找到 gateway.auth.token')
+      throw new Error('Gateway auth token 未配置。请在 OpenClaw 配置文件中设置 gateway.auth.token，或通过 SynClaw 设置界面提供 Token。')
     } catch (err) {
-      log.warn('获取 auth token 失败，将使用无认证连接:', err)
+      log.error('获取 auth token 失败:', err)
       return ''
     }
   }
@@ -332,8 +449,7 @@ export class GatewayBridge {
     let helloReject!: (err: Error) => void
     let connected = false
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const clientOpts: any = {
+    const clientOpts: GatewayClientOptionsInterface = {
       url: this.opts.url,
       token: token || undefined,
       bootstrapToken: this.opts.bootstrapToken || undefined,
@@ -377,6 +493,7 @@ export class GatewayBridge {
       },
     }
 
+    const GatewayClient = await getGatewayClientClass()
     this.client = new GatewayClient(clientOpts)
     this.client.start()
 
@@ -440,6 +557,11 @@ export class GatewayBridge {
             // 平衡安全性与功能（主进程需要访问 GUI 资源）
             mode: 'non-main' as const,
             scope: 'session' as const,
+            // Docker 隔离配置（SBX-02, SBX-03）
+            docker: {
+              network: 'none' as const,       // SBX-02: 沙箱内网络完全禁用
+              readOnlyRoot: true as const,    // SBX-03: 根目录只读
+            },
           },
         },
       },
@@ -482,8 +604,7 @@ export class GatewayBridge {
     }
 
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const res = await this.request<any>('config.patch', securityConfig)
+      const res = await this.request<ConfigPatchResult>('config.patch', securityConfig)
       if (res?.success === false || res?.error) {
         log.warn('安全加固配置应用失败（非致命，继续运行）:', res?.error)
       } else {

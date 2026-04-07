@@ -1,70 +1,85 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.2
-milestone_name: 用户体验与分发完善
-status: Planning
-last_updated: "2026-03-31T00:00:00.000Z"
+milestone: v1.7
+milestone_name: milestone
+status: unknown
+last_updated: "2026-04-07T03:20:18.709Z"
+last_activity: 2026-04-07
 progress:
   total_phases: 5
-  completed_phases: 4
-  total_plans: 0
-  completed_plans: 0
-verification:
-  tsc: "✅ zero errors (2026-03-31)"
-  exec_phase: "✅ 384-line ExecApprovalModal + Zustand store + full approval chain"
-  web_phase: "✅ BrowserView + Next.js standalone server + Sidebar about entry"
-  tts_phase: "✅ VoiceModePanel + useTTS/useSpeechRecognition hooks + TtsPanel settings"
-  ava_phase: "✅ AvatarListPanel + AvatarEditModal + avatarStore + 5 templates + E2E"
+  completed_phases: 1
+  total_plans: 4
+  completed_plans: 4
 ---
 
-# STATE.md — SynClaw v1.2 用户体验与分发完善
+# STATE.md — SynClaw
 
-**Version:** v1.2
-**Started:** 2026-03-30
-**Target:** 完善分发能力、提升用户体验
+**Updated:** 2026-04-07
+
+---
 
 ## Project Reference
 
-See: `.planning/PROJECT.md`
-See: `.planning/REQUIREMENTS.md` — v1.2 详细需求
-See: `.planning/ROADMAP.md` — v1.2 阶段路线图
+**Project:** SynClaw — Electron desktop client for OpenClaw Gateway
+**Core Value:** 用户可以通过自然语言对话，安全地操作用户本地文件系统，且数据永不离开用户设备。
+**Current Milestone:** v1.7 Backlog 清理 + 性能优化 — 🚧 Planning (Phase 26)
 
-**Core value:** 用户可以通过自然语言对话，安全地操作用户本地文件系统，且数据永不离开用户设备。
+---
 
-## Phase 概览
+## Current Position
 
-| # | Phase | 功能 | 依赖 | 状态 | 验证日期 |
-|---|-------|------|------|------|---------|
-| 1 | EXEC | Exec 审批弹窗 | OpenClaw >= 2026.3.28 | ✅ 完成 | 2026-03-31 |
-| 2 | SIGN | macOS 公证签名 | Apple Developer ID | ⏳ 等待用户提供证书 | — |
-| 3 | WEB | web/ landing page 集成 | web/ 子仓库 | ✅ 完成 | 2026-03-31 |
-| 4 | TTS | TTS / Talk Mode UI | OpenClaw talk API | ✅ 完成 | 2026-03-31 |
-| 5 | AVA | Avatar 多分身体系落地 | OpenClaw avatars API | ✅ 完成 | 2026-03-31 |
+Phase: 27
+Plan: Not started
 
-## Decisions
+## Accumulated Context
 
-- Phase 5 AVA 核心 CRUD 已完整实现（ListPanel、EditModal、avatarStore、E2E）
-- Phase 4 TTS 对齐 settings key（tts.autoPlay 嵌套命名）
-- Phase 3 WEB 集成 Next.js standalone server 到 Electron BrowserView
-- Phase 1 EXEC 完整审批链路：Gateway event → chatStore → execApprovalStore → Modal → Gateway resolve
-- **全部验证通过**：tsc 零错误（2026-03-31）+ 代码走读确认
+### Phase Structure (v1.7)
 
-## Blockers
+| Phase | Name | Requirements |
+|-------|------|-------------|
+| 26 | Onboarding + Gateway 状态 | ONB-01, GATE-01, GATE-02 |
+| 27 | 空状态补全 | EMPTY-01, EMPTY-02, EMPTY-03, EMPTY-04 |
+| 28 | UX 补全 | UX-01, UX-02, UX-03, UX-04, DEG-01, CLI-01 |
+| 29 | 性能优化（启动 + IPC） | PERF-01, PERF-02, PERF-03, PERF-04 |
+| 30 | 性能优化（React + 内存） | PERF-05, PERF-06, PERF-07 |
 
-| Blocker | 解决方式 |
-|---------|---------|
-| Apple Developer ID（macOS 公证） | 用户自行提供 |
-| web/ 子仓库依赖 | 独立 git 工作，不阻塞主规划 |
+### Key Decisions (from v1.7 planning)
 
-## Active Debug Sessions
+|| | Decision | Rationale | Status |
+|--|---------|-----------|--------|
+|| Phase order | Backlog first, performance second | Need baseline metrics before optimizing | 🚧 Planning |
+|| Phase 30 depends on 29 | React + memory optimization needs startup/IPC baseline | Data-driven optimization | 🚧 Planning |
+|| UI phases grouped | ONB/GATE, EMPTY, UX are independent UI work | Can execute in parallel if needed | 🚧 Planning |
 
-*(None)*
+### Key Decisions (from v1.6)
 
-## Notes
+|| | Decision | Rationale | Status |
+|--|---------|-----------|--------|
+|| Skill install progress events | `skill:progress` / `skill:installed` / `skill:error` 事件驱动 | 非轮询，实时反馈 | ✅ Implemented (Phase 24) |
+|| IM compact row layout | 频道列表从 Card 改为紧凑行 | 减少视觉噪音，settings 面板更紧凑 | ✅ Implemented (Phase 25) |
 
-- 子仓库 `web/` 独立管理，`.planning/` 文档不进入 web 提交
-- v1.1 Phase 0-4 全部完成，零 TS 错误，构建通过
-- macOS 公证需要：Apple Developer ID + app-specific password + 签名证书（需用户提供）
-- v1.2 EXEC/WEB/TTS/AVA 4/5 阶段完成并验证通过，仅剩 SIGN 等待用户提供 Apple ID
-- **验证方法**：tsc --noEmit 零错误 + 代码走读 + 文件存在性核查（2026-03-31）
-- **E2E 测试**：5 个 spec 存在（app/avatar/exec-approval/landing-page/tts），需在完整环境中运行
+### Key Decisions (from v1.5)
+
+|| | Decision | Rationale | Status |
+|--|---------|-----------|--------|
+|| TypeScript type safety | 消除 any，让 TS 真正发挥作用 | Foundation work | ✅ Implemented (Phase 20) |
+|| EventBus unified | 合并事件注册，React Context 封装 | Foundation work | ✅ Implemented (Phase 21) |
+|| requestId + timeout + retry | 稳定性保障 | Foundation work | ✅ Implemented (Phase 22) |
+|| workspace:get IPC | FileExplorer Gateway workspace 路径 | Foundation work | ✅ Implemented (Phase 23) |
+
+### Known Blockers
+
+|| | Blocker | Impact | Resolution |
+|--|---------|--------|------------|
+|| macOS 公证需 Apple ID | Cannot complete notarization without user credentials | User needs to provide Apple Developer ID |
+
+---
+
+## Session Continuity
+
+**Last activity:** 2026-04-07
+**Next Action:** Phase 26 全部完成 → Phase 27 空状态补全
+
+---
+
+*State last updated: 2026-04-07*

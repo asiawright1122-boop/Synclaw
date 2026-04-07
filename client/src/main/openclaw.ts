@@ -6,6 +6,23 @@ import logger from './logger.js'
 
 const log = logger.scope('openclaw')
 
+// Known CVE-patched versions. GHSA-rqpp-rjj8-7wv8 (CVSS 10.0) fixed in >= 2026.3.12
+const MIN_VERSION = '2026.3.12'
+
+function parseVersion(v: string): number[] {
+  return v.replace(/^v/, '').split('.').map(Number)
+}
+
+function isVersionAtLeast(installed: string, minimum: string): boolean {
+  const a = parseVersion(installed)
+  const b = parseVersion(minimum)
+  for (let i = 0; i < Math.max(a.length, b.length); i++) {
+    if ((a[i] ?? 0) > (b[i] ?? 0)) return true
+    if ((a[i] ?? 0) < (b[i] ?? 0)) return false
+  }
+  return true
+}
+
 export class OpenClawProcess {
   private process: ChildProcess | null = null
   private openclawPath: string = ''
@@ -14,17 +31,41 @@ export class OpenClawProcess {
     this.initPath()
   }
 
+  private checkVersion(): void {
+    try {
+      const pkgPath = path.join(this.openclawPath, 'package.json')
+      if (!fs.existsSync(pkgPath)) {
+        log.warn('[security] OpenClaw package.json not found — skipping version check')
+        return
+      }
+      const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'))
+      const installed = pkg.version ?? 'unknown'
+      if (!isVersionAtLeast(installed, MIN_VERSION)) {
+        log.error(
+          `[security] OpenClaw v${installed} is below minimum recommended ` +
+          `v${MIN_VERSION} (GHSA-rqpp-rjj8-7wv8 patch). ` +
+          'Run: cd client && pnpm run openclaw:update'
+        )
+      } else {
+        log.info(`[security] OpenClaw v${installed} >= v${MIN_VERSION} — CVE check passed`)
+      }
+    } catch (err) {
+      log.warn('[security] Could not read OpenClaw version:', err)
+    }
+  }
+
   private initPath() {
-    // 开发环境: 使用项目目录下的 openclaw
-    // 生产环境: 使用 resources 目录
     if (app.isPackaged) {
-      // 生产环境: extraResources 直接在 Contents/Resources/openclaw-source/
       this.openclawPath = path.join(process.resourcesPath, 'openclaw-source')
     } else {
-      // 开发环境: resources/ 在 client/ 目录下
-      this.openclawPath = path.join(app.getAppPath(), 'resources', 'openclaw-source')
+      const appPath = app.getAppPath()
+      this.openclawPath =
+        this.findOpenClawPath(appPath) ??
+        this.findOpenClawPath(process.cwd()) ??
+        path.join(appPath, 'resources', 'openclaw-source')
     }
     log.info('OpenClaw 路径:', this.openclawPath)
+    this.checkVersion()
   }
 
   async start(): Promise<void> {
@@ -36,26 +77,19 @@ export class OpenClawProcess {
     return new Promise((resolve, reject) => {
       log.info('正在启动 OpenClaw 进程...')
 
-      // 使用 tsx 运行 TypeScript 源码（无需预编译 dist/）
-      // tsx 支持直接加载 .ts 文件并处理相对路径导入
+      // 优先使用 tsx（开发/调试时），fallback 到 node（生产 npm 安装）
       const tsxBin = path.join(this.openclawPath, 'node_modules', 'tsx', 'dist', 'cli.mjs')
+      const useTsx = fs.existsSync(tsxBin)
+      const runnerArgs = useTsx
+        ? [tsxBin, 'openclaw.mjs']
+        : [path.join(this.openclawPath, 'openclaw.mjs')]
+      const runnerLabel = useTsx ? 'tsx' : 'node'
 
-      // 快速失败检查：确保 tsx 二进制文件存在
-      if (!fs.existsSync(tsxBin)) {
-        const msg = (
-          `tsx binary not found at: ${tsxBin}\n` +
-          `This usually means OpenClaw source has not been downloaded.\n` +
-          `To fix this, run one of the following:\n` +
-          `  - node scripts/download-openclaw.mjs\n` +
-          `  - npm run openclaw:download\n` +
-          `Or check if openclaw-source directory exists at: ${this.openclawPath}`
-        )
-        log.error(msg)
-        reject(new Error(msg))
-        return
+      if (!useTsx) {
+        log.info('tsx not found in node_modules, using node directly')
       }
 
-      this.process = spawn('node', [tsxBin, 'openclaw.mjs'], {
+      this.process = spawn('node', runnerArgs, {
         cwd: this.openclawPath,
         stdio: ['ignore', 'pipe', 'pipe'],
         env: {
@@ -64,6 +98,7 @@ export class OpenClawProcess {
           ...(process.env.NODE_ENV === 'development' ? { SKIP_UPDATE_CHECK: 'true' } : {})
         }
       })
+      log.info(`OpenClaw 进程已启动 (runner=${runnerLabel})，等待 Gateway 就绪...`)
 
       // 收集输出
       this.process.stdout?.on('data', (data) => {
@@ -87,7 +122,6 @@ export class OpenClawProcess {
 
       // 进程已启动，resolve 即可
       // 整体超时由 gateway-bridge.waitForHttpReady() 的 30 秒超时处理
-      log.info('OpenClaw 进程已启动，等待 Gateway 就绪...')
       resolve()
     })
   }

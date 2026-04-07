@@ -4,32 +4,34 @@
 import { useState, useEffect } from 'react'
 import { Card, Row, Spinner } from '../ui'
 import { pillBtn } from './shared/pillBtn'
-import { Wifi, RefreshCw, WifiOff, ExternalLink } from 'lucide-react'
+import { Wifi, RefreshCw, WifiOff, ExternalLink, CheckCircle, XCircle, AlertCircle } from 'lucide-react'
+import { useGatewayStatus } from '../../hooks/useGatewayStatus'
+import { useGatewayStore } from '../../stores/gatewayStore'
 
 function GatewayPanel() {
-  const [status, setStatus] = useState<string>('idle')
+  const {
+    status,
+    isConnected,
+    isDisconnected,
+    isConnecting,
+    openClawVersion,
+    connectionUrl,
+    reconnect,
+  } = useGatewayStatus()
+
   const [loading, setLoading] = useState(false)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
-  const [identity, setIdentity] = useState<Record<string, unknown> | null>(null)
   const [health, setHealth] = useState<Record<string, unknown> | null>(null)
 
   const loadGateway = async () => {
     setLoading(true)
     try {
-      const [statusRes, identityRes, healthRes] = await Promise.allSettled([
-        window.openclaw?.getStatus(),
-        window.openclaw?.gateway.identity(),
+      const healthRes = await Promise.allSettled([
         window.openclaw?.gateway.health(),
       ])
 
-      if (statusRes?.status === 'fulfilled') {
-        setStatus(statusRes.value as string)
-      }
-      if (identityRes?.status === 'fulfilled' && identityRes.value?.success) {
-        setIdentity(identityRes.value.data as typeof identity)
-      }
-      if (healthRes?.status === 'fulfilled' && healthRes.value?.success) {
-        setHealth(healthRes.value.data as typeof health)
+      if (healthRes?.[0]?.status === 'fulfilled' && healthRes[0]?.value?.success) {
+        setHealth(healthRes[0].value.data as typeof health)
       }
     } catch {
       // keep empty
@@ -40,8 +42,9 @@ function GatewayPanel() {
 
   useEffect(() => {
     loadGateway()
-    const unsub = window.openclaw?.onStatusChange(s => setStatus(s))
-    return () => { unsub?.() }
+    useGatewayStore.getState().loadConnectionUrl()
+    // subscription is handled by useGatewayStatus hook
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const handleConnect = async () => {
@@ -67,14 +70,12 @@ function GatewayPanel() {
   const handleReconnect = async () => {
     setActionLoading('reconnect')
     try {
-      await window.openclaw?.reconnect()
+      await reconnect()
       await loadGateway()
     } finally {
       setActionLoading(null)
     }
   }
-
-  const isConnected = status === 'connected' || status === 'ready'
 
   return (
     <div className="pb-10">
@@ -102,18 +103,65 @@ function GatewayPanel() {
       <Card className="mb-4">
         <Row label="连接状态" border={false}>
           <div className="flex items-center gap-2">
-            <span
-              className="w-2.5 h-2.5 rounded-full"
-              style={{ background: isConnected ? 'var(--success)' : 'var(--danger)' }}
-            />
-            <span className="text-sm font-medium" style={{ color: 'var(--text)' }}>
-              {isConnected ? '已连接' : '未连接'}
-            </span>
+            {isConnected && (
+              <>
+                <span
+                  className="w-2.5 h-2.5 rounded-full"
+                  style={{ background: 'var(--success)' }}
+                />
+                <CheckCircle className="w-3.5 h-3.5" style={{ color: 'var(--success)' }} />
+                <span className="text-sm font-medium" style={{ color: 'var(--success)' }}>
+                  已连接
+                </span>
+              </>
+            )}
+            {isDisconnected && (
+              <>
+                <span
+                  className="w-2.5 h-2.5 rounded-full"
+                  style={{ background: 'var(--danger)' }}
+                />
+                <XCircle className="w-3.5 h-3.5" style={{ color: 'var(--danger)' }} />
+                <span className="text-sm font-medium" style={{ color: 'var(--danger)' }}>
+                  已断开
+                </span>
+              </>
+            )}
+            {isConnecting && (
+              <>
+                <span
+                  className="w-2.5 h-2.5 rounded-full animate-pulse"
+                  style={{ background: '#eab308' }}
+                />
+                <AlertCircle className="w-3.5 h-3.5" style={{ color: '#eab308' }} />
+                <span className="text-sm font-medium" style={{ color: '#eab308' }}>
+                  连接中
+                </span>
+              </>
+            )}
             <span className="text-xs" style={{ color: 'var(--text-ter)' }}>
               ({status})
             </span>
           </div>
         </Row>
+
+        {/* OpenClaw version */}
+        {openClawVersion && (
+          <Row label="OpenClaw 版本" border={false}>
+            <span className="text-sm font-medium" style={{ color: 'var(--text)' }}>
+              {openClawVersion}
+            </span>
+          </Row>
+        )}
+
+        {/* Connection address */}
+        {connectionUrl && (
+          <Row label="连接地址" border={false}>
+            <span className="text-xs font-mono" style={{ color: 'var(--text-sec)' }}>
+              {connectionUrl}
+            </span>
+          </Row>
+        )}
       </Card>
 
       {/* Actions */}
@@ -180,27 +228,6 @@ function GatewayPanel() {
                   <span>{k}</span>
                   <span className="font-medium" style={{ color: 'var(--text)' }}>
                     {String(v)}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </Card>
-      )}
-
-      {/* Identity */}
-      {identity && (
-        <Card>
-          <div className="px-5 py-4">
-            <p className="text-sm font-semibold mb-3" style={{ color: 'var(--text)' }}>
-              版本信息
-            </p>
-            <div className="space-y-2 text-xs" style={{ color: 'var(--text-sec)' }}>
-              {Object.entries(identity).map(([k, v]) => (
-                <div key={k} className="flex justify-between gap-4">
-                  <span>{k}</span>
-                  <span className="font-medium break-all text-right" style={{ color: 'var(--text)' }}>
-                    {typeof v === 'object' ? JSON.stringify(v) : String(v)}
                   </span>
                 </div>
               ))}

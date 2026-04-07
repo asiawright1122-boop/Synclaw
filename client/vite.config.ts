@@ -13,7 +13,19 @@ export default defineConfig({
     rollupOptions: {
       input: {
         main: path.resolve(__dirname, 'index.html')
-      }
+      },
+      // Prevent Vite from bundling main/preload process code into renderer output.
+      // Without this, esbuild transitively resolves src/main/** imports and emits a
+      // spurious dist/main/index.cjs (26500-line ESM→CJS bundle) alongside the real
+      // dist/main/index.mjs produced by scripts/build-main.mjs.  Electron would then
+      // load index.cjs instead of index.mjs and crash with:
+      //   ERR_REQUIRE_ESM: require() of ES Module gateway-runtime.js not supported.
+      external: [
+        'electron',
+        ...Object.keys(process.env).filter(k => k.startsWith('ELECTRON_')),
+      ],
+      // Scoped to main/preload source only
+      noExternal: [],
     }
   },
   resolve: {
@@ -22,7 +34,7 @@ export default defineConfig({
     }
   },
   server: {
-    port: 5173,
+    port: 5174,
     strictPort: true
   }
 })

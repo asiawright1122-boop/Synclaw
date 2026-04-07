@@ -2,6 +2,7 @@
  * SkillsPanel.tsx — 技能管理面板
  */
 import { useState, useEffect } from 'react'
+import { Loader2 } from 'lucide-react'
 import { Card } from '../ui'
 import { pillBtn } from './shared/pillBtn'
 import { useToastStore } from '../../stores/toastStore'
@@ -11,6 +12,9 @@ interface SkillItem {
   badge: string
   desc: string
   warn: string | null
+  installing?: boolean
+  installProgress?: number
+  installMessage?: string
 }
 
 const FALLBACK_SKILLS: SkillItem[] = [
@@ -46,6 +50,8 @@ function SkillsPanel() {
   const [skills, setSkills] = useState<SkillItem[]>([])
   const [loading, setLoading] = useState(true)
   const [toggling, setToggling] = useState<string | null>(null)
+  // skillKey → 安装进度信息
+  const [installingSkills, setInstallingSkills] = useState<Record<string, { progress?: number; message?: string }>>({})
 
   const pills: { id: typeof filter; label: string }[] = [
     { id: 'all', label: '全部' },
@@ -145,22 +151,88 @@ function SkillsPanel() {
 
     const unsub = window.openclaw.on((e) => {
       if (e.event === 'skill:installed' || e.event === 'skill:status-changed') {
+        const payload = e.data as { skillKey?: string }
+        if (e.event === 'skill:status-changed' && payload?.skillKey) {
+          setInstallingSkills((prev) => {
+            const next = { ...prev }
+            delete next[payload.skillKey]
+            return next
+          })
+        }
         reloadSkills()
+      }
+    })
+
+    const installUnsub = window.openclaw.on((e) => {
+      if (e.event === 'skill:progress') {
+        const payload = e.data as { skillKey?: string; progress?: number; message?: string }
+        if (payload?.skillKey) {
+          setInstallingSkills((prev) => ({
+            ...prev,
+            [payload.skillKey]: {
+              progress: payload.progress,
+              message: payload.message,
+            },
+          }))
+        }
+      }
+      if (e.event === 'skill:installed') {
+        const payload = e.data as { skillKey?: string }
+        if (payload?.skillKey) {
+          setInstallingSkills((prev) => {
+            const next = { ...prev }
+            delete next[payload.skillKey]
+            return next
+          })
+          reloadSkills()
+        }
+      }
+      if (e.event === 'skill:status-changed') {
+        const payload = e.data as { skillKey?: string }
+        if (payload?.skillKey) {
+          setInstallingSkills((prev) => {
+            const next = { ...prev }
+            delete next[payload.skillKey]
+            return next
+          })
+          reloadSkills()
+        }
+      }
+      if (e.event === 'skill:error') {
+        const payload = e.data as { skillKey?: string; error?: string }
+        if (payload?.skillKey) {
+          setInstallingSkills((prev) => {
+            const next = { ...prev }
+            delete next[payload.skillKey]
+            return next
+          })
+          addToast({
+            type: 'error',
+            message: `"${payload.skillKey}" 安装失败${payload.error ? `：${payload.error}` : ''}`,
+            duration: 4000,
+          })
+        }
       }
     })
 
     return () => {
       cancelled = true
       unsub?.()
+      installUnsub?.()
     }
   }, [])
 
   const filteredSkills = skills.filter((s) => {
     if (filter === 'installed') return s.badge === '已启用'
-    if (filter === 'avail') return s.badge === '已禁用'
+    if (filter === 'avail') return s.badge === '已禁用' || !!installingSkills[s.name]
     if (filter === 'paid') return s.warn !== null
     return true
-  })
+  }).map((s) => ({
+    ...s,
+    installing: !!installingSkills[s.name],
+    installProgress: installingSkills[s.name]?.progress,
+    installMessage: installingSkills[s.name]?.message,
+  }))
 
   return (
     <div className="pb-10">
@@ -235,6 +307,34 @@ function SkillsPanel() {
                     <p className="text-xs mt-2" style={{ color: 'var(--accent1)' }}>
                       {s.warn}
                     </p>
+                  ) : null}
+                  {/* 安装进度条 */}
+                  {s.installing ? (
+                    <div className="mt-2">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-[10px] flex items-center gap-1" style={{ color: 'var(--accent1)' }}>
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                          {s.installMessage ?? '安装中...'}
+                        </span>
+                        {s.installProgress !== undefined && (
+                          <span className="text-[10px]" style={{ color: 'var(--text-ter)' }}>
+                            {s.installProgress}%
+                          </span>
+                        )}
+                      </div>
+                      <div
+                        className="h-1.5 rounded-full overflow-hidden"
+                        style={{ background: 'var(--bg-elevated)' }}
+                      >
+                        <div
+                          className="h-full rounded-full transition-all duration-300"
+                          style={{
+                            width: `${s.installProgress ?? 0}%`,
+                            background: 'var(--accent1)',
+                          }}
+                        />
+                      </div>
+                    </div>
                   ) : null}
                 </div>
                 <button

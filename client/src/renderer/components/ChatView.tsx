@@ -6,18 +6,19 @@
 import { useState, useEffect, useRef, useCallback, useMemo, memo } from 'react'
 import { useAppStore } from '../stores/appStore'
 import { useChatStore } from '../stores/chatStore'
+import { useGatewayStore } from '../stores/gatewayStore'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Send, Bot, User, ChevronDown, Paperclip, BadgeCheck, MessageCircle, X, Copy, Check, Volume2, Settings } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import rehypeHighlight from 'rehype-highlight'
-import type { OpenClawStatus } from '../types/electron'
 import type { ContextMenuItem } from '../hooks/useContextMenu'
 import { t } from '../i18n'
 import { AvatarSelector } from './AvatarSelector'
 import { VoiceModePanel } from './VoiceModePanel'
 import { useTTS } from '../hooks/useTTS'
 import { useSpeechRecognition } from '../hooks/useSpeechRecognition'
+import { DisconnectBanner } from './DisconnectBanner'
 import 'highlight.js/styles/github-dark.css'
 
 function formatFileSize(bytes: number): string {
@@ -103,29 +104,6 @@ function ClawLogo({ className }: { className?: string }) {
       <path d="M9 10c0-1.5 1-2.5 3-2.5s3 1 3 2.5v1c0 3-1.5 5-3 6.5-1.5-1.5-3-3.5-3-6.5v-1Z" />
       <path d="M12 8V6" />
     </svg>
-  )
-}
-
-function StatusIndicator({ status }: { status: OpenClawStatus }) {
-  const statusConfig: Record<OpenClawStatus, { color: string; labelKey: string }> = {
-    connected: { color: '#22c55e', labelKey: 'status.connected' },
-    ready: { color: '#3b82f6', labelKey: 'status.ready' },
-    starting: { color: '#eab308', labelKey: 'status.starting' },
-    idle: { color: '#9ca3af', labelKey: 'status.idle' },
-    disconnected: { color: '#ef4444', labelKey: 'status.disconnected' },
-    error: { color: '#ef4444', labelKey: 'status.error' },
-  }
-  const config = statusConfig[status] || statusConfig.idle
-  return (
-    <div className="flex items-center gap-1.5">
-      <span
-        className="w-2 h-2 rounded-full animate-pulse"
-        style={{ backgroundColor: config.color }}
-      />
-      <span className="text-xs" style={{ color: 'var(--text-sec)' }}>
-        {t(config.labelKey)}
-      </span>
-    </div>
   )
 }
 
@@ -276,7 +254,6 @@ export function ChatView({ onShowContextMenu }: ChatViewProps) {
   const [input, setInput] = useState('')
   const [modelOpen, setModelOpen] = useState(false)
   const [models, setModels] = useState<ModelOption[]>([])
-  const [connectionStatus, setConnectionStatus] = useState<OpenClawStatus>('disconnected')
   const [attachments, setAttachments] = useState<AttachmentFile[]>([])
   const [voiceModeOpen, setVoiceModeOpen] = useState(false)
   const [autoPlayTTS, setAutoPlayTTS] = useState(false)
@@ -287,6 +264,12 @@ export function ChatView({ onShowContextMenu }: ChatViewProps) {
 
   const { currentModel, setCurrentModel, selectedAvatar, setActiveTab, setActiveView, setSettingsModalOpen, setSettingsSection } = useAppStore()
   const { messages, sending, sendMessage, abortRun, init } = useChatStore()
+
+  // Gateway status from unified store
+  const status = useGatewayStore((s) => s.status)
+  const reconnect = useGatewayStore((s) => s.reconnect)
+  const isConnected = status === 'connected' || status === 'ready'
+  const isDisconnected = status === 'disconnected' || status === 'error'
   const initRef = useRef(init)
   initRef.current = init
 
@@ -363,23 +346,6 @@ export function ChatView({ onShowContextMenu }: ChatViewProps) {
 
     initChat()
 
-    // Check initial connection status
-    const checkStatus = async () => {
-      try {
-        const status = await window.openclaw!.getStatus()
-        setConnectionStatus(status)
-      } catch (error) {
-        console.error('[ChatView] Failed to get status:', error)
-        setConnectionStatus('error')
-      }
-    }
-    checkStatus()
-
-    // Listen for status changes
-    const unsubStatus = window.openclaw!.onStatusChange((status) => {
-      setConnectionStatus(status)
-    })
-
     // Load model list
     const loadModels = async () => {
       try {
@@ -399,7 +365,6 @@ export function ChatView({ onShowContextMenu }: ChatViewProps) {
 
     return () => {
       cleanup?.()
-      unsubStatus()
     }
   }, [])
 
@@ -533,27 +498,38 @@ export function ChatView({ onShowContextMenu }: ChatViewProps) {
 
   return (
     <div className="h-full flex flex-col overflow-hidden" style={{ background: 'var(--bg-container)' }}>
+      {/* Disconnect Banner */}
+      <DisconnectBanner />
+
       {/* Connection status bar */}
       <div className="flex-shrink-0 flex items-center justify-between px-6 py-2 border-b" style={{ borderColor: 'var(--border)' }}>
-        <StatusIndicator status={connectionStatus} />
+        <div className="flex items-center gap-1.5">
+          <span
+            className="w-2 h-2 rounded-full animate-pulse"
+            style={{ backgroundColor: isConnected ? '#22c55e' : '#ef4444' }}
+          />
+          <span className="text-xs" style={{ color: 'var(--text-sec)' }}>
+            {isConnected ? t('status.connected') : t('status.disconnected')}
+          </span>
+        </div>
         <button
           type="button"
           onClick={() => {
             if (!window.openclaw) return
-            if (connectionStatus === 'disconnected' || connectionStatus === 'error') {
-              window.openclaw.connect()
-            } else if (connectionStatus === 'connected') {
+            if (isDisconnected) {
+              reconnect()
+            } else if (isConnected) {
               window.openclaw.disconnect()
             }
           }}
           className="text-xs px-3 py-1 rounded-full cursor-pointer transition-colors"
           style={{
-            background: connectionStatus === 'connected' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(34, 197, 94, 0.1)',
-            color: connectionStatus === 'connected' ? '#ef4444' : '#22c55e',
-            border: `1px solid ${connectionStatus === 'connected' ? 'rgba(239, 68, 68, 0.3)' : 'rgba(34, 197, 94, 0.3)'}`,
+            background: isConnected ? 'rgba(239, 68, 68, 0.1)' : 'rgba(34, 197, 94, 0.1)',
+            color: isConnected ? '#ef4444' : '#22c55e',
+            border: `1px solid ${isConnected ? 'rgba(239, 68, 68, 0.3)' : 'rgba(34, 197, 94, 0.3)'}`,
           }}
         >
-          {connectionStatus === 'connected' ? t('btn.disconnect') : t('btn.connect')}
+          {isConnected ? t('btn.disconnect') : t('btn.connect')}
         </button>
       </div>
 
@@ -666,6 +642,52 @@ export function ChatView({ onShowContextMenu }: ChatViewProps) {
                   </motion.div>
                 ))}
               </AnimatePresence>
+
+              {/* AI 响应骨架屏 — sending 时显示 */}
+              <AnimatePresence>
+                {sending && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="space-y-4"
+                  >
+                    {/* User thought skeleton (right-aligned) */}
+                    <div className="flex gap-3 flex-row-reverse">
+                      <div className="w-8 h-8 rounded-full" style={{ background: 'var(--accent1)' }} />
+                      <div
+                        className="max-w-[70%] px-4 py-3 rounded-2xl space-y-2"
+                        style={{ background: 'var(--accent1)', borderTopLeftRadius: 4, borderTopRightRadius: 16, borderBottomLeftRadius: 16, borderBottomRightRadius: 16 }}
+                      >
+                        <div className="h-3 rounded-full animate-pulse" style={{ background: 'rgba(255,255,255,0.25)', width: '60%' }} />
+                      </div>
+                    </div>
+                    {/* Assistant response skeletons (left-aligned) */}
+                    {[1, 2].map((i) => (
+                      <div key={i} className="flex gap-3">
+                        <div className="w-8 h-8 rounded-full" style={{ background: 'var(--accent-gradient)' }} />
+                        <div
+                          className="max-w-[70%] px-4 py-3 rounded-2xl space-y-2"
+                          style={{
+                            background: 'var(--bg-elevated)',
+                            border: '1px solid var(--border)',
+                            borderTopLeftRadius: 16,
+                            borderTopRightRadius: 4,
+                            borderBottomLeftRadius: 16,
+                            borderBottomRightRadius: 16,
+                          }}
+                        >
+                          <div className="h-3 rounded-full animate-pulse" style={{ background: 'var(--border)', animationDelay: `${i * 150}ms` }} />
+                          <div className="h-3 rounded-full animate-pulse" style={{ background: 'var(--border)', width: '80%', animationDelay: `${i * 150 + 100}ms` }} />
+                          {i === 1 && <div className="h-3 rounded-full animate-pulse" style={{ background: 'var(--border)', width: '55%' }} />}
+                        </div>
+                      </div>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
               <div ref={messagesEndRef} />
             </motion.div>
           )}

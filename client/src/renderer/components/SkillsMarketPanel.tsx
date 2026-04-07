@@ -526,7 +526,9 @@ export function SkillsMarketPanel() {
       if (statusRes?.success && statusRes.data) {
         setClawhubStatus(statusRes.data)
       }
-    } catch {}
+    } catch {
+      // clawhub status check failed — continue silently
+    }
 
     // Load installed skills (from openclaw.skills.status)
     try {
@@ -553,7 +555,9 @@ export function SkillsMarketPanel() {
         }))
         setInstalledSkills(installed)
       }
-    } catch {}
+    } catch {
+      // skills status check failed — continue silently
+    }
 
     // Load browse list
     if (window.electronAPI?.clawhub) {
@@ -583,7 +587,9 @@ export function SkillsMarketPanel() {
           }))
           setBrowseSkills(browsed)
         }
-      } catch {}
+      } catch {
+        // browse list load failed — continue silently
+      }
       setLoadingBrowse(false)
     } else {
       // Fallback to static list when clawhub not available
@@ -615,7 +621,9 @@ export function SkillsMarketPanel() {
       if (res?.success && Array.isArray(res.data?.results)) {
         setSearchResults(res.data.results)
       }
-    } catch {}
+    } catch {
+      // search failed — continue silently
+    }
     setLoadingSearch(false)
     setViewMode('search')
   }, [])

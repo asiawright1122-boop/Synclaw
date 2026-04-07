@@ -23,6 +23,26 @@ export interface UsageEvent {
   metadata?: Record<string, unknown>
 }
 
+// Gateway event payload types (inferred from OpenClaw Gateway)
+interface SessionStartPayload {
+  sessionId?: string
+  model?: string
+  [key: string]: unknown
+}
+
+interface ChatPayload {
+  model?: string
+  inputTokens?: number
+  outputTokens?: number
+  [key: string]: unknown
+}
+
+interface ErrorPayload {
+  id?: string
+  error?: string
+  [key: string]: unknown
+}
+
 const REPORT_INTERVAL_MS = 30_000 // 每 30 秒强制上报一次（防止事件丢失）
 const BATCH_SIZE = 50              // 超过 50 条立即上报
 
@@ -42,7 +62,7 @@ export function useUsageReporter() {
       const res = await window.openclaw?.web?.reportUsage(batch)
       if (res?.success) {
         console.debug(`[useUsageReporter] 上报成功: ${batch.length} events`)
-      } else if (res && 'skipped' in res && (res as any).skipped) {
+      } else if (res && 'skipped' in res && (res as { skipped?: boolean }).skipped) {
         // 未注册，跳过（正常状态）
       } else {
         console.warn('[useUsageReporter] 上报失败:', res)
@@ -73,9 +93,9 @@ export function useUsageReporter() {
       const { event, payload } = evt
 
       if (event === 'session.start' || event === 'session.started') {
-        // Session 启动
-        sessionIdRef.current = (payload as any)?.sessionId ?? null
-        modelRef.current = (payload as any)?.model ?? null
+        const data = payload as SessionStartPayload
+        sessionIdRef.current = data?.sessionId ?? null
+        modelRef.current = data?.model ?? null
         eventsRef.current.push({
           eventType: 'SESSION_START',
           sessionId: sessionIdRef.current ?? undefined,
@@ -85,8 +105,7 @@ export function useUsageReporter() {
       }
 
       if (event === 'chat') {
-        // 收到 AI 回复消息（包含 token 消耗）
-        const p = payload as any
+        const p = payload as ChatPayload
         if (p?.model) modelRef.current = p.model
         const inputTokens = typeof p?.inputTokens === 'number' ? p.inputTokens : 0
         const outputTokens = typeof p?.outputTokens === 'number' ? p.outputTokens : 0
@@ -106,6 +125,20 @@ export function useUsageReporter() {
         })
         // 超过批量大小立即上报
         if (eventsRef.current.length >= BATCH_SIZE) flush()
+        return
+      }
+
+      if (event === 'task:log-line') {
+        // task:log-line 事件，仅追加日志不产生用量事件
+        void event
+        return
+      }
+
+      if (event === 'task:error') {
+        const data = payload as ErrorPayload
+        if (data?.id) {
+          void data
+        }
         return
       }
 

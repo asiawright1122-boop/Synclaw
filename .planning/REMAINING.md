@@ -1,9 +1,10 @@
 # 遗留项 PLAN — v1.1 已全部完成
 
 **Created:** 2026-03-27
-**Updated:** 2026-03-30
+**Updated:** 2026-04-05
 **Goal:** 解决 v1.1 遗留的 3 个主要项
-**Status:** All Done
+**Status:** All Done ✅
+**Note:** 本文档已归档，剩余技术债见 `BACKLOG.md`
 
 ---
 

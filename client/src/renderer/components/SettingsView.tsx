@@ -4,7 +4,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useAppStore } from '../stores/appStore'
 import { ImPanel } from './IMPanel'
-import { AuthorizedDirsPanel } from './AuthorizedDirsPanel'
 import { SkillsMarketPanel } from './SkillsMarketPanel'
 import {
   ArrowLeft,
@@ -17,7 +16,6 @@ import {
   MessageCircle,
   FolderOpen,
   Shield,
-  Lock,
   MessageSquarePlus,
   Info,
   Server,
@@ -43,6 +41,7 @@ import { AboutPanel } from './settings/AboutPanel'
 import { TtsPanel } from './settings/TtsPanel'
 import { ExecApprovalsPanel } from './settings/ExecApprovalsPanel'
 import { AvatarSettingsPanel } from './settings/AvatarSettingsPanel'
+import { SecurityPanel } from './settings/SecurityPanel'
 
 type SettingsSection =
   | 'general'
@@ -76,7 +75,7 @@ const NAV: { id: SettingsSection; label: string; icon: typeof Pencil }[] = [
   { id: 'skills', label: '技能', icon: BookOpen },
   { id: 'skillsMarket', label: '技能市场', icon: Sparkles },
   { id: 'im', label: 'IM 频道', icon: MessageCircle },
-  { id: 'security', label: '文件安全', icon: Lock },
+  { id: 'security', label: '安全性', icon: Shield },
   { id: 'execApprovals', label: '执行审批', icon: Shield },
   { id: 'avatar', label: '分身', icon: Bot },
   { id: 'workspace', label: '工作区', icon: FolderOpen },
@@ -131,7 +130,7 @@ export function SettingsView() {
       case 'im':
         return <ImPanel />
       case 'security':
-        return <AuthorizedDirsPanel />
+        return <SecurityPanel />
       case 'execApprovals':
         return <ExecApprovalsPanel />
       case 'workspace':

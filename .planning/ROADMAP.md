@@ -1,283 +1,163 @@
-# ROADMAP.md — SynClaw v1.2 用户体验与分发完善
+# ROADMAP — v1.7 Backlog 清理 + 性能优化
 
-**Version:** v1.2
-**Date:** 2026-03-30
-**Status:** Near-Complete (4/5 phases verified)
-
----
-
-## 阶段顺序决策
-
-**并行规划 / 顺序执行策略：**
-
-| 阶段 | 执行顺序 | 理由 |
-|------|---------|------|
-| Phase 1 (EXEC) | **最先** | 安全功能，用户体验直接影响信任度 |
-| Phase 2 (SIGN) | **次之（独立）** | 与其他阶段无依赖，但需要用户提供 Apple ID |
-| Phase 3 (WEB) | **并行执行** | 独立于 EXEC/SIGN，可以并行 |
-| Phase 4 (TTS) | **并行执行** | 独立于其他阶段 |
-| Phase 5 (AVA) | **并行执行** | 独立于其他阶段 |
-
-**推荐执行顺序：**
-1. Phase 1 (EXEC) — 先做安全相关
-2. Phase 2 (SIGN) — 分发必要条件（等待用户提供 Apple ID）
-3. Phase 3-5 — 三路并行，各自独立推进
+**Milestone:** v1.7
+**Created:** 2026-04-07
+**Phases:** 5 | **Requirements:** 20 | **Covered:** 20/20 ✓
 
 ---
 
-## Phase 1: EXEC — Exec 审批弹窗
+## Phases
 
-**目标：** 用户对每一个要执行的 shell 命令有知情权和批准权。
-
-### 1.1 阶段计划
-
-- [ ] **T-EXEC-01**: 研究 OpenClaw `exec.approval.*` WebSocket 事件格式（payload 结构）
-- [ ] **T-EXEC-02**: 创建 `ExecApprovalModal.tsx` 组件（Framer Motion 动画弹窗）
-- [ ] **T-EXEC-03**: 在 `chatStore.ts` 中将 `console.log` 替换为真实弹窗逻辑
-- [ ] **T-EXEC-04**: 实现批准/拒绝 IPC 调用（`window.openclaw.exec.approval.resolve`）
-- [ ] **T-EXEC-05**: 添加超时机制（`setTimeout`，5分钟默认）
-- [ ] **T-EXEC-06**: 实现多审批排队队列
-- [ ] **T-EXEC-07**: 添加系统通知（`client/src/main/notifications.ts`）
-- [ ] **T-EXEC-08**: 验收测试（Playwright E2E）
-
-### 1.2 关键文件
-
-```
-client/src/renderer/components/ExecApprovalModal.tsx   ← 新建
-client/src/renderer/stores/chatStore.ts               ← 修改
-client/src/renderer/stores/uiStore.ts                 ← 新增审批队列 state
-client/src/renderer/App.tsx                          ← 挂载 Modal
-client/e2e/exec-approval.spec.ts                     ← 新建 E2E
-```
-
-### 1.3 成功标准
-
-- `exec.approval.requested` 事件触发后 500ms 内显示弹窗
-- 批准/拒绝操作正确传递给 Gateway
-- 多审批场景下正确排队
-
-### 1.4 风险
-
-| 风险 | 缓解 |
-|------|------|
-| OpenClaw exec API 变更 | Phase 1 最先做，发现问题早 |
-| 审批超时用户不知情 | 添加通知 + 弹窗内倒计时显示 |
+- [x] **Phase 26: Onboarding + Gateway 状态** — API key 验证 + 断连 banner + 状态显示 (completed 2026-04-07)
+- [ ] **Phase 27: 空状态补全** — 4 个面板的空状态引导
+- [ ] **Phase 28: UX 补全** — Avatar 状态、快捷键、Toast、CLI 检测、降级
+- [ ] **Phase 29: 性能优化（启动 + IPC）** — 启动链路 + IPC 批量 + 缓存
+- [ ] **Phase 30: 性能优化（React + 内存）** — 重渲染 + 虚拟化 + 内存泄漏
 
 ---
 
-## Phase 2: SIGN — macOS 公证签名
+## Phase Details
 
-**目标：** SynClaw .dmg 通过 Apple Notarization，Gatekeeper 零警告。
+### Phase 26: Onboarding + Gateway 状态
 
-### 2.1 阶段计划
+**Goal:** 用户可以清楚知道 Gateway 连接状态并在连接失败时快速重连
 
-- [ ] **T-SIGN-01**: 确认 electron-builder `notarize` 配置格式（查询最新文档）
-- [ ] **T-SIGN-02**: 更新 `electron-builder.yml` 添加 `notarize` block
-- [ ] **T-SIGN-03**: 创建 `.env.example` 占位符（CSC_LINK, APPLE_ID 等 6 个变量）
-- [ ] **T-SIGN-04**: 创建 `client/scripts/notarize.mjs` 本地公证脚本
-- [ ] **T-SIGN-05**: 更新 `.github/workflows/release.yml` 添加 notarize step
-- [ ] **T-SIGN-06**: 更新 `README.md` 分发说明（添加 Apple ID 配置指南）
-- [ ] **T-SIGN-07**: 本地测试公证流程（需用户提供凭据）
+**Depends on:** None
 
-### 2.2 关键文件
+**Requirements:** ONB-01, GATE-01, GATE-02
 
-```
-client/electron-builder.yml                           ← 修改
-.github/workflows/release.yml                        ← 修改
-client/scripts/notarize.mjs                          ← 新建
-.env.example                                         ← 修改
-README.md                                            ← 修改
-```
+**Success Criteria** (what must be TRUE):
+1. User saves API key in onboarding and immediately sees "连接成功" or "连接失败" status after `gateway.ping()` call
+2. User sees a prominent disconnect banner in ChatView when Gateway disconnects unexpectedly
+3. User can click "重新连接" button on the banner to attempt reconnection
+4. User can see Gateway status (connected/disconnected/error), OpenClaw version, and connection address in GatewayPanel
 
-### 2.3 成功标准
+**Plans:** 4/4 plans complete
+- [x] 26-01-PLAN.md — Gateway 连接状态 Hook（Zustand store + useGatewayStatus）
+- [x] 26-02-PLAN.md — 断连 Banner UI（ChatView DisconnectBanner）
+- [x] 26-03-PLAN.md — Onboarding API Key 验证（gateway.ping 集成）
+- [x] 26-04-PLAN.md — GatewayPanel 状态显示（增强版）
 
-- `xcrun stapler validate` 返回有效 ticket
-- `spctl -a -t exec -vv <app>.app` 验证通过
-- CI 构建日志显示 `notarization succeeded`
+**Status:** ✅ Complete
 
-### 2.4 风险
-
-| 风险 | 缓解 |
-|------|------|
-| 用户无 Apple Developer ID | Phase 2 可以跳过，PR 合入时添加证书 |
-| App-specific password 泄漏 | 仅存 GitHub Secrets，不进入代码仓库 |
+**UI hint:** yes
 
 ---
 
-## Phase 3: WEB — web/ landing page 集成
+### Phase 27: 空状态补全
 
-**目标：** SynClaw 桌面客户端内置 web/ landing page，通过 BrowserView 加载。
+**Goal:** 用户在空面板看到清晰的引导 CTA，不再面对空白界面
 
-### 3.1 阶段计划
+**Depends on:** None (independent UI components)
 
-- [x] **T-WEB-01**: 分析 web/ 构建产物（`.next/` 或 `out/`），确定集成方案
-- [x] **T-WEB-02**: 选择并实现技术方案（推荐：独立 BrowserView + 本地 Next.js 服务）
-- [x] **T-WEB-03**: 修改 electron-builder 配置，`extraResources` 包含 web/ 构建产物
-- [x] **T-WEB-04**: 在主进程添加 `window:openLandingPage` IPC handler
-- [x] **T-WEB-05**: 在 Sidebar 添加「关于」入口按钮
-- [x] **T-WEB-06**: 实现优雅降级（web/ 不存在时隐藏入口）
-- [x] **T-WEB-07**: 主题一致性适配（暗色模式同步）
-- [x] **T-WEB-08**: 打包测试（`electron-builder --mac`）
-- [x] **T-WEB-09**: 设计并实现 DeviceToken + UsageEvent Prisma 模型
-- [x] **T-WEB-10**: 创建 `POST /api/device-tokens` 和 `POST /api/usage-events` web API
-- [x] **T-WEB-11**: 重写 `GET /api/usage` 从 UsageEvent + CreditsHistory 读取真实数据
-- [x] **T-WEB-12**: 创建 `web:register` + `web:report-usage` + `web:revoke` IPC handlers
-- [x] **T-WEB-13**: 创建 `useUsageReporter` hook 监听 Gateway 事件并上报
-- [x] **T-WEB-14**: 更新 STACK.md / INTEGRATIONS.md / STRUCTURE.md 文档
+**Requirements:** EMPTY-01, EMPTY-02, EMPTY-03, EMPTY-04
 
-### 3.2 关键文件
+**Success Criteria** (what must be TRUE):
+1. User sees "创建分身" CTA button in AvatarListPanel when no avatars exist
+2. User sees "开启你的第一个任务" guidance in empty TaskBoard
+3. User sees ClawHub CLI detection + installation guide in SkillsMarketPanel when CLI is not detected
+4. User sees "添加 MCP server" guide in empty McpPanel
 
-```
-client/src/main/index.ts                             ← 修改（添加 BrowserView 管理）
-client/src/main/ipc-handlers/app.ts                  ← 修改（添加 landing page IPC）
-client/src/main/ipc-handlers/web.ts                  ← 新建（web 平台桥接）
-client/src/main/ipc-handlers.ts                      ← 修改（注册 web.ts）
-client/src/main/app-settings.ts                      ← 修改（添加 web.deviceToken 等）
-client/src/renderer/components/Sidebar.tsx           ← 修改（添加入口按钮）
-client/src/renderer/hooks/useUsageReporter.ts         ← 新建（Gateway 事件上报 hook）
-client/src/preload/index.ts                          ← 修改（暴露 web.* API）
-client/src/renderer/types/electron.d.ts               ← 修改（添加 web 命名空间类型）
-web/prisma/schema.prisma                            ← 修改（添加 DeviceToken / UsageEvent 模型）
-web/src/app/api/device-tokens/route.ts               ← 新建（设备注册）
-web/src/app/api/device-tokens/[id]/route.ts         ← 新建（设备撤销/心跳）
-web/src/app/api/usage-events/route.ts               ← 新建（用量上报）
-web/src/app/api/usage/route.ts                       ← 修改（从 UsageEvent 读取真实数据）
-client/e2e/landing-page.spec.ts                     ← 新建 E2E
-```
+**Plans:** TBD
 
-### 3.3 成功标准
-
-- 「关于」入口加载 landing page，无白屏
-- web/ 不存在时构建成功
-- 暗色主题一致
-- SynClaw ↔ web 用量事件管道打通（SESSION_START / MESSAGE_SENT / TOKENS_CONSUMED 三类事件）
-- web portal 的 /usage 页面展示真实数据（不再依赖 CreditsHistory 模拟）
-
-### 3.4 风险
-
-| 风险 | 缓解 |
-|------|------|
-| Next.js SSR/CSR 兼容性问题 | 使用 `next export` 静态导出，或仅服务端渲染 |
-| CORS / CSP 问题 | BrowserView 设置 `webSecurity: false`，添加 CSP header |
+**UI hint:** yes
 
 ---
 
-## Phase 4: TTS — TTS / Talk Mode UI
+### Phase 28: UX 补全
 
-**目标：** 在 ChatView 中实现语音输入输出，AI 回复实时 TTS 朗读。
+**Goal:** 关键 UX 流程完善，提升用户操作反馈感知
 
-### 4.1 阶段计划
+**Depends on:** None (independent UX improvements)
 
-- [ ] **T-TTS-01**: 研究 OpenClaw `talk.*` API 格式（TTS streaming 方式）
-- [ ] **T-TTS-02**: 创建 `VoiceModeButton.tsx` 组件（ChatView 工具栏按钮）
-- [ ] **T-TTS-03**: 实现 TTS 播放逻辑（Web Audio API）
-- [ ] **T-TTS-04**: 添加播放控制 UI（播放/暂停/停止/语速滑块）
-- [ ] **T-TTS-05**: 实现 Speech-to-Text（Web Speech API `SpeechRecognition`）
-- [ ] **T-TTS-06**: 在设置面板中添加 TTS 配置（引擎/语速/音量）
-- [ ] **T-TTS-07**: TTS 偏好持久化（electron-store）
-- [ ] **T-TTS-08**: 验收测试
+**Requirements:** UX-01, UX-02, UX-03, UX-04, DEG-01, CLI-01
 
-### 4.2 关键文件
+**Success Criteria** (what must be TRUE):
+1. User sees current Avatar name displayed in ChatView Header after switching avatars
+2. User's active chat resets Avatar state to "未选择" after deleting the current Avatar
+3. User can use Cmd+, to open Settings, Escape to close any modal, Cmd+Shift+M to toggle voice mode
+4. User sees toast notifications for these events: Gateway connect/disconnect, API key save, Avatar save, TTS play failure, approval timeout
+5. User sees friendly ClawHub CLI installation guidance in SkillsMarketPanel when CLI is not installed (not silent failure)
+6. User can still use main app features (chat, file ops) when WEB_API_BASE API is unavailable
 
-```
-client/src/renderer/components/ChatView.tsx         ← 修改（添加语音按钮）
-client/src/renderer/components/VoiceModePanel.tsx   ← 新建（语音面板）
-client/src/renderer/components/SettingsView.tsx     ← 修改（TTS 配置面板）
-client/src/renderer/stores/uiStore.ts               ← 修改（TTS 状态）
-client/src/renderer/hooks/useTTS.ts                  ← 新建（hook）
-client/src/renderer/hooks/useSpeechRecognition.ts   ← 新建（hook）
-```
+**Plans:** TBD
 
-### 4.3 成功标准
-
-- AI 回复触发 TTS 朗读
-- 播放/暂停/停止正常工作
-- 语音识别准确转写用户说话内容
-- 语速/音量配置重启后保持
-
-### 4.4 风险
-
-| 风险 | 缓解 |
-|------|------|
-| Web Speech API macOS Safari 支持有限 | 检测兼容性，不支持时隐藏语音按钮 |
-| WebView 模式下 TTS 失效 | 走 Renderer 主进程 audio，不依赖 BrowserView |
+**UI hint:** yes
 
 ---
 
-## Phase 5: AVA — Avatar 多分身体系落地
+### Phase 29: 性能优化（启动 + IPC）
 
-**目标：** 完整的 Avatar CRUD 管理，选定分身作为当前对话 Agent。
+**Goal:** 提升应用启动速度，降低 IPC 通信延迟
 
-### 5.1 阶段计划
+**Depends on:** None (independent technical work)
 
-- [ ] **T-AVA-01**: 研究 OpenClaw `avatars.*` IPC API（参数/返回值）
-- [ ] **T-AVA-02**: 创建 `AvatarListPanel.tsx` 组件（分身列表 + 创建表单）
-- [ ] **T-AVA-03**: 创建 `AvatarEditModal.tsx`（编辑分身弹窗）
-- [ ] **T-AVA-04**: 实现 CRUD 调用（`avatars.create/update/delete/list`）
-- [ ] **T-AVA-05**: 实现 `avatars.activate`（切换当前分身）
-- [ ] **T-AVA-06**: 添加 ChatView 头像选择下拉菜单
-- [ ] **T-AVA-07**: 创建 5 个官方模板（程序员、写作助手、产品经理、代码审查员、数据分析师）
-- [ ] **T-AVA-08**: 验收测试
+**Requirements:** PERF-01, PERF-02, PERF-03, PERF-04
 
-### 5.2 关键文件
+**Success Criteria** (what must be TRUE):
+1. Developer can see Electron main process startup timing breakdown (module load, Gateway init, window creation phases)
+2. User experiences measurably faster first screen paint (TTI improvement via lazy loading non-critical components)
+3. Frequent gateway status polling requests are batched or deduplicated (no redundant IPC calls within 500ms window)
+4. Hot gateway-bridge RPC methods return cached results when inputs unchanged
 
-```
-client/src/renderer/components/AvatarListPanel.tsx   ← 新建
-client/src/renderer/components/AvatarEditModal.tsx   ← 新建
-client/src/renderer/components/ChatView.tsx          ← 修改（头像选择）
-client/src/renderer/components/Sidebar.tsx           ← 修改（Avatars 入口）
-client/src/renderer/stores/chatStore.ts              ← 修改（activeAvatar state）
-client/src/renderer/lib/avatar-templates.ts          ← 新建（官方模板）
-client/e2e/avatar.spec.ts                           ← 新建 E2E
-```
-
-### 5.3 成功标准
-
-- 可创建/编辑/删除 Avatar
-- 选中 Avatar 后对话使用对应 prompt
-- 5 个官方模板可一键创建
-
-### 5.4 风险
-
-| 风险 | 缓解 |
-|------|------|
-| OpenClaw avatars API 字段未知 | 先写存根，用 mock 数据开发 UI，再接真实 API |
-| Avatar 切换延迟 | UI 即时更新，Gateway 同步在后端异步执行 |
+**Plans:** TBD
 
 ---
 
-## 进度概览
+### Phase 30: 性能优化（React + 内存）
 
-```
-Phase 1: EXEC  ██████████ 100%  ✅ 完成（验证：2026-03-31）
-Phase 2: SIGN  ░░░░░░░░░  0%  ⏳ 等待用户提供 Apple ID
-Phase 3: WEB   ██████████ 100%  ✅ 完成（验证：2026-03-31）
-Phase 4: TTS   ██████████ 100%  ✅ 完成（验证：2026-03-31）
-Phase 5: AVA   ██████████ 100%  ✅ 完成（验证：2026-03-31）
-```
+**Goal:** 提升 React 渲染效率，消除内存泄漏
 
-**验证结果（2026-03-31）：**
-- ✅ tsc --noEmit 零错误
-- ✅ EXEC: ExecApprovalModal (384行) + execApprovalStore + chatStore 完整审批链路
-- ✅ WEB: BrowserView 主进程管理 + Next.js standalone 集成 + Sidebar 入口
-- ✅ TTS: VoiceModePanel + useTTS hook + useSpeechRecognition hook + TtsPanel 设置
-- ✅ AVA: AvatarListPanel + AvatarEditModal + avatarStore + 5 官方模板 + E2E
-- ✅ IPC handlers 拆分为 6 个模块
-- ✅ SettingsView 拆分为 16 个独立 panel
-- ⏳ SIGN: 待用户提供 Apple Developer ID
+**Depends on:** Phase 29 (needs baseline metrics first)
+
+**Requirements:** PERF-05, PERF-06, PERF-07
+
+**Success Criteria** (what must be TRUE):
+1. Zustand stores only trigger re-renders for components subscribing to actually changed state (no unnecessary re-renders in React DevTools)
+2. ChatView maintains smooth 60fps scrolling with 100+ messages (via virtualization)
+3. No memory leaks detected after 30 minutes of active use (no growing heap in Chrome DevTools)
+
+**Plans:** TBD
 
 ---
 
-## 里程碑完成条件
+## Progress Table
 
-所有 5 个阶段通过以下验收：
+| Phase | Name | Requirements | Plans | Status | Completed |
+|-------|------|-------------|-------|--------|-----------|
+| 26 | Onboarding + Gateway 状态 | ONB-01, GATE-01, GATE-02 | 4/4 | ✅ Complete | 2026-04-07 |
+| 27 | 空状态补全 | EMPTY-01~04 | 0/4 | Not started | - |
+| 28 | UX 补全 | UX-01~04, DEG-01, CLI-01 | 0/6 | Not started | - |
+| 29 | 性能优化（启动 + IPC） | PERF-01~04 | 0/4 | Not started | - |
+| 30 | 性能优化（React + 内存） | PERF-05~07 | 0/3 | Not started | - |
 
-| 阶段 | 验收条件 | 状态 |
-|------|---------|------|
-| Phase 1: EXEC | `tsc --noEmit` 通过，E2E 测试通过 | ✅ 编译已通过，E2E 待完整环境运行 |
-| Phase 2: SIGN | `spctl` 验证通过（macOS 全新环境） | ⏳ 等待 Apple ID |
-| Phase 3: WEB | 打包 .app 包含 web/ 资源，入口正常加载 | ✅ 代码已实现，待打包验证 |
-| Phase 4: TTS | TTS 播放/语音识别正常 | ✅ 代码已实现，待实际设备验证 |
-| Phase 5: AVA | Avatar CRUD + 切换正常 | ✅ 代码已实现，E2E spec 存在 |
-| 全部 | `cd client && pnpm exec tsc --noEmit` | ✅ 零错误（2026-03-31） |
-| 全部 | Playwright E2E | ⏳ 需完整环境运行 |
+---
+
+## Coverage Map
+
+| REQ-ID | Phase | Requirement |
+|--------|-------|-------------|
+| ONB-01 | Phase 26 | Onboarding API key 验证 |
+| GATE-01 | Phase 26 | Gateway 断连 banner |
+| GATE-02 | Phase 26 | GatewayPanel 状态显示 |
+| EMPTY-01 | Phase 27 | AvatarListPanel 空状态 |
+| EMPTY-02 | Phase 27 | TaskBoard 空状态 |
+| EMPTY-03 | Phase 27 | SkillsMarketPanel 空状态 |
+| EMPTY-04 | Phase 27 | McpPanel 空状态 |
+| UX-01 | Phase 28 | Avatar Header 显示 |
+| UX-02 | Phase 28 | Avatar 删除状态重置 |
+| UX-03 | Phase 28 | 快捷键扩展 |
+| UX-04 | Phase 28 | Toast 体系完整性 |
+| DEG-01 | Phase 28 | WEB_API_BASE 降级 |
+| CLI-01 | Phase 28 | ClawHub CLI 检测 |
+| PERF-01 | Phase 29 | 启动链路分析 |
+| PERF-02 | Phase 29 | 首屏渲染优化 |
+| PERF-03 | Phase 29 | IPC 批量处理 |
+| PERF-04 | Phase 29 | IPC 热点缓存 |
+| PERF-05 | Phase 30 | Zustand selector 审查 |
+| PERF-06 | Phase 30 | ChatView 虚拟化 |
+| PERF-07 | Phase 30 | 内存泄漏排查 |
+
+---
+
+*Roadmap created: 2026-04-07 for v1.7 Backlog 清理 + 性能优化*

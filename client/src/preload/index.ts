@@ -136,7 +136,7 @@ const electronAPI = {
   shell: {
     openPath: (filePath: string): Promise<ApiResponse> =>
       ipcRenderer.invoke('shell:openPath', filePath),
-    openExternal: (url: string): Promise<void> =>
+    openExternal: (url: string): Promise<ApiResponse> =>
       ipcRenderer.invoke('shell:openExternal', url),
     showItemInFolder: (filePath: string): Promise<void> =>
       ipcRenderer.invoke('shell:showItemInFolder', filePath),
@@ -156,6 +156,10 @@ const electronAPI = {
       ipcRenderer.invoke('app:downloadUpdate'),
     installUpdate: (): Promise<ApiResponse> =>
       ipcRenderer.invoke('app:installUpdate'),
+    getSigningStatus: (): Promise<ApiResponse<{ status: 'signed' | 'unsigned' | 'not_macos' | 'unknown'; teamId?: string }>> =>
+      ipcRenderer.invoke('app:getSigningStatus') as Promise<ApiResponse<{ status: 'signed' | 'unsigned' | 'not_macos' | 'unknown'; teamId?: string }>>,
+    getDefaultWorkspacePath: (): Promise<ApiResponse<string>> =>
+      ipcRenderer.invoke('app:getDefaultWorkspacePath'),
   },
 
   landing: {
@@ -662,6 +666,10 @@ const openclaw = {
   gateway: {
     identity: (): Promise<ApiResponse> => ipcRenderer.invoke('openclaw:gateway:identity'),
     health: (): Promise<ApiResponse> => ipcRenderer.invoke('openclaw:health'),
+    ping: (): Promise<ApiResponse<{ ok: boolean; status: string }>> =>
+      ipcRenderer.invoke('gateway:ping'),
+    connectionUrl: (): Promise<string> =>
+      ipcRenderer.invoke('gateway:connection:url'),
   },
 
   // ── App Settings (electron-store) ─────────────────────────────────
@@ -696,8 +704,8 @@ const openclaw = {
      * 注册桌面设备到 web 平台（获取 device token）。
      * @param apiToken - 用户登录后从 web API 获取的 JWT token
      */
-    register: (apiToken: string): Promise<ApiResponse<{ id: string; token: string }>> =>
-      ipcRenderer.invoke('web:register', { apiToken }) as Promise<ApiResponse<{ id: string; token: string }>>,
+    register: (apiToken: string): Promise<ApiResponse & { skipped?: boolean }> =>
+      ipcRenderer.invoke('web:register', { apiToken }) as Promise<ApiResponse & { skipped?: boolean }>,
     /**
      * 上报 AI 用量事件到 web 平台。
      * events 由 chatStore 在每次 session/message/token 事件时收集，批量上报。
@@ -719,6 +727,42 @@ const openclaw = {
      */
     revoke: (apiToken?: string): Promise<ApiResponse> =>
       ipcRenderer.invoke('web:revoke', { apiToken }),
+  },
+
+  // ── Security & Encryption ─────────────────────────────────────────────
+  // electron-store 加密状态查询、密钥生成、WEB_API_BASE 配置。
+  security: {
+    /** 获取加密状态和 WEB_API_BASE 配置 */
+    getStatus: (): Promise<ApiResponse<{
+      encryptionEnabled: boolean
+      encryptionKeySetAt: string | null
+      webApiBaseConfigured: boolean
+      webApiBase: string
+      webApiBaseFromEnv: boolean
+    }>> =>
+      ipcRenderer.invoke('security:status') as Promise<ApiResponse<{
+        encryptionEnabled: boolean
+        encryptionKeySetAt: string | null
+        webApiBaseConfigured: boolean
+        webApiBase: string
+        webApiBaseFromEnv: boolean
+      }>>,
+    /** 生成新的加密密钥，返回密钥值和操作指引 */
+    generateKey: (): Promise<ApiResponse<{
+      key: string
+      setAt: string
+      instructions: string
+    }>> =>
+      ipcRenderer.invoke('security:generateKey') as Promise<ApiResponse<{
+        key: string
+        setAt: string
+        instructions: string
+      }>>,
+    /** 保存用户配置的 WEB_API_BASE 到 electron-store */
+    setWebApiBase: (url: string): Promise<ApiResponse> =>
+      ipcRenderer.invoke('security:setWebApiBase', { url }),
+    /** 运行 openclaw security audit CLI，返回 CVE 审计结果 */
+    runAudit: () => ipcRenderer.invoke('security:runAudit'),
   },
 
   // ── Events ────────────────────────────────────────────────────────

@@ -10,6 +10,7 @@ import {
   reasonOf,
 } from './execApprovalStore'
 import { useToastStore } from '../components/Toast'
+import { eventBus } from '../lib/eventBus'
 
 // Development-only debug logger — silent in production builds
 const debug = import.meta.env.DEV
@@ -520,6 +521,20 @@ export const useChatStore = create<ChatState>((set, get) => ({
       // Heartbeat / presence events
       if (event.event === 'tick' || event.event === 'presence' || event.event === 'heartbeat') {
         // Connection alive
+      }
+
+      // Re-emit all Gateway events through the unified EventBus so other
+      // components can subscribe via useOpenClaw() without raw openclaw listeners.
+      // Only emit typed events that have specific handlers above.
+      // Tick/presence are noise — skip them.
+      if (event.event === 'agent') {
+        eventBus.emit('agent', event.payload as AgentEvent)
+      } else if (event.event === 'chat') {
+        eventBus.emit('chat', event.payload as { role?: string; content?: string })
+      } else if (event.event === 'exec.approval.requested') {
+        eventBus.emit('exec.approval.requested', event.payload as ExecApprovalEvent)
+      } else if (event.event === 'exec.approval.resolved') {
+        eventBus.emit('exec.approval.resolved', event.payload as ExecApprovalEvent)
       }
     })
 

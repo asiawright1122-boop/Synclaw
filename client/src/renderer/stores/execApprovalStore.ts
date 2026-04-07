@@ -4,7 +4,7 @@
  */
 import { create } from 'zustand'
 
-export type ApprovalDecision = 'approved' | 'denied' | 'deny-all'
+export type ApprovalDecision = 'approved' | 'approved-once' | 'denied' | 'deny-all'
 export type ApprovalDecisionReason = ApprovalDecision | { decision: ApprovalDecision; reason: string }
 
 /** Extract decision string from a plain decision or a decision-with-reason */
@@ -93,7 +93,8 @@ export const useExecApprovalStore = create<ExecApprovalState>((set, get) => ({
       const entry = state.pending.find((e) => e.id === id)
       if (entry) {
         clearTimeout(entry.timer)
-        entry.resolve('denied')
+        const timeoutMinutes = Math.round((req.timeoutMs ?? DEFAULT_TIMEOUT_MS) / 60000)
+        entry.resolve({ decision: 'denied', reason: `自动拒绝：审批超时（${timeoutMinutes} 分钟）` })
         set((s) => ({
           pending: s.pending.filter((e) => e.id !== id),
           current: s.current?.id === id ? null : s.current,
