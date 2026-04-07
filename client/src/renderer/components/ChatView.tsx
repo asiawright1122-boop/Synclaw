@@ -503,14 +503,36 @@ export function ChatView({ onShowContextMenu }: ChatViewProps) {
 
       {/* Connection status bar */}
       <div className="flex-shrink-0 flex items-center justify-between px-6 py-2 border-b" style={{ borderColor: 'var(--border)' }}>
-        <div className="flex items-center gap-1.5">
-          <span
-            className="w-2 h-2 rounded-full animate-pulse"
-            style={{ backgroundColor: isConnected ? '#22c55e' : '#ef4444' }}
-          />
-          <span className="text-xs" style={{ color: 'var(--text-sec)' }}>
-            {isConnected ? t('status.connected') : t('status.disconnected')}
-          </span>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5">
+            <span
+              className="w-2 h-2 rounded-full animate-pulse"
+              style={{ backgroundColor: isConnected ? '#22c55e' : '#ef4444' }}
+            />
+            <span className="text-xs" style={{ color: 'var(--text-sec)' }}>
+              {isConnected ? t('status.connected') : t('status.disconnected')}
+            </span>
+          </div>
+
+          {/* Avatar indicator */}
+          {selectedAvatar && (
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab('avatar')
+                setActiveView('chat')
+              }}
+              className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs transition-colors"
+              style={{
+                background: 'rgba(252,93,30,0.08)',
+                color: 'var(--accent1)',
+                border: '1px solid rgba(252,93,30,0.2)',
+              }}
+            >
+              <Bot className="w-3 h-3" />
+              <span className="font-medium max-w-[100px] truncate">{selectedAvatar.name}</span>
+            </button>
+          )}
         </div>
         <button
           type="button"
