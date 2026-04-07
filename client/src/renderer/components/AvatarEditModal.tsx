@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { X, User, Palette, FileText, Sparkles, Check } from 'lucide-react'
 import { useAvatarStore, type Avatar, type CreateAvatarParams } from '../stores/avatarStore'
 import { AVATAR_TEMPLATES, type AvatarTemplate } from '../lib/avatar-templates'
+import { useToast } from './Toast'
 
 interface AvatarEditModalProps {
   open: boolean
@@ -28,6 +29,7 @@ export function AvatarEditModal({
   initialTemplateId,
 }: AvatarEditModalProps) {
   const { createAvatar, updateAvatar, loading } = useAvatarStore()
+  const toast = useToast()
 
   // Form state
   const [name, setName] = useState('')
@@ -91,13 +93,18 @@ export function AvatarEditModal({
       color,
     }
 
-    if (editAvatar) {
-      await updateAvatar({ id: editAvatar.id, ...params })
-    } else {
-      await createAvatar(params)
+    try {
+      if (editAvatar) {
+        await updateAvatar({ id: editAvatar.id, ...params })
+        toast.success('分身已更新', 2000)
+      } else {
+        await createAvatar(params)
+        toast.success('分身已创建', 2000)
+      }
+      onClose()
+    } catch (err) {
+      toast.error('保存失败', 3000)
     }
-
-    onClose()
   }, [name, description, personality, emoji, color, editAvatar, createAvatar, updateAvatar, onClose])
 
   const handleClose = useCallback(() => {

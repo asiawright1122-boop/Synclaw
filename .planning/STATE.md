@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.7
 milestone_name: milestone
 status: unknown
-last_updated: "2026-04-07T05:33:35.603Z"
+last_updated: "2026-04-07T05:34:41.660Z"
 last_activity: 2026-04-07
 progress:
   total_phases: 5
@@ -29,7 +29,7 @@ progress:
 ## Current Position
 
 Phase: 28
-Plan: 04 (快捷键验证)
+Plan: 05 (降级 + CLI 检测)
 
 ## Accumulated Context
 
