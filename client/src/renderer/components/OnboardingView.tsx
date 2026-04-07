@@ -19,6 +19,7 @@ import {
 } from 'lucide-react'
 import { useSettingsStore } from '../stores/settingsStore'
 import { useGatewayStatus } from '../hooks/useGatewayStatus'
+import { useToast } from './Toast'
 
 interface OnboardingViewProps {
   onComplete: () => void
@@ -59,6 +60,9 @@ export function OnboardingView({ onComplete }: OnboardingViewProps) {
   // Gateway ping status from useGatewayStatus hook
   const { ping, isPinging, pingResult } = useGatewayStatus()
 
+  // Toast notifications
+  const toast = useToast()
+
   // 同步外部变更（如从设置页面添加的目录）
   useEffect(() => {
     setAuthorizedDirs(storedAuthorizedDirs)
@@ -95,6 +99,7 @@ export function OnboardingView({ onComplete }: OnboardingViewProps) {
       const res = await window.openclaw?.skills?.update?.({ apiKey: apiKeyInput.trim() })
       if (res?.success) {
         setApiKeySuccess(true)
+        toast.success('API Key 已保存', 2000)
         // Per ONB-01: verify connection with gateway.ping()
         await ping()
         if (pingResult === true) {
@@ -105,10 +110,14 @@ export function OnboardingView({ onComplete }: OnboardingViewProps) {
           setApiKeyError('API Key 已保存，但 Gateway 连接验证失败。请确认 OpenClaw 已启动，或前往「设置 → Gateway」查看状态。')
         }
       } else {
-        setApiKeyError(res?.error ? `保存失败：${res.error}` : '保存 API Key 时出错，请重试')
+        const errorMsg = res?.error ? `保存失败：${res.error}` : '保存 API Key 时出错，请重试'
+        setApiKeyError(errorMsg)
+        toast.error(errorMsg, 3000)
       }
     } catch (err) {
-      setApiKeyError(`保存失败：${err instanceof Error ? err.message : String(err)}`)
+      const errorMsg = `保存失败：${err instanceof Error ? err.message : String(err)}`
+      setApiKeyError(errorMsg)
+      toast.error(errorMsg, 3000)
     } finally {
       setApiKeySaving(false)
     }

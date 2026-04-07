@@ -86,7 +86,7 @@
 5. User sees friendly ClawHub CLI installation guidance in SkillsMarketPanel when CLI is not installed (not silent failure)
 6. User can still use main app features (chat, file ops) when WEB_API_BASE API is unavailable
 
-**Plans:** 2/5 plans executed
+**Plans:** 4/5 plans executed
 
 **UI hint:** yes
 

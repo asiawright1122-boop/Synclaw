@@ -25,7 +25,7 @@
 ### 关键 UX 补全
 
 - [x] **UX-01**: 切换 Avatar 后 ChatView Header 显示当前 Avatar 名称
-- [ ] **UX-02**: Avatar 删除后当前会话重置 Avatar 状态
+- [x] **UX-02**: Avatar 删除后当前会话重置 Avatar 状态
 - [ ] **UX-03**: 快捷键扩展 — 添加 Cmd+,（打开设置）、Escape（关闭弹窗）、Cmd+Shift+M（语音模式）
 - [ ] **UX-04**: Toast 体系完整性 — 覆盖 Gateway 连接/断连、API key 保存、Avatar 保存、TTS 播放失败、审批超时场景
 
