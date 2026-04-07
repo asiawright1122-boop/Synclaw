@@ -29,7 +29,7 @@ progress:
 ## Current Position
 
 Phase: 28
-Plan: 05 (降级 + CLI 检测)
+Plan: 05 (28-04 Toast 通知体系已完成)
 
 ## Accumulated Context
 
@@ -78,7 +78,7 @@ Plan: 05 (降级 + CLI 检测)
 ## Session Continuity
 
 **Last activity:** 2026-04-07
-**Next Action:** Phase 27 Plan 04 待执行 (IMPanel/ChannelList 空状态)
+**Next Action:** Phase 28 Plan 05 待执行 (或其他 UX 优化任务)
 
 ---
 
