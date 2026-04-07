@@ -307,4 +307,22 @@ gw('openclaw:gateway:identity', 'gateway.identity.get')
 
 // ── Gateway ────────────────────────────────────────────────────────
 
+ipcMain.handle('gateway:ping', async (): Promise<ApiResponse<{ ok: boolean; status: string }>> => {
+  try {
+    const bridge = g()
+    const status = bridge.getStatus()
+    if (status === 'connected' || status === 'ready') {
+      try {
+        await bridge.request('gateway.identity.get', {}, { timeoutMs: 5000 })
+        return { success: true, data: { ok: true, status } }
+      } catch {
+        return { success: false, error: 'Gateway RPC call failed' }
+      }
+    }
+    return { success: false, error: `Gateway not connected (status: ${status})` }
+  } catch (err) {
+    return { success: false, error: String(err) }
+  }
+})
+
 log.info('Gateway handlers registered')
