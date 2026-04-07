@@ -284,6 +284,15 @@ export function ChatView({ onShowContextMenu }: ChatViewProps) {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
+  // Toggle voice mode via keyboard shortcut (Cmd+Shift+M)
+  useEffect(() => {
+    const handler = () => {
+      setVoiceModeOpen(v => !v)
+    }
+    document.addEventListener('voice:toggle', handler)
+    return () => document.removeEventListener('voice:toggle', handler)
+  }, [])
+
   // Auto-play TTS when AI response completes
   const lastAssistantMessageRef = useRef<string | null>(null)
   useEffect(() => {

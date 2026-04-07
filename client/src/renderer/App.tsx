@@ -25,6 +25,7 @@ function ShortcutsModal({ onClose }: { onClose: () => void }) {
     { keys: '⌘ + K', description: '命令面板' },
     { keys: '⌘ + ⇧ + F', description: '全局搜索' },
     { keys: '⌘ + ⇧ + S', description: '收起 / 展开侧栏' },
+    { keys: '⌘ + ⇧ + M', description: '切换语音模式' },
     { keys: '⌘ + /', description: '快捷键参考' },
     { keys: 'Esc', description: '关闭弹窗（从外向内）' },
     { keys: 'Enter', description: '发送消息' },
@@ -201,6 +202,13 @@ function App() {
       if (mod && e.key === '/') {
         e.preventDefault()
         setShortcutsModalOpen(v => !v)
+        return
+      }
+
+      // Cmd+Shift+M → 切换语音模式
+      if (mod && e.shiftKey && e.key.toLowerCase() === 'm') {
+        e.preventDefault()
+        document.dispatchEvent(new CustomEvent('voice:toggle'))
         return
       }
 
