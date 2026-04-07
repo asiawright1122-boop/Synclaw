@@ -12,7 +12,7 @@
 - [x] **Phase 27: 空状态补全** — 4 个面板的空状态引导 (completed 2026-04-07)
 - [x] **Phase 28: UX 补全** — Avatar 状态、快捷键、Toast、CLI 检测、降级 (completed 2026-04-07)
 - [x] **Phase 29: 性能优化（启动 + IPC）** — 启动链路 + IPC 批量 + 缓存 (completed 2026-04-07)
-- [ ] **Phase 30: 性能优化（React + 内存）** — 重渲染 + 虚拟化 + 内存泄漏
+- [x] **Phase 30: 性能优化（React + 内存）** — 重渲染 + 虚拟化 + 内存泄漏 (completed 2026-04-07)
 
 ---
 
@@ -138,7 +138,7 @@
 2. ChatView maintains smooth 60fps scrolling with 100+ messages (via virtualization)
 3. No memory leaks detected after 30 minutes of active use (no growing heap in Chrome DevTools)
 
-**Plans:** 1/3 plans executed
+**Plans:** 3/3 plans complete
 
 ---
 

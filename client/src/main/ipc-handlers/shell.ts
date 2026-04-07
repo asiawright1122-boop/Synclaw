@@ -196,7 +196,16 @@ ipcMain.handle('app:getVersion', () => {
 })
 
 ipcMain.handle('app:getPath', (_event, name: 'home' | 'temp' | 'desktop' | 'documents') => {
-  return { success: true, data: app.getPath(name) }
+  const ALLOWED_PATHS = new Set(['home', 'temp', 'desktop', 'documents'] satisfies ('home' | 'temp' | 'desktop' | 'documents')[])
+  if (!ALLOWED_PATHS.has(name)) {
+    return { success: false, error: `Invalid path name: "${name}". Allowed: ${[...ALLOWED_PATHS].join(', ')}` }
+  }
+  try {
+    return { success: true, data: app.getPath(name) }
+  } catch (err) {
+    log.error('[app:getPath]', name, err)
+    return { success: false, error: err instanceof Error ? err.message : String(err) }
+  }
 })
 
 ipcMain.handle('app:setAutoLaunch', (_event, enabled: boolean) => {

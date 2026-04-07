@@ -280,61 +280,6 @@ export class GatewayBridge {
   }
 
   /**
-   * Get TTL for a method (hot method or default 500ms) — 29-04
-   */
-  private getCacheTTL(method: string): number {
-    return HOT_METHODS[method] ?? CACHE_TTL_MS
-  }
-
-  /**
-   * 构建请求去重 key：method + JSON.stringify(params)
-   */
-  private buildRequestKey(method: string, params: unknown): string {
-    return `${method}:${JSON.stringify(params ?? {})}`
-  }
-
-  /**
-   * 清理过期缓存条目，防止内存泄漏
-   */
-  private cleanupExpiredCache(now: number): void {
-    for (const [key, { timestamp }] of this.requestCache) {
-      // Use per-method TTL for cleanup threshold
-      const method = key.split(':')[0]
-      const ttl = this.getCacheTTL(method)
-      if (now - timestamp > ttl * 2) {
-        this.requestCache.delete(key)
-      }
-    }
-  }
-
-  /**
-   * Invalidate related read caches after a write operation — 29-04
-   */
-  private invalidateRelatedCache(method: string): void {
-    const maps: Record<string, string[]> = {
-      'models.setCurrent': ['models.list:{}', 'models.getCurrent:{}'],
-      'models.configure': ['models.list:{}', 'models.getCurrent:{}'],
-      'config.patch': ['config.get:{}'],
-      'skills.install': ['skills.status:{}'],
-      'skills.update': ['skills.status:{}'],
-    }
-    const toDelete = maps[method] ?? []
-    for (const key of toDelete) {
-      this.requestCache.delete(key)
-      this.cacheStats.invalidations++
-    }
-  }
-
-  /**
-   * Get cache statistics for debugging — 29-04
-   */
-  getCacheStats(): { hits: number; misses: number; invalidations: number; hitRate: string } {
-    const total = this.cacheStats.hits + this.cacheStats.misses
-    const hitRate = total > 0 ? `${((this.cacheStats.hits / total) * 100).toFixed(1)}%` : '0%'
-    return { ...this.cacheStats, hitRate }
-  }
-
-  /**
    * 执行实际 RPC 请求
    */
   private async executeRequest<T>(

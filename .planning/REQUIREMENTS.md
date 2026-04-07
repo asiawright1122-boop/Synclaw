@@ -46,16 +46,16 @@
 ### IPC 优化
 
 - [x] **PERF-03**: IPC 请求批量处理 — 对频繁轮询场景（如 gateway status）做请求去重或批量
-- [ ] **PERF-04**: gateway-bridge 热点方法添加缓存 — 避免重复 RPC 调用
+- [x] **PERF-04**: gateway-bridge 热点方法添加缓存 — 避免重复 RPC 调用
 
 ### React 优化
 
-- [ ] **PERF-05**: Zustand store selector 审查 — 消除不必要的订阅导致的过度重渲染
+- [x] **PERF-05**: Zustand store selector 审查 — 消除不必要的订阅导致的过度重渲染
 - [ ] **PERF-06**: ChatView 消息列表虚拟化 — 大量消息时不卡顿
 
 ### 内存优化
 
-- [ ] **PERF-07**: 内存泄漏排查 — 使用 Chrome DevTools 排查未清理的定时器、订阅、闭包
+- [x] **PERF-07**: 内存泄漏排查 — 使用 Chrome DevTools 排查未清理的定时器、订阅、闭包
 
 ---
 
@@ -99,10 +99,10 @@
 | UX-04 | Phase 28 | Toast 体系完整性 | ✅ |
 | DEG-01 | Phase 28 | WEB_API_BASE 降级 | ✅ |
 | CLI-01 | Phase 28 | ClawHub CLI 检测 | ✅ |
-| PERF-01 | Phase 29 | 启动链路分析 | — |
-| PERF-02 | Phase 29 | 首屏渲染优化 | — |
-| PERF-03 | Phase 29 | IPC 批量处理 | ✅ 29-03 |
-| PERF-04 | Phase 29 | IPC 热点缓存 | — |
+| PERF-01 | Phase 29 | 启动链路分析 | ✅ |
+| PERF-02 | Phase 29 | 首屏渲染优化 | ✅ |
+| PERF-03 | Phase 29 | IPC 批量处理 | ✅ |
+| PERF-04 | Phase 29 | IPC 热点缓存 | ✅ |
 | PERF-05 | Phase 30 | Zustand selector 审查 | — |
 | PERF-06 | Phase 30 | ChatView 虚拟化 | — |
 | PERF-07 | Phase 30 | 内存泄漏排查 | — |

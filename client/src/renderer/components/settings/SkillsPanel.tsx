@@ -151,7 +151,7 @@ function SkillsPanel() {
 
     const unsub = window.openclaw.on((e) => {
       if (e.event === 'skill:installed' || e.event === 'skill:status-changed') {
-        const payload = e.data as { skillKey?: string }
+        const payload = e.payload as { skillKey?: string }
         if (e.event === 'skill:status-changed' && payload?.skillKey) {
           setInstallingSkills((prev) => {
             const next = { ...prev }
@@ -165,7 +165,7 @@ function SkillsPanel() {
 
     const installUnsub = window.openclaw.on((e) => {
       if (e.event === 'skill:progress') {
-        const payload = e.data as { skillKey?: string; progress?: number; message?: string }
+        const payload = e.payload as { skillKey?: string; progress?: number; message?: string }
         if (payload?.skillKey) {
           setInstallingSkills((prev) => ({
             ...prev,
@@ -177,7 +177,7 @@ function SkillsPanel() {
         }
       }
       if (e.event === 'skill:installed') {
-        const payload = e.data as { skillKey?: string }
+        const payload = e.payload as { skillKey?: string }
         if (payload?.skillKey) {
           setInstallingSkills((prev) => {
             const next = { ...prev }
@@ -188,7 +188,7 @@ function SkillsPanel() {
         }
       }
       if (e.event === 'skill:status-changed') {
-        const payload = e.data as { skillKey?: string }
+        const payload = e.payload as { skillKey?: string }
         if (payload?.skillKey) {
           setInstallingSkills((prev) => {
             const next = { ...prev }
@@ -199,7 +199,7 @@ function SkillsPanel() {
         }
       }
       if (e.event === 'skill:error') {
-        const payload = e.data as { skillKey?: string; error?: string }
+        const payload = e.payload as { skillKey?: string; error?: string }
         if (payload?.skillKey) {
           setInstallingSkills((prev) => {
             const next = { ...prev }

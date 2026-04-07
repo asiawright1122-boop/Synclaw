@@ -96,7 +96,7 @@ export function OnboardingView({ onComplete }: OnboardingViewProps) {
     setApiKeySuccess(false)
     setApiKeySaving(true)
     try {
-      const res = await window.openclaw?.skills?.update?.({ apiKey: apiKeyInput.trim() })
+      const res = await window.openclaw?.skills?.update?.({ skillKey: 'anthropic', apiKey: apiKeyInput.trim() })
       if (res?.success) {
         setApiKeySuccess(true)
         toast.success('API Key 已保存', 2000)
