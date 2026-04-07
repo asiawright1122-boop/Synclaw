@@ -24,7 +24,7 @@
 
 ### 关键 UX 补全
 
-- [ ] **UX-01**: 切换 Avatar 后 ChatView Header 显示当前 Avatar 名称
+- [x] **UX-01**: 切换 Avatar 后 ChatView Header 显示当前 Avatar 名称
 - [ ] **UX-02**: Avatar 删除后当前会话重置 Avatar 状态
 - [ ] **UX-03**: 快捷键扩展 — 添加 Cmd+,（打开设置）、Escape（关闭弹窗）、Cmd+Shift+M（语音模式）
 - [ ] **UX-04**: Toast 体系完整性 — 覆盖 Gateway 连接/断连、API key 保存、Avatar 保存、TTS 播放失败、审批超时场景
@@ -89,10 +89,10 @@
 | ONB-01 | Phase 26 | Onboarding API key 验证 | ✅ |
 | GATE-01 | Phase 26 | Gateway 断连 banner | ✅ |
 | GATE-02 | Phase 26 | GatewayPanel 状态显示 | ✅ |
-| EMPTY-01 | Phase 27 | AvatarListPanel 空状态 | — |
-| EMPTY-02 | Phase 27 | TaskBoard 空状态 | — |
-| EMPTY-03 | Phase 27 | SkillsMarketPanel 空状态 | — |
-| EMPTY-04 | Phase 27 | McpPanel 空状态 | — |
+| EMPTY-01 | Phase 27 | AvatarListPanel 空状态 | ✅ |
+| EMPTY-02 | Phase 27 | TaskBoard 空状态 | ✅ |
+| EMPTY-03 | Phase 27 | SkillsMarketPanel 空状态 | ✅ |
+| EMPTY-04 | Phase 27 | McpPanel 空状态 | ✅ |
 | UX-01 | Phase 28 | Avatar Header 显示 | — |
 | UX-02 | Phase 28 | Avatar 删除状态重置 | — |
 | UX-03 | Phase 28 | 快捷键扩展 | — |

@@ -9,7 +9,7 @@
 ## Phases
 
 - [x] **Phase 26: Onboarding + Gateway 状态** — API key 验证 + 断连 banner + 状态显示 (completed 2026-04-07)
-- [ ] **Phase 27: 空状态补全** — 4 个面板的空状态引导
+- [x] **Phase 27: 空状态补全** — 4 个面板的空状态引导 (completed 2026-04-07)
 - [ ] **Phase 28: UX 补全** — Avatar 状态、快捷键、Toast、CLI 检测、降级
 - [ ] **Phase 29: 性能优化（启动 + IPC）** — 启动链路 + IPC 批量 + 缓存
 - [ ] **Phase 30: 性能优化（React + 内存）** — 重渲染 + 虚拟化 + 内存泄漏
@@ -58,15 +58,15 @@
 3. User sees ClawHub CLI detection + installation guide in SkillsMarketPanel when CLI is not detected
 4. User sees "添加 MCP server" guide in empty McpPanel
 
-**Plans:** 3/4 plans executed
+**Plans:** 4/4 plans executed
 
 **Plan list:**
 - [x] 27-01-PLAN.md — AvatarListPanel 空状态 CTA 增强
-- [x] 27-02-PLAN.md — TaskBoard 空状态验证
-- [x] 27-03-PLAN.md — SkillsMarketPanel CLI 检测验证
-- [ ] 27-04-PLAN.md — McpPanel 空状态增强
+- [x] 27-02-PLAN.md — TaskBoard + SkillsMarketPanel 空状态验证
+- [x] 27-03-PLAN.md — McpPanel 空状态增强
+- [x] 27-04-PLAN.md — 全局空状态验收（人工）
 
-**Status:** Planning
+**Status:** ✅ Complete
 
 ---
 
@@ -86,7 +86,7 @@
 5. User sees friendly ClawHub CLI installation guidance in SkillsMarketPanel when CLI is not installed (not silent failure)
 6. User can still use main app features (chat, file ops) when WEB_API_BASE API is unavailable
 
-**Plans:** TBD
+**Plans:** 1/5 plans executed
 
 **UI hint:** yes
 
@@ -132,7 +132,7 @@
 | Phase | Name | Requirements | Plans | Status | Completed |
 |-------|------|-------------|-------|--------|-----------|
 | 26 | Onboarding + Gateway 状态 | ONB-01, GATE-01, GATE-02 | 4/4 | ✅ Complete | 2026-04-07 |
-| 27 | 空状态补全 | EMPTY-01~04 | 2/2 | 🚧 Planning | — |
+| 27 | 空状态补全 | EMPTY-01~04 | 4/4 | ✅ Complete | 2026-04-07 |
 | 28 | UX 补全 | UX-01~04, DEG-01, CLI-01 | 0/6 | Not started | - |
 | 29 | 性能优化（启动 + IPC） | PERF-01~04 | 0/4 | Not started | - |
 | 30 | 性能优化（React + 内存） | PERF-05~07 | 0/3 | Not started | - |

@@ -231,15 +231,27 @@ export const useAvatarStore = create<AvatarState>((set, get) => ({
     try {
       if (!hasOpenClaw()) {
         // Demo mode - delete locally
+        // Also reset appStore.selectedAvatar if deleting the active avatar
+        const { activeAvatarId } = get()
+        if (activeAvatarId === id) {
+          const { setSelectedAvatar } = await import('./appStore').then(m => m.useAppStore.getState())
+          setSelectedAvatar(null)
+        }
         set(state => ({
           avatars: state.avatars.filter(av => av.id !== id),
-          activeAvatarId: state.activeAvatarId === id ? null : state.activeAvatarId,
+          activeAvatarId: activeAvatarId === id ? null : state.activeAvatarId,
         }))
         return
       }
 
       const result = await window.openclaw!.avatars.delete({ id })
       if (result.success) {
+        // Reset appStore.selectedAvatar if deleting the active avatar
+        const { activeAvatarId } = get()
+        if (activeAvatarId === id) {
+          const { setSelectedAvatar } = await import('./appStore').then(m => m.useAppStore.getState())
+          setSelectedAvatar(null)
+        }
         set(state => ({
           avatars: state.avatars.filter(av => av.id !== id),
           activeAvatarId: state.activeAvatarId === id ? null : state.activeAvatarId,
