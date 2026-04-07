@@ -63,9 +63,10 @@ const HOT_METHODS: Record<string, number> = {
 }
 
 const CACHE_TTL_MS = 500        // Default TTL for non-hot methods (29-03)
+const CACHE_CLEANUP_THRESHOLD_MS = 1000  // Cleanup threshold (2x default TTL)
 const DEDUP_WINDOW_MS = 500     // Deduplication window (29-03)
 
-// Methods excluded from caching/dedup — must always execute fresh
+// Methods excluded from caching/dedup — must always execute fresh (29-03, 29-04)
 const DEDUP_EXCLUDED = new Set([
   'chat.send', 'chat.inject', 'chat.abort',
   'file.write', 'file.delete', 'file.mkdir',
@@ -76,22 +77,6 @@ const DEDUP_EXCLUDED = new Set([
   'models.setCurrent', 'models.configure',
   'config.patch',
 ])
-
-// ── 请求去重配置 ──────────────────────────────────────────────────────
-
-/** 写操作不参与去重（每次都应执行） */
-const DEDUP_EXCLUDED = new Set([
-  'chat.send', 'chat.inject', 'chat.abort',
-  'file.write', 'file.delete', 'file.mkdir',
-  'sessions.patch', 'sessions.delete',
-  'memory.store', 'memory.delete',
-  'skills.install', 'skills.update',
-  'cron.add', 'cron.update', 'cron.remove', 'cron.run',
-  'exec.approval.resolve',
-])
-
-const CACHE_TTL_MS = 500  // 缓存有效期 500ms
-const CACHE_CLEANUP_THRESHOLD_MS = 1000  // 超过 1000ms 的缓存条目清理
 
 // ── Typed interfaces for dynamic GatewayClient ──────────────────────
 // Avoids `any` when calling client.request<T>() after dynamic import
@@ -140,11 +125,6 @@ export class GatewayBridge {
   private pendingRequests: Map<string, Promise<unknown>> = new Map()
   private requestCache: Map<string, { result: unknown; timestamp: number }> = new Map()
   private cacheStats = { hits: 0, misses: 0, invalidations: 0 }
-
-  /** 正在进行的请求（用于去重：500ms 内相同请求等待同一 Promise） */
-  private pendingRequests: Map<string, Promise<unknown>> = new Map()
-  /** 请求结果缓存（TTL 500ms） */
-  private requestCache: Map<string, { result: unknown; timestamp: number }> = new Map()
 
   constructor(opts: GatewayBridgeOptions = {}) {
     this.opts = {
@@ -246,7 +226,8 @@ export class GatewayBridge {
 
   /**
    * 向 Gateway 发送 RPC 请求。
-   * 包含请求去重：500ms 内相同 method+params 的请求合并为一次 RPC 调用。
+   * 29-03: 请求去重 — 500ms 窗口内相同 method+params 合并为一次 RPC
+   * 29-04: 热方法缓存 — 热方法使用更长 TTL（2s-30s）
    *
    * @param method  Gateway 方法名（如 'agent', 'chat.send', 'sessions.list'）
    * @param params  请求参数
@@ -266,13 +247,16 @@ export class GatewayBridge {
 
     const cacheKey = this.buildRequestKey(method, params)
     const now = Date.now()
+    const ttl = this.getCacheTTL(method)  // 29-04: per-method TTL
 
-    // 步骤 1: 检查缓存（TTL 500ms 内的读请求直接返回缓存）
+    // 步骤 1: 检查缓存（TTL 内的读请求直接返回缓存）
     const cached = this.requestCache.get(cacheKey)
-    if (cached && now - cached.timestamp < CACHE_TTL_MS) {
-      log.debug(`[cache-hit] ${method}`)
+    if (cached && now - cached.timestamp < ttl) {
+      this.cacheStats.hits++
+      log.debug(`[cache-hit:${ttl}ms] ${method}`)
       return cached.result as T
     }
+    this.cacheStats.misses++
 
     // 步骤 2: 检查去重窗口（500ms 内相同请求等待同一 Promise）
     const existing = this.pendingRequests.get(cacheKey)
@@ -281,11 +265,11 @@ export class GatewayBridge {
       return existing as Promise<T>
     }
 
-    // 步骤 3: 清理过期缓存（超过 1000ms 的条目）
+    // 步骤 3: 清理过期缓存
     this.cleanupExpiredCache(now)
 
     // 步骤 4: 执行实际请求
-    const promise = this.executeRequest<T>(method, params, opts, cacheKey)
+    const promise = this.executeRequest<T>(method, params, opts, cacheKey, ttl)
     this.pendingRequests.set(cacheKey, promise)
 
     try {
@@ -293,6 +277,13 @@ export class GatewayBridge {
     } finally {
       this.pendingRequests.delete(cacheKey)
     }
+  }
+
+  /**
+   * Get TTL for a method (hot method or default 500ms) — 29-04
+   */
+  private getCacheTTL(method: string): number {
+    return HOT_METHODS[method] ?? CACHE_TTL_MS
   }
 
   /**
@@ -307,10 +298,40 @@ export class GatewayBridge {
    */
   private cleanupExpiredCache(now: number): void {
     for (const [key, { timestamp }] of this.requestCache) {
-      if (now - timestamp > CACHE_CLEANUP_THRESHOLD_MS) {
+      // Use per-method TTL for cleanup threshold
+      const method = key.split(':')[0]
+      const ttl = this.getCacheTTL(method)
+      if (now - timestamp > ttl * 2) {
         this.requestCache.delete(key)
       }
     }
+  }
+
+  /**
+   * Invalidate related read caches after a write operation — 29-04
+   */
+  private invalidateRelatedCache(method: string): void {
+    const maps: Record<string, string[]> = {
+      'models.setCurrent': ['models.list:{}', 'models.getCurrent:{}'],
+      'models.configure': ['models.list:{}', 'models.getCurrent:{}'],
+      'config.patch': ['config.get:{}'],
+      'skills.install': ['skills.status:{}'],
+      'skills.update': ['skills.status:{}'],
+    }
+    const toDelete = maps[method] ?? []
+    for (const key of toDelete) {
+      this.requestCache.delete(key)
+      this.cacheStats.invalidations++
+    }
+  }
+
+  /**
+   * Get cache statistics for debugging — 29-04
+   */
+  getCacheStats(): { hits: number; misses: number; invalidations: number; hitRate: string } {
+    const total = this.cacheStats.hits + this.cacheStats.misses
+    const hitRate = total > 0 ? `${((this.cacheStats.hits / total) * 100).toFixed(1)}%` : '0%'
+    return { ...this.cacheStats, hitRate }
   }
 
   /**
@@ -321,6 +342,7 @@ export class GatewayBridge {
     params: unknown,
     opts: { expectFinal?: boolean; timeoutMs?: number | null; retry?: boolean },
     cacheKey: string,
+    ttl?: number,  // 29-04: per-method TTL passed in
   ): Promise<T> {
     const requestId = crypto.randomUUID()
     const logPrefix = `[req:${requestId.slice(0, 8)}]`
@@ -335,6 +357,8 @@ export class GatewayBridge {
         // 成功时缓存结果
         if (cacheKey !== '__no_cache__') {
           this.requestCache.set(cacheKey, { result, timestamp: Date.now() })
+          // 29-04: Invalidate related caches after write operations
+          this.invalidateRelatedCache(method)
         }
         return result
       } catch (err) {
@@ -344,6 +368,7 @@ export class GatewayBridge {
             .then(result => {
               if (cacheKey !== '__no_cache__') {
                 this.requestCache.set(cacheKey, { result, timestamp: Date.now() })
+                this.invalidateRelatedCache(method)
               }
               return result
             })
