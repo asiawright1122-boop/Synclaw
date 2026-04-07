@@ -26,13 +26,13 @@
 
 - [x] **UX-01**: 切换 Avatar 后 ChatView Header 显示当前 Avatar 名称
 - [x] **UX-02**: Avatar 删除后当前会话重置 Avatar 状态
-- [ ] **UX-03**: 快捷键扩展 — 添加 Cmd+,（打开设置）、Escape（关闭弹窗）、Cmd+Shift+M（语音模式）
-- [ ] **UX-04**: Toast 体系完整性 — 覆盖 Gateway 连接/断连、API key 保存、Avatar 保存、TTS 播放失败、审批超时场景
+- [x] **UX-03**: 快捷键扩展 — 添加 Cmd+,（打开设置）、Escape（关闭弹窗）、Cmd+Shift+M（语音模式）
+- [x] **UX-04**: Toast 体系完整性 — 覆盖 Gateway 连接/断连、API key 保存、Avatar 保存、TTS 播放失败、审批超时场景
 
 ### 降级与检测
 
-- [ ] **DEG-01**: WEB_API_BASE API 不可用时应用主体仍可正常使用（仅功能受限）
-- [ ] **CLI-01**: ClawHub CLI 不存在时 SkillsMarketPanel 显示友好安装引导（非静默失败）
+- [x] **DEG-01**: WEB_API_BASE API 不可用时应用主体仍可正常使用（仅功能受限）
+- [x] **CLI-01**: ClawHub CLI 不存在时 SkillsMarketPanel 显示友好安装引导（非静默失败）
 
 ---
 
@@ -40,12 +40,12 @@
 
 ### 启动优化
 
-- [ ] **PERF-01**: Electron 启动链路分析 — 识别 main 进程启动瓶颈，报告耗时分布
-- [ ] **PERF-02**: Renderer 首次渲染优化 — 延迟加载非首屏组件，减少首屏 TTI
+- [x] **PERF-01**: Electron 启动链路分析 — 识别 main 进程启动瓶颈，报告耗时分布
+- [x] **PERF-02**: Renderer 首次渲染优化 — 延迟加载非首屏组件，减少首屏 TTI
 
 ### IPC 优化
 
-- [ ] **PERF-03**: IPC 请求批量处理 — 对频繁轮询场景（如 gateway status）做请求去重或批量
+- [x] **PERF-03**: IPC 请求批量处理 — 对频繁轮询场景（如 gateway status）做请求去重或批量
 - [ ] **PERF-04**: gateway-bridge 热点方法添加缓存 — 避免重复 RPC 调用
 
 ### React 优化
@@ -93,15 +93,15 @@
 | EMPTY-02 | Phase 27 | TaskBoard 空状态 | ✅ |
 | EMPTY-03 | Phase 27 | SkillsMarketPanel 空状态 | ✅ |
 | EMPTY-04 | Phase 27 | McpPanel 空状态 | ✅ |
-| UX-01 | Phase 28 | Avatar Header 显示 | — |
-| UX-02 | Phase 28 | Avatar 删除状态重置 | — |
-| UX-03 | Phase 28 | 快捷键扩展 | — |
-| UX-04 | Phase 28 | Toast 体系完整性 | — |
-| DEG-01 | Phase 28 | WEB_API_BASE 降级 | — |
-| CLI-01 | Phase 28 | ClawHub CLI 检测 | — |
+| UX-01 | Phase 28 | Avatar Header 显示 | ✅ |
+| UX-02 | Phase 28 | Avatar 删除状态重置 | ✅ |
+| UX-03 | Phase 28 | 快捷键扩展 | ✅ |
+| UX-04 | Phase 28 | Toast 体系完整性 | ✅ |
+| DEG-01 | Phase 28 | WEB_API_BASE 降级 | ✅ |
+| CLI-01 | Phase 28 | ClawHub CLI 检测 | ✅ |
 | PERF-01 | Phase 29 | 启动链路分析 | — |
 | PERF-02 | Phase 29 | 首屏渲染优化 | — |
-| PERF-03 | Phase 29 | IPC 批量处理 | — |
+| PERF-03 | Phase 29 | IPC 批量处理 | ✅ 29-03 |
 | PERF-04 | Phase 29 | IPC 热点缓存 | — |
 | PERF-05 | Phase 30 | Zustand selector 审查 | — |
 | PERF-06 | Phase 30 | ChatView 虚拟化 | — |

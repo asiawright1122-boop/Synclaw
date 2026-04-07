@@ -10,7 +10,7 @@
 
 - [x] **Phase 26: Onboarding + Gateway 状态** — API key 验证 + 断连 banner + 状态显示 (completed 2026-04-07)
 - [x] **Phase 27: 空状态补全** — 4 个面板的空状态引导 (completed 2026-04-07)
-- [ ] **Phase 28: UX 补全** — Avatar 状态、快捷键、Toast、CLI 检测、降级
+- [x] **Phase 28: UX 补全** — Avatar 状态、快捷键、Toast、CLI 检测、降级 (completed 2026-04-07)
 - [ ] **Phase 29: 性能优化（启动 + IPC）** — 启动链路 + IPC 批量 + 缓存
 - [ ] **Phase 30: 性能优化（React + 内存）** — 重渲染 + 虚拟化 + 内存泄漏
 
@@ -86,9 +86,16 @@
 5. User sees friendly ClawHub CLI installation guidance in SkillsMarketPanel when CLI is not installed (not silent failure)
 6. User can still use main app features (chat, file ops) when WEB_API_BASE API is unavailable
 
-**Plans:** 4/5 plans executed
+**Plans:** 5/5 plans executed
 
-**UI hint:** yes
+**Plan list:**
+- [x] 28-01-PLAN.md — ChatView Avatar Header 显示
+- [x] 28-02-PLAN.md — Avatar 删除后状态重置
+- [x] 28-03-PLAN.md — Cmd+Shift+M 快捷键
+- [x] 28-04-PLAN.md — Toast 通知体系完善
+- [x] 28-05-PLAN.md — DEG+CLI 降级
+
+**Status:** ✅ Complete
 
 ---
 
@@ -106,7 +113,15 @@
 3. Frequent gateway status polling requests are batched or deduplicated (no redundant IPC calls within 500ms window)
 4. Hot gateway-bridge RPC methods return cached results when inputs unchanged
 
-**Plans:** TBD
+**Plans:** 3/4 plans executed
+
+**Plan list:**
+- [x] 29-01-PLAN.md — 启动链路计时
+- [x] 29-02-PLAN.md — 首屏渲染优化
+- [x] 29-03-PLAN.md — RPC 请求去重
+- [ ] 29-04-PLAN.md — IPC 热点缓存
+
+**Status:** ⏳ In Progress
 
 ---
 
@@ -133,8 +148,8 @@
 |-------|------|-------------|-------|--------|-----------|
 | 26 | Onboarding + Gateway 状态 | ONB-01, GATE-01, GATE-02 | 4/4 | ✅ Complete | 2026-04-07 |
 | 27 | 空状态补全 | EMPTY-01~04 | 4/4 | ✅ Complete | 2026-04-07 |
-| 28 | UX 补全 | UX-01~04, DEG-01, CLI-01 | 0/6 | Not started | - |
-| 29 | 性能优化（启动 + IPC） | PERF-01~04 | 0/4 | Not started | - |
+| 28 | UX 补全 | UX-01~04, DEG-01, CLI-01 | 5/5 | ✅ Complete | 2026-04-07 |
+| 29 | 性能优化（启动 + IPC） | PERF-01~04 | 1/4 | ⏳ In Progress | - |
 | 30 | 性能优化（React + 内存） | PERF-05~07 | 0/3 | Not started | - |
 
 ---
