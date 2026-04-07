@@ -1,4 +1,4 @@
-import { app, BrowserWindow, BrowserView, Tray, dialog, globalShortcut } from 'electron'
+import { app, BrowserWindow, BrowserView, Tray, dialog, globalShortcut, ipcMain } from 'electron'
 import * as os from 'node:os'
 import * as path from 'node:path'
 import * as fs from 'node:fs'
@@ -125,6 +125,14 @@ let tray: Tray | null = null
 let notificationManager: NotificationManager | null = null
 // ── Logging (electron-log backed) ────────────────────────────────────────
 const log = logger.scope('main')
+
+// ── Boot timing metrics ──────────────────────────────────────────────────
+// Track startup performance phases for IPC reporting
+let windowCreatedTime = 0
+let ipcHandlersTime = 0
+let workspaceInitTime = 0
+let gatewayConnectedTime = 0
+let bootCompleteTime = 0
 
 // ── Window state store ──────────────────────────────────────────────────
 
@@ -475,6 +483,8 @@ function setupIPC() {
 // ── App lifecycle ───────────────────────────────────────────────────────
 
 app.whenReady().then(async () => {
+  const bootStart = performance.now()
+  log.info('[boot] ===== SynClaw 启动开始 =====')
   log.info('App ready')
 
   // Check if landing page is available and start its server
@@ -498,6 +508,8 @@ app.whenReady().then(async () => {
   initWindowStateStore()
 
   createWindow()
+  windowCreatedTime = performance.now()
+  log.info(`[boot] 窗口创建完成: ${Math.round(windowCreatedTime - bootStart)}ms`)
   setupIPC()
   setupSettingsBridge()
 
@@ -516,9 +528,24 @@ app.whenReady().then(async () => {
 
   // Register OpenClaw IPC handlers (gateway-bridge mode)
   registerIpcHandlers()
+  ipcHandlersTime = performance.now()
+  log.info(`[boot] IPC handlers 注册完成: ${Math.round(ipcHandlersTime - windowCreatedTime)}ms`)
+
+  // Register boot:timing handler for renderer query
+  ipcMain.handle('boot:timing', () => ({
+    bootComplete: bootCompleteTime || null,
+    phases: {
+      windowCreated: windowCreatedTime || null,
+      ipcHandlers: ipcHandlersTime || null,
+      workspaceInit: workspaceInitTime || null,
+      gatewayConnected: gatewayConnectedTime || null,
+    }
+  }))
 
   // Initialize workspace directory (auto-create + auto-authorize)
   await initWorkspace()
+  workspaceInitTime = performance.now()
+  log.info(`[boot] Workspace 初始化完成: ${Math.round(workspaceInitTime - ipcHandlersTime)}ms`)
 
   // Start OpenClaw Gateway (both dev and prod)
   let reconnectTimer: NodeJS.Timeout | null = null
@@ -555,6 +582,9 @@ app.whenReady().then(async () => {
     // NOTE: unsubscribe will be called on window close via the window-on-closed listener below
 
     await bridge.connect()
+    gatewayConnectedTime = performance.now()
+    bootCompleteTime = gatewayConnectedTime
+    log.info(`[boot] ===== SynClaw 启动完成: ${Math.round(bootCompleteTime - bootStart)}ms =====`)
     log.info('OpenClaw Gateway 连接成功')
   } catch (error) {
     log.error('OpenClaw Gateway 连接失败:', error)
