@@ -35,11 +35,12 @@ interface GatewayState {
   reconnect: () => Promise<void>
   ping: () => Promise<void>
   loadIdentity: () => Promise<void>
+  loadConnectionUrl: () => Promise<void>
 }
 
 let statusUnsubscribe: (() => void) | null = null
 
-export const useGatewayStore = create<GatewayState>((set, get) => {
+export const useGatewayStore = create<GatewayState>((set) => {
   // Subscribe to window.openclaw status changes (once)
   const ensureStatusSubscription = () => {
     if (statusUnsubscribe) return
@@ -113,6 +114,16 @@ export const useGatewayStore = create<GatewayState>((set, get) => {
         }
       } catch {
         // Silently fail - identity is optional info
+      }
+    },
+
+    loadConnectionUrl: async () => {
+      if (!window.openclaw) return
+      try {
+        const connectionUrl = await window.openclaw.gateway.connectionUrl()
+        set({ connectionUrl })
+      } catch {
+        // Silently fail — connection URL is optional info
       }
     },
   }

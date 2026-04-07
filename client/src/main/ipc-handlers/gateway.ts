@@ -325,4 +325,8 @@ ipcMain.handle('gateway:ping', async (): Promise<ApiResponse<{ ok: boolean; stat
   }
 })
 
+ipcMain.handle('gateway:connection:url', (): string => {
+  return g().getConnectionUrl()
+})
+
 log.info('Gateway handlers registered')

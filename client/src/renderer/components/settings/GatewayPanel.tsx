@@ -6,6 +6,7 @@ import { Card, Row, Spinner } from '../ui'
 import { pillBtn } from './shared/pillBtn'
 import { Wifi, RefreshCw, WifiOff, ExternalLink, CheckCircle, XCircle, AlertCircle } from 'lucide-react'
 import { useGatewayStatus } from '../../hooks/useGatewayStatus'
+import { useGatewayStore } from '../../stores/gatewayStore'
 
 function GatewayPanel() {
   const {
@@ -41,6 +42,7 @@ function GatewayPanel() {
 
   useEffect(() => {
     loadGateway()
+    useGatewayStore.getState().loadConnectionUrl()
     // subscription is handled by useGatewayStatus hook
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])

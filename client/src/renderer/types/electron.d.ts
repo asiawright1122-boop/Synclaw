@@ -376,6 +376,7 @@ export interface OpenClawAPI {
     identity: () => Promise<ApiResponse>
     health: () => Promise<ApiResponse>
     ping: () => Promise<ApiResponse<{ ok: boolean; status: string }>>
+    connectionUrl: () => Promise<string>
   }
 
   // Device
