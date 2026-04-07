@@ -29,7 +29,7 @@ progress:
 ## Current Position
 
 Phase: 28
-Plan: 01 (Avatar 状态栏指示器)
+Plan: 04 (快捷键验证)
 
 ## Accumulated Context
 

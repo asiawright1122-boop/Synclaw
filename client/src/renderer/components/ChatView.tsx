@@ -18,6 +18,7 @@ import { AvatarSelector } from './AvatarSelector'
 import { VoiceModePanel } from './VoiceModePanel'
 import { useTTS } from '../hooks/useTTS'
 import { useSpeechRecognition } from '../hooks/useSpeechRecognition'
+import { useGatewayStatusToast } from '../hooks/useGatewayStatusToast'
 import { DisconnectBanner } from './DisconnectBanner'
 import 'highlight.js/styles/github-dark.css'
 
@@ -278,6 +279,9 @@ export function ChatView({ onShowContextMenu }: ChatViewProps) {
 
   // STT hook for voice input
   const { isSupported: sttSupported } = useSpeechRecognition()
+
+  // Gateway status Toast notifications
+  useGatewayStatusToast()
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
