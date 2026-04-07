@@ -38,6 +38,11 @@ const zh: Record<string, string> = {
   'status.error': '错误',
   'btn.connect': '连接',
   'btn.disconnect': '断开连接',
+
+  // ── Gateway Banner ────────────────────────────────────────────────────────
+  'gateway.banner.disconnected': 'Gateway 已断开连接',
+  'gateway.banner.reconnect': '重新连接',
+  'gateway.banner.reconnecting': '连接中…',
   'btn.send': '发送',
   'btn.stop': '停止',
   'btn.copy': 'Copy',
@@ -177,6 +182,11 @@ const en: Record<string, string> = {
   'status.error': 'Error',
   'btn.connect': 'Connect',
   'btn.disconnect': 'Disconnect',
+
+  // ── Gateway Banner ────────────────────────────────────────────────────────
+  'gateway.banner.disconnected': 'Gateway Disconnected',
+  'gateway.banner.reconnect': 'Reconnect',
+  'gateway.banner.reconnecting': 'Connecting…',
   'btn.send': 'Send',
   'btn.stop': 'Stop',
   'btn.copy': 'Copy',
