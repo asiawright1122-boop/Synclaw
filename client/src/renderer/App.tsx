@@ -2,22 +2,24 @@
  * SynClaw — AutoClaw 主布局 + 设置弹窗
  */
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, lazy, Suspense } from 'react'
 import { useAppStore } from './stores/appStore'
 import { useSettingsStore } from './stores/settingsStore'
 import { Sidebar } from './components/Sidebar'
 import { Header } from './components/Header'
 import { ChatView } from './components/ChatView'
-import { SettingsView } from './components/SettingsView'
-import { CommandPalette } from './components/CommandPalette'
-import { GlobalSearch } from './components/GlobalSearch'
 import { ContextMenu, useContextMenu } from './components/ContextMenu'
 import { ToastContainer } from './components/Toast'
 import { OnboardingView } from './components/OnboardingView'
-import { ExecApprovalModal } from './components/ExecApprovalModal'
 import { X, Keyboard } from 'lucide-react'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { eventBus, EventBusContext } from './contexts/EventBusContext'
+
+// Non-first-screen components (lazy-loaded for faster TTI)
+const SettingsView = lazy(() => import('./components/SettingsView'))
+const CommandPalette = lazy(() => import('./components/CommandPalette'))
+const GlobalSearch = lazy(() => import('./components/GlobalSearch'))
+const ExecApprovalModal = lazy(() => import('./components/ExecApprovalModal'))
 
 function ShortcutsModal({ onClose }: { onClose: () => void }) {
   const shortcuts = [
@@ -381,7 +383,9 @@ function App() {
                 <X className="w-4 h-4" />
               </button>
               <div className="flex-1 min-h-0 flex flex-col pt-2">
-                <SettingsView />
+                <Suspense fallback={null}>
+                  <SettingsView />
+                </Suspense>
               </div>
             </div>
           </div>
@@ -391,17 +395,21 @@ function App() {
         <ContextMenu menu={menu} onSelect={handleContextMenuSelect} />
 
         {/* Command Palette */}
-        <CommandPalette
-          isOpen={commandPaletteOpen}
-          onClose={() => setCommandPaletteOpen(false)}
-          onOpenSettings={handleCommandOpenSettings}
-        />
+        <Suspense fallback={null}>
+          <CommandPalette
+            isOpen={commandPaletteOpen}
+            onClose={() => setCommandPaletteOpen(false)}
+            onOpenSettings={handleCommandOpenSettings}
+          />
+        </Suspense>
 
         {/* Global Search */}
-        <GlobalSearch
-          isOpen={globalSearchOpen}
-          onClose={() => setGlobalSearchOpen(false)}
-        />
+        <Suspense fallback={null}>
+          <GlobalSearch
+            isOpen={globalSearchOpen}
+            onClose={() => setGlobalSearchOpen(false)}
+          />
+        </Suspense>
 
         {/* Shortcuts Modal */}
         {shortcutsModalOpen && (
@@ -412,7 +420,9 @@ function App() {
         <ToastContainer />
 
         {/* Exec Approval Modal */}
-        <ExecApprovalModal />
+        <Suspense fallback={null}>
+          <ExecApprovalModal />
+        </Suspense>
       </div>
       </EventBusContext.Provider>
       </ErrorBoundary>
