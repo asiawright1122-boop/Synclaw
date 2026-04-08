@@ -180,6 +180,15 @@ export interface ElectronAPI {
   }
   // Navigation events from main process
   onNavigate: (callback: (data: { page: string }) => void) => () => void
+  // Web API Proxy (solves CORS in Electron renderer)
+  apiProxy: {
+    fetch: (params: {
+      path: string
+      method?: string
+      body?: unknown
+      token?: string
+    }) => Promise<{ ok: boolean; status: number; data?: unknown; error?: string }>
+  }
   // Security & Encryption
   security: {
     getStatus: () => Promise<ApiResponse<{

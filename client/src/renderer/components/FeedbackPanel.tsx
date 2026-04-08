@@ -76,13 +76,24 @@ export function FeedbackPanel({ onSuccess }: FeedbackPanelProps) {
         description: description.trim(),
       }
 
-      // Try to submit to backend API first
+      // Submit to backend API via IPC proxy (solves CORS in Electron)
       try {
+        const proxy = window.electronAPI?.apiProxy
+        const result = proxy
+          ? await proxy.fetch({ path: '/api/feedback', method: 'POST', body: feedbackData })
+          : null
+
+        if (result && result.ok) {
+          setSubmitStatus('success')
+          setDescription('')
+          onSuccess?.()
+          return
+        }
+
+        // If proxy failed or not available, try direct fetch as fallback
         const response = await fetch('/api/feedback', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(feedbackData),
         })
 

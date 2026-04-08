@@ -1,5 +1,23 @@
 # Milestones
 
+## v1.7 Backlog 清理 + 性能优化 (Shipped: 2026-04-08)
+
+**Phases completed:** 5 phases (26–30), 20/20 requirements
+
+**Key accomplishments:**
+
+- **Phase 26 ONB:** Gateway 状态统一管理 — gatewayStore + useGatewayStatus hook + DisconnectBanner 断连提示 + gateway.ping() API Key 验证
+- **Phase 27 EMPTY:** 空状态全补全 — AvatarListPanel/TaskBoard/SkillsMarketPanel/McpPanel 四个面板均有引导 CTA
+- **Phase 28 UX:** UX 体系完善 — Avatar Header 指示器 + 删除状态重置 + Cmd+Shift+M 快捷键 + 完整 Toast 通知 + ClawHub CLI 检测 + WEB_API_BASE 降级
+- **Phase 29 PERF:** 性能优化（IPC）— 启动链路计时分析 + 非首屏组件懒加载（React.lazy）+ RPC 请求去重（500ms TTL）+ 热点方法 per-method TTL 缓存
+- **Phase 30 PERF:** 性能优化（React）— 14 个组件 Zustand selector 精确化 + ChatView CSS contain + 选择性动画 + gatewayStore 内存泄漏修复
+
+**Known gaps:**
+- SkillsPanel.tsx 预存 TypeScript 错误（不在 v1.7 范围）
+- macOS 公证待用户提供 Apple ID
+
+---
+
 ## v1.6 P3 UI 完善冲刺 (Shipped: 2026-04-06)
 
 **Phases completed:** 2 phases (24–25), 7/7 requirements

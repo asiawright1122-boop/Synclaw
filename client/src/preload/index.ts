@@ -199,7 +199,19 @@ const electronAPI = {
     ipcRenderer.on('navigate', handler)
     return () => ipcRenderer.removeListener('navigate', handler)
   },
-}
+
+  // ── Web API Proxy ───────────────────────────────────────────────────────────
+  // 解决 Electron 渲染进程跨域问题，通过主进程转发所有 Web API 请求。
+  // 使用方式：window.electronAPI.apiProxy.fetch({ path: '/api/subscription', method: 'GET', token: '...' })
+  apiProxy: {
+    fetch: (params: {
+      path: string
+      method?: string
+      body?: unknown
+      token?: string
+    }): Promise<{ ok: boolean; status: number; data?: unknown; error?: string }> =>
+      ipcRenderer.invoke('api:proxy', params),
+  },
 
 contextBridge.exposeInMainWorld('updates', {
   onUpdateAvailable: (callback: (info: { version: string; releaseDate?: string }) => void): (() => void) => {

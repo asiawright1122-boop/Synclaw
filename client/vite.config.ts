@@ -35,6 +35,13 @@ export default defineConfig({
   },
   server: {
     port: 5174,
-    strictPort: true
-  }
+    strictPort: true,
+    // 开发模式：将 /api 请求代理到 web 服务（避免 CORS）
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+      },
+    },
+  },
 })
