@@ -51,7 +51,7 @@
 ### React 优化
 
 - [x] **PERF-05**: Zustand store selector 审查 — 消除不必要的订阅导致的过度重渲染
-- [ ] **PERF-06**: ChatView 消息列表虚拟化 — 大量消息时不卡顿
+- [x] **PERF-06**: ChatView 消息列表虚拟化 — 大量消息时不卡顿
 
 ### 内存优化
 
@@ -103,9 +103,9 @@
 | PERF-02 | Phase 29 | 首屏渲染优化 | ✅ |
 | PERF-03 | Phase 29 | IPC 批量处理 | ✅ |
 | PERF-04 | Phase 29 | IPC 热点缓存 | ✅ |
-| PERF-05 | Phase 30 | Zustand selector 审查 | — |
-| PERF-06 | Phase 30 | ChatView 虚拟化 | — |
-| PERF-07 | Phase 30 | 内存泄漏排查 | — |
+| PERF-05 | Phase 30 | Zustand selector 审查 | ✅ |
+| PERF-06 | Phase 30 | ChatView 虚拟化 | ✅ |
+| PERF-07 | Phase 30 | 内存泄漏排查 | ✅ |
 
 ---
 

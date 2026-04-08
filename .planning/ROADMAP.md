@@ -138,7 +138,14 @@
 2. ChatView maintains smooth 60fps scrolling with 100+ messages (via virtualization)
 3. No memory leaks detected after 30 minutes of active use (no growing heap in Chrome DevTools)
 
-**Plans:** 3/3 plans complete
+**Plans:** 3/3 plans executed
+
+**Plan list:**
+- [x] 30-01-PLAN.md — Zustand selector 精确化
+- [x] 30-02-PLAN.md — ChatView 消息列表优化
+- [x] 30-03-PLAN.md — 内存泄漏排查修复
+
+**Status:** ✅ Complete
 
 ---
 
@@ -150,7 +157,7 @@
 | 27 | 空状态补全 | EMPTY-01~04 | 4/4 | ✅ Complete | 2026-04-07 |
 | 28 | UX 补全 | UX-01~04, DEG-01, CLI-01 | 5/5 | ✅ Complete | 2026-04-07 |
 | 29 | 性能优化（启动 + IPC） | PERF-01~04 | 4/4 | ✅ Complete | 2026-04-07 |
-| 30 | 性能优化（React + 内存） | PERF-05~07 | 0/3 | ⏳ In Progress | - |
+| 30 | 性能优化（React + 内存） | PERF-05~07 | 3/3 | ✅ Complete | 2026-04-07 |
 
 ---
 
